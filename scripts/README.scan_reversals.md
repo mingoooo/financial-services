@@ -82,7 +82,13 @@ python3 scripts/scan_reversals.py --symbols AAPL,NVDA,SPY,TSLA
 python3 scripts/scan_reversals.py --html /tmp/reversal_report.html
 ```
 
-### 6. 生成看跌 HTML 报表
+### 6. 禁用缓存重跑
+
+```bash
+python3 scripts/scan_reversals.py --no-cache
+```
+
+### 7. 生成看跌 HTML 报表
 
 ```bash
 python3 scripts/scan_reversals.py --side bearish --html /tmp/bearish_reversal_report.html
@@ -103,7 +109,9 @@ python3 scripts/scan_reversals.py --side bearish --html /tmp/bearish_reversal_re
 HTML 报表额外包含：
 
 - 蜡烛图
+- SMA10 / SMA20 / SMA50 / SMA200（显示当前数值）
 - 成交量子图
+- 自动支撑位 / 阻力位（S1 / S2 / R1 / R2）
 - 确认原因
 - 评分明细
 
@@ -117,6 +125,7 @@ HTML 报表额外包含：
 - `--recent-confirm-days`：只保留最近 N 个自然日确认的信号
 - `--no-require-confirm-volume`：关闭确认日放量要求
 - `--scan-retries`：单只股票失败重试次数
+- `--no-cache`：本次运行不读写本地缓存
 - `--html`：输出 HTML 报表
 - `--json`：输出 JSON
 

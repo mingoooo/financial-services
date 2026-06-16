@@ -17,7 +17,7 @@ from urllib.request import Request, urlopen
 
 from finvizfinance.screener.overview import Overview
 
-API_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=3mo&interval=1d&includePrePost=false&events=div%2Csplits"
+API_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=2y&interval=1d&includePrePost=false&events=div%2Csplits"
 WIKI_SP500 = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
 NASDAQ_LIST = "https://www.nasdaqtrader.com/dynamic/symdir/nasdaqlisted.txt"
 OTHER_LIST = "https://www.nasdaqtrader.com/dynamic/symdir/otherlisted.txt"
@@ -26,6 +26,7 @@ TIMEOUT = 8
 CACHE_DIR = Path(".cache/bullish-reversal-scanner")
 DEFAULT_SYMBOLS_FILE = Path("scripts/high_liquidity_us_symbols.txt")
 BAD_SUFFIXES = ("-W", "-U", "-R", "-RT", "WS", "WT")
+NO_CACHE = False
 
 
 @dataclass
@@ -80,6 +81,8 @@ def cache_path(kind: str, key: str) -> Path:
 
 
 def load_cache(kind: str, key: str, max_age_seconds: int):
+    if NO_CACHE:
+        return None
     path = cache_path(kind, key)
     if not path.exists():
         return None
@@ -92,6 +95,8 @@ def load_cache(kind: str, key: str, max_age_seconds: int):
 
 
 def save_cache(kind: str, key: str, payload) -> None:
+    if NO_CACHE:
+        return
     cache_path(kind, key).write_text(json.dumps(payload), encoding="utf-8")
 
 
@@ -772,8 +777,50 @@ def format_market_cap(value: float | None) -> str:
     return f"{value:.0f}"
 
 
-def build_price_chart_svg(symbol: str, candidate_date: str, confirm_date: str) -> str:
-    candles = fetch_candles(symbol)[-50:]
+def simple_moving_average(candles: list[Candle], period: int) -> list[float | None]:
+    values: list[float | None] = []
+    closes = [c.close for c in candles]
+    for idx in range(len(closes)):
+        if idx + 1 < period:
+            values.append(None)
+        else:
+            window = closes[idx - period + 1:idx + 1]
+            values.append(sum(window) / period)
+    return values
+
+
+def detect_support_resistance_levels(candles: list[Candle], lookback: int = 50) -> tuple[list[float], list[float]]:
+    window = candles[-lookback:] if len(candles) > lookback else candles
+    if len(window) < 7:
+        return [], []
+    highs: list[float] = []
+    lows: list[float] = []
+    for i in range(2, len(window) - 2):
+        c = window[i]
+        left = window[i-2:i]
+        right = window[i+1:i+3]
+        if c.high >= max(x.high for x in left + right):
+            highs.append(c.high)
+        if c.low <= min(x.low for x in left + right):
+            lows.append(c.low)
+
+    def dedupe(levels: list[float]) -> list[float]:
+        picked: list[float] = []
+        for level in sorted(levels):
+            if not picked or abs(level - picked[-1]) / max(abs(level), 1.0) > 0.015:
+                picked.append(level)
+        return picked
+
+    current = window[-1].close
+    supports = [lvl for lvl in dedupe(lows) if lvl < current]
+    resistances = [lvl for lvl in dedupe(highs) if lvl > current]
+    supports = sorted(supports, key=lambda x: abs(current - x))[:2]
+    resistances = sorted(resistances, key=lambda x: abs(current - x))[:2]
+    return supports, resistances
+
+
+def build_price_chart_svg(symbol: str, candidate_date: str, confirm_date: str, stop_loss: float | None = None, first_target: float | None = None, second_target: float | None = None, pattern: str | None = None, confirmation_reason: str | None = None, score: float | None = None) -> str:
+    candles = fetch_candles(symbol)[-100:]
     if not candles:
         return ""
     width = 860
@@ -792,8 +839,19 @@ def build_price_chart_svg(symbol: str, candidate_date: str, confirm_date: str) -
     lows = [c.low for c in candles]
     highs = [c.high for c in candles]
     volumes = [c.volume for c in candles]
-    min_price = min(lows)
-    max_price = max(highs)
+    sma_periods = [10, 20, 50, 200]
+    sma_colors = {10: "#f59e0b", 20: "#38bdf8", 50: "#a78bfa", 200: "#f472b6"}
+    full_candles = fetch_candles(symbol)
+    sma_series_full = {period: simple_moving_average(full_candles, period) for period in sma_periods}
+    offset = len(full_candles) - len(candles)
+    sma_series = {period: series[offset:] for period, series in sma_series_full.items()}
+    sma_levels = [value for series in sma_series.values() for value in series if value is not None]
+    sma_latest = {period: next((v for v in reversed(series) if v is not None), None) for period, series in sma_series_full.items()}
+    supports, resistances = detect_support_resistance_levels(candles)
+    overlay_levels = [level for level in [stop_loss, first_target, second_target] if level is not None]
+    extra_levels = supports + resistances + overlay_levels + sma_levels
+    min_price = min(lows + extra_levels) if extra_levels else min(lows)
+    max_price = max(highs + extra_levels) if extra_levels else max(highs)
     price_padding = max((max_price - min_price) * 0.04, max_price * 0.005)
     min_price -= price_padding
     max_price += price_padding
@@ -821,11 +879,46 @@ def build_price_chart_svg(symbol: str, candidate_date: str, confirm_date: str) -
         parts.append(f'<line x1="{pad_left}" y1="{gy:.1f}" x2="{width-pad_right}" y2="{gy:.1f}" stroke="#22314b" stroke-width="1"/>')
         parts.append(f'<text x="10" y="{gy+4:.1f}" fill="#94a3b8" font-size="11">{price_label:.2f}</text>')
 
+    sr_specs = []
+    for idx, level in enumerate(sorted(supports, reverse=True), start=1):
+        sr_specs.append((f"S{idx}", level, "#22c55e"))
+    for idx, level in enumerate(sorted(resistances), start=1):
+        sr_specs.append((f"R{idx}", level, "#f87171"))
+    for label, level, color in sr_specs:
+        sy = y_price(level)
+        parts.append(f'<line x1="{pad_left}" y1="{sy:.1f}" x2="{width-pad_right}" y2="{sy:.1f}" stroke="{color}" stroke-dasharray="6 4" stroke-width="1.2" opacity="0.9"/>')
+        parts.append(f'<rect x="{width-pad_right-88}" y="{sy-9:.1f}" width="82" height="18" rx="8" fill="#0b1020" stroke="{color}" stroke-width="1"/>')
+        parts.append(f'<text x="{width-pad_right-47}" y="{sy+4:.1f}" fill="{color}" font-size="10" text-anchor="middle">{label} {level:.2f}</text>')
+
+    trade_specs = []
+    if stop_loss is not None:
+        trade_specs.append(("Stop", stop_loss, "#f59e0b"))
+    if first_target is not None:
+        trade_specs.append(("T1", first_target, "#38bdf8"))
+    if second_target is not None:
+        trade_specs.append(("T2", second_target, "#a78bfa"))
+    for label, level, color in trade_specs:
+        ty = y_price(level)
+        parts.append(f'<line x1="{pad_left}" y1="{ty:.1f}" x2="{width-pad_right}" y2="{ty:.1f}" stroke="{color}" stroke-dasharray="3 3" stroke-width="1.1" opacity="0.95"/>')
+        parts.append(f'<rect x="{pad_left+4}" y="{ty-9:.1f}" width="70" height="18" rx="8" fill="#0b1020" stroke="{color}" stroke-width="1"/>')
+        parts.append(f'<text x="{pad_left+39}" y="{ty+4:.1f}" fill="{color}" font-size="10" text-anchor="middle">{label} {level:.2f}</text>')
+
     for level in range(3):
         gy = volume_top + volume_height * level / 2
         vol_label = max_volume * (1 - level / 2)
         parts.append(f'<line x1="{pad_left}" y1="{gy:.1f}" x2="{width-pad_right}" y2="{gy:.1f}" stroke="#1f2b40" stroke-width="1"/>')
         parts.append(f'<text x="10" y="{gy+4:.1f}" fill="#64748b" font-size="10">{int(vol_label):,}</text>')
+
+    for period in sma_periods:
+        series = sma_series[period]
+        points = []
+        for i, value in enumerate(series):
+            if value is None:
+                continue
+            x = pad_left + step * i + step / 2
+            points.append(f"{x:.1f},{y_price(value):.1f}")
+        if len(points) >= 2:
+            parts.append(f'<polyline fill="none" stroke="{sma_colors[period]}" stroke-width="1.4" points="{" ".join(points)}" opacity="0.95"/>')
 
     cand = candidate_date
     conf = confirm_date
@@ -875,9 +968,28 @@ def build_price_chart_svg(symbol: str, candidate_date: str, confirm_date: str) -
 
     parts.append(f'<text x="{pad_left}" y="14" fill="#e5eefc" font-size="13" font-weight="600">{html.escape(symbol)} - Candlestick</text>')
     parts.append(f'<text x="{pad_left+170}" y="14" fill="#94a3b8" font-size="11">最近 {len(candles)} 根日线</text>')
+    if pattern:
+        parts.append(f'<text x="{pad_left}" y="32" fill="#93c5fd" font-size="11">形态: {html.escape(pattern)}</text>')
+    if score is not None:
+        parts.append(f'<text x="{pad_left+250}" y="32" fill="#c4b5fd" font-size="11">Score: {score:.0f}</text>')
     parts.append(f'<text x="{width-236}" y="14" fill="#f59e0b" font-size="11">候选日: {html.escape(candidate_date)}</text>')
     parts.append(f'<text x="{width-110}" y="14" fill="#60a5fa" font-size="11">确认日: {html.escape(confirm_date)}</text>')
+    if confirmation_reason:
+        parts.append(f'<text x="{pad_left}" y="46" fill="#94a3b8" font-size="10">确认原因: {html.escape(confirmation_reason)[:90]}</text>')
+    sma_badges = [(10, 140), (20, 235), (50, 330), (200, 435)]
+    for period, x_pos in sma_badges:
+        color = sma_colors[period]
+        latest = sma_latest.get(period)
+        label = f"SMA{period} {latest:.2f}" if latest is not None else f"SMA{period} n/a"
+        parts.append(f'<rect x="{x_pos}" y="56" width="88" height="16" rx="8" fill="#0b1020" stroke="{color}" stroke-width="1"/>')
+        parts.append(f'<text x="{x_pos+44}" y="67" fill="{color}" font-size="10" text-anchor="middle">{label}</text>')
     parts.append(f'<text x="{pad_left}" y="{volume_top-6}" fill="#94a3b8" font-size="11">Volume</text>')
+    if sr_specs:
+        legend = ' · '.join(f'{label} {level:.2f}' for label, level, _ in sr_specs)
+        trade_legend = ' · '.join(f'{label} {level:.2f}' for label, level, _ in trade_specs)
+        sma_legend = ' · '.join(f'SMA{period}' for period in sma_periods)
+        full_legend = legend + ((' · ' + trade_legend) if trade_legend else '') + ((' · ' + sma_legend) if sma_legend else '')
+        parts.append(f'<text x="{pad_left+90}" y="{volume_top-6}" fill="#94a3b8" font-size="10">{full_legend}</text>')
     parts.append('</svg>')
     return ''.join(parts)
 
@@ -896,7 +1008,7 @@ def format_table(results: list[ScanResult]) -> str:
 
 def render_html_report(results: list[ScanResult], output_path: str, args: argparse.Namespace) -> None:
     for result in results:
-        result.chart_svg = build_price_chart_svg(result.symbol, result.candidate_date, result.confirm_date)
+        result.chart_svg = build_price_chart_svg(result.symbol, result.candidate_date, result.confirm_date, result.stop_loss, result.first_target, result.second_target, result.pattern, result.confirmation_reason, result.score)
     rows = []
     for r in results:
         rows.append(f"""<tr>
@@ -981,12 +1093,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--html", dest="html_out", help="Write an HTML report with summary table and per-symbol daily charts")
     parser.add_argument("--side", choices=["both", "bullish", "bearish"], default="both", help="Scan bullish, bearish, or both confirmed reversal patterns")
     parser.add_argument("--scan-retries", type=int, default=3, help="Retry transient per-symbol scan failures up to N total attempts")
+    parser.add_argument("--no-cache", action="store_true", help="Disable all local cache reads and writes for this run")
     return parser.parse_args()
 
 
 def main() -> int:
+    global NO_CACHE
     started = time.time()
     args = parse_args()
+    NO_CACHE = args.no_cache
 
     universe_start = time.time()
     if args.symbols:
