@@ -114,6 +114,7 @@ HTML 报表额外包含：
 - 自动支撑位 / 阻力位（S1 / S2 / R1 / R2）
 - 确认原因
 - 评分明细
+- 运行摘要（生成时间、参数、命中数量）
 
 ## 主要参数
 
@@ -141,3 +142,44 @@ pip install finvizfinance
 ```bash
 python3 scripts/check.py
 ```
+
+## GitHub 定时执行
+
+仓库已提供 GitHub Actions 工作流：
+
+- `.github/workflows/scan-reversals.yml`
+
+功能：
+
+- 支持手动触发
+- 支持工作日定时执行
+- 生成 HTML 与 JSON 报表
+- 作为 artifact 上传到 GitHub Actions
+
+默认执行命令等价于：
+
+```bash
+python3 scripts/scan_reversals.py \
+  --universe us \
+  --side both \
+  --recent-confirm-days 2 \
+  --workers 8 \
+  --no-cache \
+  --html reports/reversal_report.html \
+  --json reports/reversal_signals.json
+```
+
+## GitHub Pages 查看报告
+
+仓库已配置 GitHub Actions + GitHub Pages：
+
+- Workflow: `.github/workflows/scan-reversals.yml`
+- Pages 输出：`reports/site/index.html`
+
+工作流执行后：
+
+- 最新 HTML 报表会发布到 GitHub Pages
+- 同时 JSON 和 HTML 仍会作为 artifact 上传
+- 定时运行时间为：**工作日 22:15 UTC**，并在 workflow 内用纽约时间做收盘后窗口判断
+
+如果仓库已开启 Pages，运行完成后可以直接在 Actions 页面里的 `github-pages` 环境链接中打开最新报告。

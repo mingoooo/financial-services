@@ -1,0 +1,111 @@
+name: Scan Reversals
+
+on:
+  workflow_dispatch:
+    inputs:
+      side:
+        description: Scan side
+        required: false
+        default: both
+        type: choice
+        options:
+          - both
+          - bullish
+          - bearish
+  schedule:
+    - cron: '15 22 * * 1-5'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Decide whether to run now
+        id: gate
+        shell: bash
+        run: |
+          python - <<'PY'
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+
+          now_ny = datetime.now(ZoneInfo("America/New_York"))
+          hour = now_ny.hour
+          minute = now_ny.minute
+          weekday = now_ny.weekday()
+
+          should_run = weekday < 5 and ((hour == 17 and minute >= 5) or hour > 17)
+          print(f"NY time: {now_ny.isoformat()}")
+          with open("$GITHUB_OUTPUT", "a", encoding="utf-8") as fh:
+              fh.write(f"should_run={'true' if should_run else 'false'}\n")
+              fh.write(f"ny_time={now_ny.isoformat()}\n")
+          PY
+
+      - name: Skip outside target window
+        if: github.event_name == 'schedule' && steps.gate.outputs.should_run != 'true'
+        run: |
+          echo "Skipping scheduled run outside post-close NY window."
+          echo "NY time was: ${{ steps.gate.outputs.ny_time }}"
+
+      - name: Install dependencies
+        if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install finvizfinance
+
+      - name: Prepare report directory
+        if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
+        run: mkdir -p reports/site
+
+      - name: Run reversal scan
+        if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
+        run: |
+          SIDE="${{ github.event.inputs.side || 'both' }}"
+          python scripts/scan_reversals.py \
+            --universe us \
+            --side "$SIDE" \
+            --recent-confirm-days 2 \
+            --workers 8 \
+            --no-cache \
+            --html reports/site/index.html \
+            --json reports/reversal_signals.json
+
+      - name: Upload reports artifact
+        if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: reversal-scan-reports
+          path: |
+            reports/site/index.html
+            reports/reversal_signals.json
+          if-no-files-found: error
+
+      - name: Upload Pages artifact
+        if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: reports/site
+
+      - name: Deploy to GitHub Pages
+        if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
+        id: deployment
+        uses: actions/deploy-pages@v4

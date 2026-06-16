@@ -1007,6 +1007,7 @@ def format_table(results: list[ScanResult]) -> str:
 
 
 def render_html_report(results: list[ScanResult], output_path: str, args: argparse.Namespace) -> None:
+    generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     for result in results:
         result.chart_svg = build_price_chart_svg(result.symbol, result.candidate_date, result.confirm_date, result.stop_loss, result.first_target, result.second_target, result.pattern, result.confirmation_reason, result.score)
     rows = []
@@ -1060,7 +1061,14 @@ h3 span{{font-size:13px;color:#93c5fd;font-weight:500;margin-left:8px;}}
 </head>
 <body>
 <h1>最近{args.recent_confirm_days}日已确认{("双向" if args.side == "both" else ("看涨" if args.side == "bullish" else "看跌"))}反转信号</h1>
-<p class="sub">按市值从大到小排序 · Universe={html.escape(args.universe)} · Include ETFs={args.include_etfs}</p>
+<p class="sub">按评分、市值与流动性排序</p>
+<section class="card">
+<h3>运行摘要</h3>
+<div class="meta">生成时间：{generated_at}</div>
+<div class="meta">命中数量：{len(results)} · Universe={html.escape(args.universe)} · Side={html.escape(args.side)} · Include ETFs={args.include_etfs}</div>
+<div class="meta">参数：min_market_cap={args.min_market_cap} · min_price={args.min_price} · min_avg_volume={args.min_avg_volume} · min_last_volume={args.min_last_volume} · top_dollar_volume={args.top_dollar_volume} · recent_confirm_days={args.recent_confirm_days} · require_confirm_volume={args.require_confirm_volume}</div>
+<div class="meta">输出文件：{html.escape(output_path)}</div>
+</section>
 <section class="card">
 <table>
 <thead><tr><th>Symbol</th><th>Pattern</th><th>Strength</th><th>Score</th><th>Candidate</th><th>Confirm</th><th>MktCap</th><th>Close</th><th>Stop</th><th>T1</th><th>T2</th><th>ConfVol</th><th>AvgVol20</th><th>Avg$Vol20</th></tr></thead>
