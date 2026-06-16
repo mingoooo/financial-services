@@ -12,8 +12,10 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, asdict
 from pathlib import Path
+from http.cookiejar import CookieJar
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+import urllib.parse
+from urllib.request import HTTPCookieProcessor, Request, build_opener, urlopen
 
 from finvizfinance.screener.overview import Overview
 
@@ -22,11 +24,13 @@ WIKI_SP500 = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
 NASDAQ_LIST = "https://www.nasdaqtrader.com/dynamic/symdir/nasdaqlisted.txt"
 OTHER_LIST = "https://www.nasdaqtrader.com/dynamic/symdir/otherlisted.txt"
 USER_AGENT = "Mozilla/5.0 (compatible; bullish-reversal-scanner/1.0)"
-TIMEOUT = 8
+TIMEOUT = 20
 CACHE_DIR = Path(".cache/bullish-reversal-scanner")
 DEFAULT_SYMBOLS_FILE = Path("scripts/high_liquidity_us_symbols.txt")
 BAD_SUFFIXES = ("-W", "-U", "-R", "-RT", "WS", "WT")
 NO_CACHE = False
+YAHOO_COOKIE_JAR = CookieJar()
+YAHOO_OPENER = build_opener(HTTPCookieProcessor(YAHOO_COOKIE_JAR))
 
 
 @dataclass
@@ -100,10 +104,40 @@ def save_cache(kind: str, key: str, payload) -> None:
     cache_path(kind, key).write_text(json.dumps(payload), encoding="utf-8")
 
 
+def warm_yahoo_session() -> None:
+    warm_url = "https://finance.yahoo.com/quote/AAPL"
+    req = Request(warm_url, headers={
+        "User-Agent": USER_AGENT,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Cache-Control": "no-cache",
+    })
+    with YAHOO_OPENER.open(req, timeout=TIMEOUT) as resp:
+        resp.read(256)
+
+
 def fetch_json(url: str) -> dict:
-    req = Request(url, headers={"User-Agent": USER_AGENT})
-    with urlopen(req, timeout=TIMEOUT) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    headers = {
+        "User-Agent": USER_AGENT,
+        "Accept": "application/json,text/plain,*/*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://finance.yahoo.com/",
+        "Origin": "https://finance.yahoo.com",
+        "Connection": "keep-alive",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
+    }
+    req = Request(url, headers=headers)
+    try:
+        with YAHOO_OPENER.open(req, timeout=TIMEOUT) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except HTTPError as exc:
+        if exc.code == 403:
+            warm_yahoo_session()
+            req_retry = Request(url, headers=headers)
+            with YAHOO_OPENER.open(req_retry, timeout=TIMEOUT) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        raise
 
 
 def fetch_default_symbols() -> list[str]:
@@ -823,10 +857,10 @@ def build_price_chart_svg(symbol: str, candidate_date: str, confirm_date: str, s
     candles = fetch_candles(symbol)[-100:]
     if not candles:
         return ""
-    width = 860
+    width = 980
     height = 420
     pad_left = 56
-    pad_right = 16
+    pad_right = 128
     pad_top = 20
     pad_bottom = 28
     gap = 18
@@ -872,6 +906,7 @@ def build_price_chart_svg(symbol: str, candidate_date: str, confirm_date: str, s
     parts.append('<rect x="0" y="0" width="100%" height="100%" fill="#0b1020"/>')
     parts.append(f'<rect x="{pad_left}" y="{pad_top}" width="{plot_width}" height="{price_height}" fill="#0f172a" rx="8"/>')
     parts.append(f'<rect x="{pad_left}" y="{volume_top}" width="{plot_width}" height="{volume_height}" fill="#0f172a" rx="8"/>')
+    parts.append(f'<rect x="{width-120}" y="{pad_top}" width="104" height="{price_height}" fill="#0b1020" rx="8"/>')
 
     for level in range(5):
         gy = pad_top + price_height * level / 4
@@ -887,8 +922,6 @@ def build_price_chart_svg(symbol: str, candidate_date: str, confirm_date: str, s
     for label, level, color in sr_specs:
         sy = y_price(level)
         parts.append(f'<line x1="{pad_left}" y1="{sy:.1f}" x2="{width-pad_right}" y2="{sy:.1f}" stroke="{color}" stroke-dasharray="6 4" stroke-width="1.2" opacity="0.9"/>')
-        parts.append(f'<rect x="{width-pad_right-88}" y="{sy-9:.1f}" width="82" height="18" rx="8" fill="#0b1020" stroke="{color}" stroke-width="1"/>')
-        parts.append(f'<text x="{width-pad_right-47}" y="{sy+4:.1f}" fill="{color}" font-size="10" text-anchor="middle">{label} {level:.2f}</text>')
 
     trade_specs = []
     if stop_loss is not None:
@@ -900,8 +933,6 @@ def build_price_chart_svg(symbol: str, candidate_date: str, confirm_date: str, s
     for label, level, color in trade_specs:
         ty = y_price(level)
         parts.append(f'<line x1="{pad_left}" y1="{ty:.1f}" x2="{width-pad_right}" y2="{ty:.1f}" stroke="{color}" stroke-dasharray="3 3" stroke-width="1.1" opacity="0.95"/>')
-        parts.append(f'<rect x="{pad_left+4}" y="{ty-9:.1f}" width="70" height="18" rx="8" fill="#0b1020" stroke="{color}" stroke-width="1"/>')
-        parts.append(f'<text x="{pad_left+39}" y="{ty+4:.1f}" fill="{color}" font-size="10" text-anchor="middle">{label} {level:.2f}</text>')
 
     for level in range(3):
         gy = volume_top + volume_height * level / 2
@@ -909,16 +940,67 @@ def build_price_chart_svg(symbol: str, candidate_date: str, confirm_date: str, s
         parts.append(f'<line x1="{pad_left}" y1="{gy:.1f}" x2="{width-pad_right}" y2="{gy:.1f}" stroke="#1f2b40" stroke-width="1"/>')
         parts.append(f'<text x="10" y="{gy+4:.1f}" fill="#64748b" font-size="10">{int(vol_label):,}</text>')
 
+    sma_label_specs = []
     for period in sma_periods:
         series = sma_series[period]
         points = []
+        last_visible_value = None
         for i, value in enumerate(series):
             if value is None:
                 continue
             x = pad_left + step * i + step / 2
             points.append(f"{x:.1f},{y_price(value):.1f}")
+            last_visible_value = value
         if len(points) >= 2:
             parts.append(f'<polyline fill="none" stroke="{sma_colors[period]}" stroke-width="1.4" points="{" ".join(points)}" opacity="0.95"/>')
+        latest = sma_latest.get(period)
+        if latest is not None:
+            sma_label_specs.append((period, latest, y_price(last_visible_value if last_visible_value is not None else latest), sma_colors[period]))
+
+    sma_label_specs.sort(key=lambda item: item[2])
+    adjusted_specs = []
+    min_gap = 18.0
+    last_y = None
+    for period, latest, base_y, color in sma_label_specs:
+        y_pos = base_y
+        if last_y is not None and y_pos - last_y < min_gap:
+            y_pos = last_y + min_gap
+        y_pos = min(max(y_pos, pad_top + 10), pad_top + price_height - 10)
+        adjusted_specs.append((period, latest, y_pos, color))
+        last_y = y_pos
+
+    last_price = candles[-1].close
+    current_specs = [("Last", last_price, y_price(last_price), "#e5eefc")]
+
+    resistance_specs = [(label, level, y_price(level), color) for label, level, color in sr_specs if label.startswith("R")]
+    support_specs = [(label, level, y_price(level), color) for label, level, color in sr_specs if label.startswith("S")]
+    trade_label_specs = [(label, level, y_price(level), color) for label, level, color in trade_specs]
+    sma_label_specs_sidebar = [(f"SMA{period}", latest, y_pos, color) for period, latest, y_pos, color in adjusted_specs]
+
+    resistance_specs.sort(key=lambda item: item[1], reverse=True)
+    support_specs.sort(key=lambda item: item[1], reverse=True)
+    sma_label_specs_sidebar.sort(key=lambda item: item[1], reverse=True)
+    trade_label_specs.sort(key=lambda item: item[1], reverse=True)
+
+    right_label_specs = resistance_specs + sma_label_specs_sidebar + current_specs + support_specs + trade_label_specs
+
+    right_label_specs.sort(key=lambda item: item[2])
+    packed_specs = []
+    min_gap = 18.0
+    last_y = None
+    for label, level, base_y, color in right_label_specs:
+        y_pos = base_y
+        if last_y is not None and y_pos - last_y < min_gap:
+            y_pos = last_y + min_gap
+        y_pos = min(max(y_pos, pad_top + 10), pad_top + price_height - 10)
+        packed_specs.append((label, level, y_pos, color))
+        last_y = y_pos
+
+    for label, level, y_pos, color in packed_specs:
+        box_x = width - 116
+        text = f"{label} {level:.2f}"
+        parts.append(f'<rect x="{box_x}" y="{y_pos-8:.1f}" width="106" height="16" rx="8" fill="#0b1020" stroke="{color}" stroke-width="1"/>')
+        parts.append(f'<text x="{box_x+53}" y="{y_pos+3:.1f}" fill="{color}" font-size="10" text-anchor="middle">{text}</text>')
 
     cand = candidate_date
     conf = confirm_date
@@ -966,30 +1048,6 @@ def build_price_chart_svg(symbol: str, candidate_date: str, confirm_date: str, s
         label = time.strftime("%m-%d", time.gmtime(candle.ts))
         parts.append(f'<text x="{x:.1f}" y="{height-8}" fill="#94a3b8" font-size="10" text-anchor="middle">{label}</text>')
 
-    parts.append(f'<text x="{pad_left}" y="14" fill="#e5eefc" font-size="13" font-weight="600">{html.escape(symbol)} - Candlestick</text>')
-    parts.append(f'<text x="{pad_left+170}" y="14" fill="#94a3b8" font-size="11">最近 {len(candles)} 根日线</text>')
-    if pattern:
-        parts.append(f'<text x="{pad_left}" y="32" fill="#93c5fd" font-size="11">形态: {html.escape(pattern)}</text>')
-    if score is not None:
-        parts.append(f'<text x="{pad_left+250}" y="32" fill="#c4b5fd" font-size="11">Score: {score:.0f}</text>')
-    parts.append(f'<text x="{width-236}" y="14" fill="#f59e0b" font-size="11">候选日: {html.escape(candidate_date)}</text>')
-    parts.append(f'<text x="{width-110}" y="14" fill="#60a5fa" font-size="11">确认日: {html.escape(confirm_date)}</text>')
-    if confirmation_reason:
-        parts.append(f'<text x="{pad_left}" y="46" fill="#94a3b8" font-size="10">确认原因: {html.escape(confirmation_reason)[:90]}</text>')
-    sma_badges = [(10, 140), (20, 235), (50, 330), (200, 435)]
-    for period, x_pos in sma_badges:
-        color = sma_colors[period]
-        latest = sma_latest.get(period)
-        label = f"SMA{period} {latest:.2f}" if latest is not None else f"SMA{period} n/a"
-        parts.append(f'<rect x="{x_pos}" y="56" width="88" height="16" rx="8" fill="#0b1020" stroke="{color}" stroke-width="1"/>')
-        parts.append(f'<text x="{x_pos+44}" y="67" fill="{color}" font-size="10" text-anchor="middle">{label}</text>')
-    parts.append(f'<text x="{pad_left}" y="{volume_top-6}" fill="#94a3b8" font-size="11">Volume</text>')
-    if sr_specs:
-        legend = ' · '.join(f'{label} {level:.2f}' for label, level, _ in sr_specs)
-        trade_legend = ' · '.join(f'{label} {level:.2f}' for label, level, _ in trade_specs)
-        sma_legend = ' · '.join(f'SMA{period}' for period in sma_periods)
-        full_legend = legend + ((' · ' + trade_legend) if trade_legend else '') + ((' · ' + sma_legend) if sma_legend else '')
-        parts.append(f'<text x="{pad_left+90}" y="{volume_top-6}" fill="#94a3b8" font-size="10">{full_legend}</text>')
     parts.append('</svg>')
     return ''.join(parts)
 
@@ -1013,7 +1071,7 @@ def render_html_report(results: list[ScanResult], output_path: str, args: argpar
     rows = []
     for r in results:
         rows.append(f"""<tr>
-<td>{html.escape(r.symbol)}</td>
+<td><a href="#chart-{html.escape(r.symbol)}">{html.escape(r.symbol)}</a></td>
 <td>{html.escape(r.pattern)}</td>
 <td>{html.escape(r.pattern_strength or "-")}</td>
 <td>{(r.score or 0):.0f}</td>
@@ -1030,11 +1088,12 @@ def render_html_report(results: list[ScanResult], output_path: str, args: argpar
 </tr>""")
     chart_blocks = []
     for r in results:
-        chart_blocks.append(f"""<section class="card">
+        chart_blocks.append(f"""<section class="card" id="chart-{html.escape(r.symbol)}">
 <h3>{html.escape(r.symbol)} <span>{html.escape(r.pattern)}</span></h3>
 <div class="meta">确认日 {html.escape(r.confirm_date)} · 市值 {html.escape(format_market_cap(r.market_cap))} · 强度 {html.escape(r.pattern_strength or "-")} · 评分 {(r.score or 0):.0f}</div>
 <div class="meta">确认原因：{html.escape(r.confirmation_reason or "-")}</div>
 <div class="meta">评分明细：{html.escape(r.score_detail or "-")}</div>
+<div class="meta">S/R：S1/S2/R1/R2 自动识别；交易位：Stop/T1/T2；均线数值显示在图右侧</div>
 <div class="chart">{r.chart_svg or ''}</div>
 </section>""")
     title = f"Confirmed {args.side.title()} Reversals ({len(results)})"
@@ -1057,6 +1116,8 @@ h3{{margin:0 0 6px;font-size:18px;}}
 h3 span{{font-size:13px;color:#93c5fd;font-weight:500;margin-left:8px;}}
 .meta{{color:#94a3b8;font-size:12px;margin-bottom:10px;}}
 .chart{{overflow:auto;background:#0b1020;border-radius:10px;padding:8px;}}
+a{{color:#93c5fd;text-decoration:none;}}
+a:hover{{text-decoration:underline;}}
 </style>
 </head>
 <body>

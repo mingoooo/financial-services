@@ -126,6 +126,7 @@ HTML 报表额外包含：
 - `--recent-confirm-days`：只保留最近 N 个自然日确认的信号
 - `--no-require-confirm-volume`：关闭确认日放量要求
 - `--scan-retries`：单只股票失败重试次数
+- 网络请求默认超时已调长，降低慢响应导致的失败
 - `--no-cache`：本次运行不读写本地缓存
 - `--html`：输出 HTML 报表
 - `--json`：输出 JSON
