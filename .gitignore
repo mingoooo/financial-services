@@ -16,6 +16,7 @@ venv/
 env/
 __pycache__/
 *.pyc
+.venv/
 
 # Build outputs
 dist/
@@ -36,6 +37,7 @@ coverage/
 .coverage
 *.cover
 .pytest_cache/
+.cache/
 
 # Package files
 *.egg-info/
