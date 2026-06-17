@@ -15,7 +15,7 @@ on:
       universe:
         description: Scan universe
         required: false
-        default: us
+        default: sp500
         type: choice
         options:
           - us
@@ -74,7 +74,7 @@ on:
       deploy_pages:
         description: Deploy to GitHub Pages if Pages is enabled
         required: false
-        default: false
+        default: true
         type: boolean
   schedule:
     - cron: '15 22 * * 1-5'
