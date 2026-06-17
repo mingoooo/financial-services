@@ -1070,7 +1070,7 @@ def render_html_report(results: list[ScanResult], output_path: str, args: argpar
     for result in results:
         result.chart_svg = build_price_chart_svg(result.symbol, result.candidate_date, result.confirm_date, result.stop_loss, result.first_target, result.second_target, result.pattern, result.confirmation_reason, result.score)
     rows = []
-    mobile_cards = []
+    mobile_rows = []
     for r in results:
         rows.append(f"""<tr>
 <td data-label="Symbol"><a href="#chart-{html.escape(r.symbol)}">{html.escape(r.symbol)}</a></td>
@@ -1088,16 +1088,11 @@ def render_html_report(results: list[ScanResult], output_path: str, args: argpar
 <td data-label="AvgVol20">{int(r.avg_volume_20)}</td>
 <td data-label="Avg$Vol20">{int(r.avg_dollar_volume_20)}</td>
 </tr>""")
-        mobile_cards.append(f"""<a class="mobile-row" href="#chart-{html.escape(r.symbol)}">
-<div class="mobile-head">
-<span class="mobile-symbol">{html.escape(r.symbol)}</span>
-<span class="mobile-side">{html.escape((r.side or '-').upper())}</span>
-<span class="mobile-score">Score {(r.score or 0):.0f}</span>
-</div>
-<div class="mobile-line">{html.escape(r.pattern)}</div>
-<div class="mobile-line">Confirm {html.escape(r.confirm_date)} · MktCap {html.escape(format_market_cap(r.market_cap))}</div>
-<div class="mobile-line">Stop {r.stop_loss:.2f} · T1 {r.first_target:.2f} · T2 {r.second_target:.2f}</div>
-</a>""")
+        mobile_rows.append(f"""<tr>
+<td class="symbol-col"><a class="mobile-link" href="#chart-{html.escape(r.symbol)}">{html.escape(r.symbol)}</a><span class="mobile-sub">{html.escape(r.confirm_date)}</span></td>
+<td class="signal-col">{html.escape(r.pattern)}<span class="mobile-sub">{html.escape(format_market_cap(r.market_cap))} · <span class="mobile-badge">{html.escape((r.side or '-').upper())}</span><span class="mobile-badge">S {(r.score or 0):.0f}</span></span></td>
+<td class="risk-col"><div class="mobile-risk">Stop {r.stop_loss:.2f}</div><div class="mobile-risk">T1 {r.first_target:.2f}</div><div class="mobile-risk">T2 {r.second_target:.2f}</div></td>
+</tr>""")
     chart_blocks = []
     for r in results:
         chart_blocks.append(f"""<section class="card" id="chart-{html.escape(r.symbol)}">
@@ -1123,13 +1118,20 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgro
 h1{{margin:0 0 8px;font-size:clamp(24px,4vw,32px);}}
 p.sub{{margin:0 0 20px;color:#94a3b8;font-size:14px;}}
 .card{{background:#111827;border:1px solid #243041;border-radius:14px;padding:16px;margin:16px 0;box-shadow:0 8px 24px rgba(0,0,0,.18);}}
-.mobile-summary{{display:none;}}
-.mobile-list{{display:grid;gap:10px;}}
-.mobile-row{{display:block;background:#0b1220;border:1px solid #243041;border-radius:12px;padding:12px;color:#e2e8f0;text-decoration:none;}}
-.mobile-head{{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;}}
-.mobile-symbol{{font-weight:700;font-size:16px;color:#93c5fd;}}
-.mobile-side,.mobile-score{{font-size:12px;color:#cbd5e1;background:#172033;border-radius:999px;padding:2px 8px;}}
-.mobile-line{{font-size:12px;color:#94a3b8;margin-top:4px;}}
+.mobile-summary{{display:none;overflow:hidden;}}
+.mobile-list{{width:100%;overflow:hidden;border:1px solid #243041;border-radius:12px;background:#0b1220;}}
+.mobile-table{{width:100%;border-collapse:collapse;table-layout:fixed;}}
+.mobile-table th,.mobile-table td{{padding:8px 8px;border-bottom:1px solid #243041;font-size:12px;text-align:left;vertical-align:top;}}
+.mobile-table th{{background:#172033;color:#cbd5e1;font-weight:600;}}
+.mobile-table tbody tr:last-child td{{border-bottom:none;}}
+.mobile-table .symbol-col{{width:72px;position:sticky;left:0;background:#0b1220;z-index:2;box-shadow:6px 0 10px rgba(2,6,23,.35);}}
+.mobile-table thead .symbol-col{{background:#172033;z-index:3;}}
+.mobile-table .signal-col{{width:auto;}}
+.mobile-table .risk-col{{width:108px;}}
+.mobile-link{{color:#93c5fd;text-decoration:none;font-weight:700;display:inline-block;}}
+.mobile-sub{{display:block;color:#94a3b8;font-size:11px;line-height:1.35;margin-top:2px;}}
+.mobile-badge{{display:inline-block;font-size:11px;color:#cbd5e1;background:#172033;border-radius:999px;padding:1px 6px;margin-left:4px;}}
+.mobile-risk{{color:#cbd5e1;font-variant-numeric:tabular-nums;line-height:1.4;}}
 .table-card{{padding:0;overflow:hidden;}}
 .table-wrap{{width:100%;overflow:auto;-webkit-overflow-scrolling:touch;}}
 table{{width:100%;border-collapse:collapse;background:#111827;min-width:980px;}}
@@ -1157,10 +1159,8 @@ tr:hover td:first-child{{background:#0b1220;}}
   .mobile-summary{{display:block;}}
   .table-card{{display:none !important;}}
   .chart{{padding:6px;}}
-  .mobile-row{{padding:12px 12px 10px;}}
-  .mobile-head{{justify-content:space-between;align-items:flex-start;gap:6px;}}
-  .mobile-symbol{{font-size:17px;}}
-  .mobile-line{{font-size:12px;line-height:1.45;}}
+  .mobile-list{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .mobile-table{min-width:100%;}
 }}
 </style>
 </head>
@@ -1177,7 +1177,7 @@ tr:hover td:first-child{{background:#0b1220;}}
 </section>
 <section class="card mobile-summary">
 <h3>结果列表</h3>
-<div class="mobile-list">{''.join(mobile_cards)}</div>
+<div class="mobile-list"><table class="mobile-table"><thead><tr><th class="symbol-col">代码</th><th class="signal-col">信号</th><th class="risk-col">交易计划</th></tr></thead><tbody>{''.join(mobile_rows)}</tbody></table></div>
 </section>
 <section class="card table-card">
 <div class="table-wrap">
