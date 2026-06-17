@@ -72,6 +72,7 @@ class ScanResult:
     confirmation_reason: str | None = None
     score: float | None = None
     score_detail: str | None = None
+    side: str | None = None
     chart_svg: str | None = None
 
 
@@ -854,7 +855,7 @@ def detect_support_resistance_levels(candles: list[Candle], lookback: int = 50) 
 
 
 def build_price_chart_svg(symbol: str, candidate_date: str, confirm_date: str, stop_loss: float | None = None, first_target: float | None = None, second_target: float | None = None, pattern: str | None = None, confirmation_reason: str | None = None, score: float | None = None) -> str:
-    candles = fetch_candles(symbol)[-100:]
+    candles = fetch_candles(symbol)[-80:]
     if not candles:
         return ""
     width = 980
@@ -1069,6 +1070,7 @@ def render_html_report(results: list[ScanResult], output_path: str, args: argpar
     for result in results:
         result.chart_svg = build_price_chart_svg(result.symbol, result.candidate_date, result.confirm_date, result.stop_loss, result.first_target, result.second_target, result.pattern, result.confirmation_reason, result.score)
     rows = []
+    mobile_cards = []
     for r in results:
         rows.append(f"""<tr>
 <td data-label="Symbol"><a href="#chart-{html.escape(r.symbol)}">{html.escape(r.symbol)}</a></td>
@@ -1086,6 +1088,16 @@ def render_html_report(results: list[ScanResult], output_path: str, args: argpar
 <td data-label="AvgVol20">{int(r.avg_volume_20)}</td>
 <td data-label="Avg$Vol20">{int(r.avg_dollar_volume_20)}</td>
 </tr>""")
+        mobile_cards.append(f"""<a class="mobile-row" href="#chart-{html.escape(r.symbol)}">
+<div class="mobile-head">
+<span class="mobile-symbol">{html.escape(r.symbol)}</span>
+<span class="mobile-side">{html.escape((r.side or '-').upper())}</span>
+<span class="mobile-score">Score {(r.score or 0):.0f}</span>
+</div>
+<div class="mobile-line">{html.escape(r.pattern)}</div>
+<div class="mobile-line">Confirm {html.escape(r.confirm_date)} · MktCap {html.escape(format_market_cap(r.market_cap))}</div>
+<div class="mobile-line">Stop {r.stop_loss:.2f} · T1 {r.first_target:.2f} · T2 {r.second_target:.2f}</div>
+</a>""")
     chart_blocks = []
     for r in results:
         chart_blocks.append(f"""<section class="card" id="chart-{html.escape(r.symbol)}">
@@ -1111,6 +1123,13 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgro
 h1{{margin:0 0 8px;font-size:clamp(24px,4vw,32px);}}
 p.sub{{margin:0 0 20px;color:#94a3b8;font-size:14px;}}
 .card{{background:#111827;border:1px solid #243041;border-radius:14px;padding:16px;margin:16px 0;box-shadow:0 8px 24px rgba(0,0,0,.18);}}
+.mobile-summary{{display:none;}}
+.mobile-list{{display:grid;gap:10px;}}
+.mobile-row{{display:block;background:#0b1220;border:1px solid #243041;border-radius:12px;padding:12px;color:#e2e8f0;text-decoration:none;}}
+.mobile-head{{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;}}
+.mobile-symbol{{font-weight:700;font-size:16px;color:#93c5fd;}}
+.mobile-side,.mobile-score{{font-size:12px;color:#cbd5e1;background:#172033;border-radius:999px;padding:2px 8px;}}
+.mobile-line{{font-size:12px;color:#94a3b8;margin-top:4px;}}
 .table-card{{padding:0;overflow:hidden;}}
 .table-wrap{{width:100%;overflow:auto;-webkit-overflow-scrolling:touch;}}
 table{{width:100%;border-collapse:collapse;background:#111827;min-width:980px;}}
@@ -1120,25 +1139,22 @@ tr:hover td{{background:#0b1220;}}
 h3{{margin:0 0 6px;font-size:18px;}}
 h3 span{{font-size:13px;color:#93c5fd;font-weight:500;margin-left:8px;}}
 .meta{{color:#94a3b8;font-size:12px;margin-bottom:8px;word-break:break-word;}}
-.chart{{overflow:auto;background:#0b1020;border-radius:10px;padding:8px;}}
+.chart{{overflow:auto;background:#0b1020;border-radius:10px;padding:8px;scroll-behavior:auto;}}
 .chart svg{{display:block;max-width:none;height:auto;}}
 a{{color:#93c5fd;text-decoration:none;}}
 a:hover{{text-decoration:underline;}}
+th:first-child, td:first-child{{position:sticky;left:0;z-index:2;background:#111827;box-shadow:6px 0 10px rgba(2,6,23,.35);border-right:1px solid #243041;}}
+th:first-child{{z-index:4;background:#172033;}}
+th{{box-shadow:0 1px 0 #243041;}}
+tr:hover td:first-child{{background:#0b1220;}}
 @media (max-width: 900px){{
   body{{padding:12px;}}
   .card{{padding:14px;}}
   table{{min-width:820px;}}
 }}
 @media (max-width: 680px){{
-  .table-card{{padding:12px;}}
-  table, thead, tbody, th, td, tr{{display:block;}}
-  table{{min-width:0;background:transparent;}}
-  thead{{display:none;}}
-  tbody{{display:grid;gap:12px;}}
-  tr{{background:#111827;border:1px solid #243041;border-radius:12px;padding:10px;}}
-  td{{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px dashed #243041;font-size:13px;}}
-  td:last-child{{border-bottom:none;}}
-  td::before{{content:attr(data-label);color:#94a3b8;font-size:12px;flex:0 0 92px;}}
+  .mobile-summary{{display:block;}}
+  .table-card{{display:none;}}
   .chart{{padding:6px;}}
 }}
 </style>
@@ -1154,6 +1170,10 @@ a:hover{{text-decoration:underline;}}
 <div class="meta">参数：min_market_cap={args.min_market_cap} · min_price={args.min_price} · min_avg_volume={args.min_avg_volume} · min_last_volume={args.min_last_volume} · top_dollar_volume={args.top_dollar_volume} · recent_confirm_days={args.recent_confirm_days} · require_confirm_volume={args.require_confirm_volume}</div>
 <div class="meta">输出文件：{html.escape(output_path)}</div>
 </section>
+<section class="card mobile-summary">
+<h3>结果列表</h3>
+<div class="mobile-list">{''.join(mobile_cards)}</div>
+</section>
 <section class="card table-card">
 <div class="table-wrap">
 <table>
@@ -1163,6 +1183,21 @@ a:hover{{text-decoration:underline;}}
 </div>
 </section>
 {''.join(chart_blocks) if chart_blocks else '<section class="card">No confirmed bullish reversal signals found.</section>'}
+<script>
+(function(){{
+  function scrollChartsToRight(){{
+    document.querySelectorAll('.chart-wrap').forEach(function(el){{
+      el.scrollLeft = el.scrollWidth;
+    }});
+  }}
+  if (document.readyState === "loading") {{
+    document.addEventListener("DOMContentLoaded", scrollChartsToRight);
+  }} else {{
+    scrollChartsToRight();
+  }}
+  window.addEventListener("load", scrollChartsToRight);
+}})();
+</script>
 </div>
 </body>
 </html>"""
