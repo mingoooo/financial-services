@@ -1159,8 +1159,8 @@ tr:hover td:first-child{{background:#0b1220;}}
   .mobile-summary{{display:block;}}
   .table-card{{display:none !important;}}
   .chart{{padding:6px;}}
-  .mobile-list{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-  .mobile-table{min-width:100%;}
+  .mobile-list{{overflow-x:auto;-webkit-overflow-scrolling:touch;}}
+  .mobile-table{{min-width:100%;}}
 }}
 </style>
 </head>
