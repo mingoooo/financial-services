@@ -1071,20 +1071,20 @@ def render_html_report(results: list[ScanResult], output_path: str, args: argpar
     rows = []
     for r in results:
         rows.append(f"""<tr>
-<td><a href="#chart-{html.escape(r.symbol)}">{html.escape(r.symbol)}</a></td>
-<td>{html.escape(r.pattern)}</td>
-<td>{html.escape(r.pattern_strength or "-")}</td>
-<td>{(r.score or 0):.0f}</td>
-<td>{html.escape(r.candidate_date)}</td>
-<td>{html.escape(r.confirm_date)}</td>
-<td>{html.escape(format_market_cap(r.market_cap))}</td>
-<td>{r.confirm_close:.2f}</td>
-<td>{r.stop_loss:.2f}</td>
-<td>{r.first_target:.2f}</td>
-<td>{r.second_target:.2f}</td>
-<td>{int(r.confirm_volume)}</td>
-<td>{int(r.avg_volume_20)}</td>
-<td>{int(r.avg_dollar_volume_20)}</td>
+<td data-label="Symbol"><a href="#chart-{html.escape(r.symbol)}">{html.escape(r.symbol)}</a></td>
+<td data-label="Pattern">{html.escape(r.pattern)}</td>
+<td data-label="Strength">{html.escape(r.pattern_strength or "-")}</td>
+<td data-label="Score">{(r.score or 0):.0f}</td>
+<td data-label="Candidate">{html.escape(r.candidate_date)}</td>
+<td data-label="Confirm">{html.escape(r.confirm_date)}</td>
+<td data-label="MktCap">{html.escape(format_market_cap(r.market_cap))}</td>
+<td data-label="Close">{r.confirm_close:.2f}</td>
+<td data-label="Stop">{r.stop_loss:.2f}</td>
+<td data-label="T1">{r.first_target:.2f}</td>
+<td data-label="T2">{r.second_target:.2f}</td>
+<td data-label="ConfVol">{int(r.confirm_volume)}</td>
+<td data-label="AvgVol20">{int(r.avg_volume_20)}</td>
+<td data-label="Avg$Vol20">{int(r.avg_dollar_volume_20)}</td>
 </tr>""")
     chart_blocks = []
     for r in results:
@@ -1104,23 +1104,47 @@ def render_html_report(results: list[ScanResult], output_path: str, args: argpar
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(title)}</title>
 <style>
-body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;margin:0;padding:24px;}}
-h1{{margin:0 0 8px;font-size:28px;}}
-p.sub{{margin:0 0 20px;color:#94a3b8;}}
-.card{{background:#111827;border:1px solid #243041;border-radius:14px;padding:16px;margin:18px 0;box-shadow:0 8px 24px rgba(0,0,0,.18);}}
-table{{width:100%;border-collapse:collapse;background:#111827;border-radius:12px;overflow:hidden;}}
-th,td{{padding:10px 12px;border-bottom:1px solid #243041;text-align:left;font-size:13px;}}
-th{{background:#172033;color:#cbd5e1;position:sticky;top:0;}}
+:root{{color-scheme:dark;}}
+*{{box-sizing:border-box;}}
+body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;margin:0;padding:16px;line-height:1.45;}}
+.page{{max-width:1400px;margin:0 auto;}}
+h1{{margin:0 0 8px;font-size:clamp(24px,4vw,32px);}}
+p.sub{{margin:0 0 20px;color:#94a3b8;font-size:14px;}}
+.card{{background:#111827;border:1px solid #243041;border-radius:14px;padding:16px;margin:16px 0;box-shadow:0 8px 24px rgba(0,0,0,.18);}}
+.table-card{{padding:0;overflow:hidden;}}
+.table-wrap{{width:100%;overflow:auto;-webkit-overflow-scrolling:touch;}}
+table{{width:100%;border-collapse:collapse;background:#111827;min-width:980px;}}
+th,td{{padding:10px 12px;border-bottom:1px solid #243041;text-align:left;font-size:13px;vertical-align:top;}}
+th{{background:#172033;color:#cbd5e1;position:sticky;top:0;z-index:1;}}
 tr:hover td{{background:#0b1220;}}
 h3{{margin:0 0 6px;font-size:18px;}}
 h3 span{{font-size:13px;color:#93c5fd;font-weight:500;margin-left:8px;}}
-.meta{{color:#94a3b8;font-size:12px;margin-bottom:10px;}}
+.meta{{color:#94a3b8;font-size:12px;margin-bottom:8px;word-break:break-word;}}
 .chart{{overflow:auto;background:#0b1020;border-radius:10px;padding:8px;}}
+.chart svg{{display:block;max-width:none;height:auto;}}
 a{{color:#93c5fd;text-decoration:none;}}
 a:hover{{text-decoration:underline;}}
+@media (max-width: 900px){{
+  body{{padding:12px;}}
+  .card{{padding:14px;}}
+  table{{min-width:820px;}}
+}}
+@media (max-width: 680px){{
+  .table-card{{padding:12px;}}
+  table, thead, tbody, th, td, tr{{display:block;}}
+  table{{min-width:0;background:transparent;}}
+  thead{{display:none;}}
+  tbody{{display:grid;gap:12px;}}
+  tr{{background:#111827;border:1px solid #243041;border-radius:12px;padding:10px;}}
+  td{{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px dashed #243041;font-size:13px;}}
+  td:last-child{{border-bottom:none;}}
+  td::before{{content:attr(data-label);color:#94a3b8;font-size:12px;flex:0 0 92px;}}
+  .chart{{padding:6px;}}
+}}
 </style>
 </head>
 <body>
+<div class="page">
 <h1>最近{args.recent_confirm_days}日已确认{("双向" if args.side == "both" else ("看涨" if args.side == "bullish" else "看跌"))}反转信号</h1>
 <p class="sub">按评分、市值与流动性排序</p>
 <section class="card">
@@ -1130,13 +1154,16 @@ a:hover{{text-decoration:underline;}}
 <div class="meta">参数：min_market_cap={args.min_market_cap} · min_price={args.min_price} · min_avg_volume={args.min_avg_volume} · min_last_volume={args.min_last_volume} · top_dollar_volume={args.top_dollar_volume} · recent_confirm_days={args.recent_confirm_days} · require_confirm_volume={args.require_confirm_volume}</div>
 <div class="meta">输出文件：{html.escape(output_path)}</div>
 </section>
-<section class="card">
+<section class="card table-card">
+<div class="table-wrap">
 <table>
 <thead><tr><th>Symbol</th><th>Pattern</th><th>Strength</th><th>Score</th><th>Candidate</th><th>Confirm</th><th>MktCap</th><th>Close</th><th>Stop</th><th>T1</th><th>T2</th><th>ConfVol</th><th>AvgVol20</th><th>Avg$Vol20</th></tr></thead>
 <tbody>{''.join(rows)}</tbody>
 </table>
+</div>
 </section>
 {''.join(chart_blocks) if chart_blocks else '<section class="card">No confirmed bullish reversal signals found.</section>'}
+</div>
 </body>
 </html>"""
     Path(output_path).write_text(doc, encoding='utf-8')
