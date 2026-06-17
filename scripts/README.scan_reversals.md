@@ -180,3 +180,21 @@ python3 scripts/scan_reversals.py \
 - 定时运行时间为：**工作日 22:15 UTC**，并在 workflow 内用纽约时间做收盘后窗口判断
 
 说明：如果仓库尚未开启 Pages，workflow 仍会成功生成 artifact；只有在手动启用 `deploy_pages=true` 时才尝试发布 Pages。
+
+## GitHub Actions 可调参数
+
+手动运行 `Scan Reversals` workflow 时，可以在 GitHub 页面直接设置这些参数：
+
+- `side`
+- `universe`
+- `include_etfs`
+- `min_market_cap`
+- `min_price`
+- `min_avg_volume`
+- `min_last_volume`
+- `recent_confirm_days`
+- `workers`
+- `scan_retries`
+- `require_confirm_volume`
+- `no_cache`
+- `deploy_pages`
