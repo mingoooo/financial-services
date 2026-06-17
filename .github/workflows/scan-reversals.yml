@@ -12,6 +12,11 @@ on:
           - both
           - bullish
           - bearish
+      deploy_pages:
+        description: Deploy to GitHub Pages if Pages is enabled
+        required: false
+        default: false
+        type: boolean
   schedule:
     - cron: '15 22 * * 1-5'
 
@@ -24,9 +29,6 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Checkout
@@ -37,9 +39,6 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-
       - name: Decide whether to run now
         id: gate
         shell: bash
@@ -47,15 +46,14 @@ jobs:
           python - <<'PY'
           from datetime import datetime
           from zoneinfo import ZoneInfo
+          import os
 
           now_ny = datetime.now(ZoneInfo("America/New_York"))
           hour = now_ny.hour
           minute = now_ny.minute
           weekday = now_ny.weekday()
-
           should_run = weekday < 5 and ((hour == 17 and minute >= 5) or hour > 17)
-          print(f"NY time: {now_ny.isoformat()}")
-          with open("$GITHUB_OUTPUT", "a", encoding="utf-8") as fh:
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
               fh.write(f"should_run={'true' if should_run else 'false'}\n")
               fh.write(f"ny_time={now_ny.isoformat()}\n")
           PY
@@ -99,13 +97,17 @@ jobs:
             reports/reversal_signals.json
           if-no-files-found: error
 
+      - name: Configure Pages
+        if: (github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true') && github.event.inputs.deploy_pages == 'true'
+        uses: actions/configure-pages@v5
+
       - name: Upload Pages artifact
-        if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
+        if: (github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true') && github.event.inputs.deploy_pages == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: reports/site
 
       - name: Deploy to GitHub Pages
-        if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
+        if: (github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true') && github.event.inputs.deploy_pages == 'true'
         id: deployment
         uses: actions/deploy-pages@v4

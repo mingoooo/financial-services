@@ -172,15 +172,11 @@ python3 scripts/scan_reversals.py \
 
 ## GitHub Pages 查看报告
 
-仓库已配置 GitHub Actions + GitHub Pages：
+仓库已配置 GitHub Actions 工作流：
 
 - Workflow: `.github/workflows/scan-reversals.yml`
-- Pages 输出：`reports/site/index.html`
-
-工作流执行后：
-
-- 最新 HTML 报表会发布到 GitHub Pages
-- 同时 JSON 和 HTML 仍会作为 artifact 上传
+- 默认上传 artifact：`reports/site/index.html` 与 `reports/reversal_signals.json`
+- 可选发布 GitHub Pages：手动触发时把 `deploy_pages` 设为 `true`
 - 定时运行时间为：**工作日 22:15 UTC**，并在 workflow 内用纽约时间做收盘后窗口判断
 
-如果仓库已开启 Pages，运行完成后可以直接在 Actions 页面里的 `github-pages` 环境链接中打开最新报告。
+说明：如果仓库尚未开启 Pages，workflow 仍会成功生成 artifact；只有在手动启用 `deploy_pages=true` 时才尝试发布 Pages。
