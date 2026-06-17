@@ -1106,7 +1106,7 @@ def render_html_report(results: list[ScanResult], output_path: str, args: argpar
 <div class="meta">确认原因：{html.escape(r.confirmation_reason or "-")}</div>
 <div class="meta">评分明细：{html.escape(r.score_detail or "-")}</div>
 <div class="meta">S/R：S1/S2/R1/R2 自动识别；交易位：Stop/T1/T2；均线数值显示在图右侧</div>
-<div class="chart">{r.chart_svg or ''}</div>
+<div class="chart"><div class="chart-wrap">{r.chart_svg or ''}</div></div>
 </section>""")
     title = f"Confirmed {args.side.title()} Reversals ({len(results)})"
     doc = f"""<!doctype html>
@@ -1139,7 +1139,8 @@ tr:hover td{{background:#0b1220;}}
 h3{{margin:0 0 6px;font-size:18px;}}
 h3 span{{font-size:13px;color:#93c5fd;font-weight:500;margin-left:8px;}}
 .meta{{color:#94a3b8;font-size:12px;margin-bottom:8px;word-break:break-word;}}
-.chart{{overflow:auto;background:#0b1020;border-radius:10px;padding:8px;scroll-behavior:auto;}}
+.chart{{overflow:hidden;background:#0b1020;border-radius:10px;padding:8px;}}
+.chart-wrap{{width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scroll-behavior:auto;}}
 .chart svg{{display:block;max-width:none;height:auto;}}
 a{{color:#93c5fd;text-decoration:none;}}
 a:hover{{text-decoration:underline;}}
@@ -1154,8 +1155,12 @@ tr:hover td:first-child{{background:#0b1220;}}
 }}
 @media (max-width: 680px){{
   .mobile-summary{{display:block;}}
-  .table-card{{display:none;}}
+  .table-card{{display:none !important;}}
   .chart{{padding:6px;}}
+  .mobile-row{{padding:12px 12px 10px;}}
+  .mobile-head{{justify-content:space-between;align-items:flex-start;gap:6px;}}
+  .mobile-symbol{{font-size:17px;}}
+  .mobile-line{{font-size:12px;line-height:1.45;}}
 }}
 </style>
 </head>
