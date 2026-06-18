@@ -10,7 +10,7 @@ import statistics
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, asdict
+from dataclasses import asdict
 from pathlib import Path
 from http.cookiejar import CookieJar
 from urllib.error import HTTPError, URLError
@@ -18,6 +18,11 @@ import urllib.parse
 from urllib.request import HTTPCookieProcessor, Request, build_opener, urlopen
 
 from finvizfinance.screener.overview import Overview
+from reversal_lib.models import Candle, PrefilterMeta, ScanResult
+from reversal_lib.data import resolve_prefiltered_symbols
+from reversal_lib.signals import generate_signals
+from reversal_lib.strategy_filters import signal_passes_filters
+from reversal_lib.presets import apply_strategy_preset
 
 API_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=2y&interval=1d&includePrePost=false&events=div%2Csplits"
 WIKI_SP500 = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
@@ -31,49 +36,6 @@ BAD_SUFFIXES = ("-W", "-U", "-R", "-RT", "WS", "WT")
 NO_CACHE = False
 YAHOO_COOKIE_JAR = CookieJar()
 YAHOO_OPENER = build_opener(HTTPCookieProcessor(YAHOO_COOKIE_JAR))
-
-
-@dataclass
-class Candle:
-    ts: int
-    open: float
-    high: float
-    low: float
-    close: float
-    volume: float
-
-
-@dataclass
-class PrefilterMeta:
-    symbol: str
-    name: str | None
-    price: float | None
-    volume: float | None
-    average_volume: float | None
-    market_cap: float | None
-
-
-@dataclass
-class ScanResult:
-    symbol: str
-    pattern: str
-    candidate_date: str
-    confirm_date: str
-    confirm_close: float
-    stop_loss: float
-    first_target: float
-    second_target: float
-    confirm_volume: float
-    avg_volume_20: float
-    avg_dollar_volume_20: float
-    market_cap: float | None
-    confidence: str
-    pattern_strength: str | None = None
-    confirmation_reason: str | None = None
-    score: float | None = None
-    score_detail: str | None = None
-    side: str | None = None
-    chart_svg: str | None = None
 
 
 def log(message: str) -> None:
@@ -1212,9 +1174,16 @@ tr:hover td:first-child{{background:#0b1220;}}
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Scan for confirmed bullish reversal candlestick signals")
     parser.add_argument("--symbols", help="Comma-separated symbol list")
-    parser.add_argument("--universe", choices=["liquid", "sp500", "us"], default="us")
+    parser.add_argument("--preset", choices=["main", "high_quality"])
+    parser.add_argument("--universe", choices=["liquid", "sp500", "us"], default="sp500")
     parser.add_argument("--include-etfs", action="store_true", default=True, help="Include ETFs when using --universe us")
     parser.add_argument("--exclude-etfs", action="store_false", dest="include_etfs", help="Exclude ETFs when using --universe us")
+    parser.add_argument("--etf-groups", default="core")
+    parser.add_argument("--scan-mode", choices=["strategy", "raw"], default="strategy")
+    parser.add_argument("--require-fresh-sma-cross-up", action="store_true", default=True)
+    parser.add_argument("--sma-cross-mode", choices=["either", "20", "50"], default="either")
+    parser.add_argument("--require-rsi-above", type=float, default=50)
+    parser.add_argument("--require-macd-bullish", action="store_true", default=False)
     parser.add_argument("--min-last-volume", type=float, default=50_000, help="Minimum last-day volume required")
     parser.add_argument("--min-market-cap", type=float, default=2_000_000_000, help="Minimum market cap required for Finviz prefilter")
     parser.add_argument("--min-price", type=float, default=1, help="Minimum last price required")
@@ -1227,7 +1196,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--json", dest="json_out")
     parser.add_argument("--recent-confirm-days", type=int, default=2, help="Only keep signals whose confirmation date is within the last N calendar days")
     parser.add_argument("--html", dest="html_out", help="Write an HTML report with summary table and per-symbol daily charts")
-    parser.add_argument("--side", choices=["both", "bullish", "bearish"], default="both", help="Scan bullish, bearish, or both confirmed reversal patterns")
+    parser.add_argument("--side", choices=["both", "bullish", "bearish"], default="bullish", help="Scan bullish, bearish, or both confirmed reversal patterns")
     parser.add_argument("--scan-retries", type=int, default=3, help="Retry transient per-symbol scan failures up to N total attempts")
     parser.add_argument("--no-cache", action="store_true", help="Disable all local cache reads and writes for this run")
     return parser.parse_args()
@@ -1237,6 +1206,9 @@ def main() -> int:
     global NO_CACHE
     started = time.time()
     args = parse_args()
+    preset_options = apply_strategy_preset(vars(args), args.preset)
+    for key, value in preset_options.items():
+        setattr(args, key, value)
     NO_CACHE = args.no_cache
 
     universe_start = time.time()
@@ -1245,20 +1217,10 @@ def main() -> int:
         prefiltered = [PrefilterMeta(symbol=s, name=None, price=None, volume=None, average_volume=None, market_cap=None) for s in symbols if is_supported_symbol(s)]
         log(f"using explicit symbol list: {len(prefiltered)} symbol(s)")
     else:
-        if args.universe == "liquid":
-            symbols = [s for s in fetch_default_symbols() if is_supported_symbol(s)]
-            prefiltered = [PrefilterMeta(symbol=s, name=None, price=None, volume=None, average_volume=None, market_cap=None) for s in symbols]
-            log(f"loaded {len(prefiltered)} symbols from liquid universe file")
-        elif args.universe in {"us", "sp500"}:
-            prefiltered = fetch_finviz_prefilter(args)
-            if args.universe == "sp500":
-                sp500_set = set(fetch_sp500_symbols())
-                prefiltered = [m for m in prefiltered if m.symbol in sp500_set]
-            symbols = [m.symbol for m in prefiltered]
-            log(f"Finviz prefilter kept {len(prefiltered)} symbols for universe={args.universe}, include_etfs={args.include_etfs}")
-        else:
-            symbols = []
-            prefiltered = []
+        etf_groups = [item.strip() for item in args.etf_groups.split(',') if item.strip()] if args.etf_groups else None
+        prefiltered = resolve_prefiltered_symbols(args.universe, include_etfs=args.include_etfs, min_market_cap=args.min_market_cap, min_price=args.min_price, min_avg_volume=args.min_avg_volume, min_last_volume=args.min_last_volume, top_dollar_volume=args.top_dollar_volume, limit=args.limit, etf_groups=etf_groups, range_str='5y')
+        symbols = [m.symbol for m in prefiltered]
+        log(f"resolved {len(prefiltered)} symbols for universe={args.universe}, include_etfs={args.include_etfs}")
     log(f"universe prep completed in {time.time() - universe_start:.1f}s")
 
     if args.top_dollar_volume:
@@ -1274,19 +1236,52 @@ def main() -> int:
     scan_failures: list[str] = []
     log(f"starting Yahoo OHLCV scan with workers={args.workers}")
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
-        futures = {pool.submit(scan_symbol_with_retries, m.symbol, args.require_confirm_volume, m.market_cap, args.scan_retries, args.side): m.symbol for m in prefiltered}
+        futures = {pool.submit(fetch_candles, m.symbol): m for m in prefiltered}
         processed = 0
         matched = 0
         for future in as_completed(futures):
-            symbol = futures[future]
+            meta = futures[future]
             processed += 1
             try:
-                result = future.result()
-                if result:
+                candles = future.result()
+                signals = generate_signals(candles, symbol=meta.symbol, side=args.side, require_confirm_volume=args.require_confirm_volume, market_cap=meta.market_cap, min_r_multiple=2.0)
+                for signal in signals:
+                    if args.scan_mode == 'strategy':
+                        passed, filt_meta = signal_passes_filters(
+                            signal,
+                            candles,
+                            require_fresh_sma_cross_up=args.require_fresh_sma_cross_up,
+                            sma_cross_mode=args.sma_cross_mode,
+                            require_macd_bullish=args.require_macd_bullish,
+                            require_rsi_above=args.require_rsi_above,
+                            require_above_sma200=args.require_above_sma200,
+                        )
+                        if not passed:
+                            continue
+                    result = ScanResult(
+                        symbol=signal.symbol,
+                        pattern=signal.pattern,
+                        candidate_date=signal.candidate_date,
+                        confirm_date=signal.confirm_date,
+                        confirm_close=signal.confirm_close,
+                        stop_loss=signal.stop_loss,
+                        first_target=signal.first_target,
+                        second_target=signal.second_target,
+                        confirm_volume=signal.confirm_volume,
+                        avg_volume_20=signal.avg_volume_20,
+                        avg_dollar_volume_20=signal.avg_dollar_volume_20,
+                        market_cap=signal.market_cap,
+                        confidence='confirmed',
+                        pattern_strength=signal.pattern_strength,
+                        confirmation_reason=signal.confirmation_reason,
+                        score=signal.score,
+                        score_detail=signal.score_detail,
+                        side=signal.side,
+                    )
                     results.append(result)
                     matched += 1
             except (URLError, HTTPError, KeyError, IndexError, ValueError, RuntimeError) as exc:
-                scan_failures.append(f"{symbol}: {exc}")
+                scan_failures.append(f"{meta.symbol}: {exc}")
             if processed % 25 == 0 or processed == len(prefiltered):
                 log(f"scan progress {processed}/{len(prefiltered)} matches={matched} failures={len(scan_failures)}")
 

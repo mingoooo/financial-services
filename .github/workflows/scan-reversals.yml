@@ -1,78 +1,49 @@
 name: Scan Reversals
 
 on:
+  push:
+    branches:
+      - main
+      - master
+      - ta
+    paths:
+      - 'scripts/scan_reversals.py'
+      - 'scripts/backtest_reversals.py'
+      - 'scripts/reversal_lib/**'
+      - 'scripts/etf_universe.json'
+      - '.github/workflows/scan-reversals.yml'
   workflow_dispatch:
     inputs:
-      side:
-        description: Scan side
+      preset:
+        description: 策略预设
         required: false
-        default: both
+        default: main
         type: choice
         options:
-          - both
-          - bullish
-          - bearish
-      universe:
-        description: Scan universe
-        required: false
-        default: sp500
-        type: choice
-        options:
-          - us
-          - sp500
-          - liquid
-      include_etfs:
-        description: Include ETFs
-        required: false
-        default: true
-        type: boolean
-      min_market_cap:
-        description: Minimum market cap
-        required: false
-        default: '2000000000'
-        type: string
-      min_price:
-        description: Minimum price
-        required: false
-        default: '1'
-        type: string
-      min_avg_volume:
-        description: Minimum average volume
-        required: false
-        default: '750000'
-        type: string
-      min_last_volume:
-        description: Minimum last-day volume
-        required: false
-        default: '50000'
-        type: string
+          - main
+          - high_quality
       recent_confirm_days:
-        description: Keep signals confirmed within N days
+        description: 仅保留最近 N 天确认信号
         required: false
         default: '2'
         type: string
       workers:
-        description: Concurrent workers
+        description: 并发 worker 数
         required: false
         default: '8'
         type: string
       scan_retries:
-        description: Per-symbol retry attempts
+        description: 单股票重试次数
         required: false
         default: '3'
         type: string
-      require_confirm_volume:
-        description: Require confirmation-day volume above average
-        required: false
-        default: true
-        type: boolean
       no_cache:
-        description: Disable local cache during run
+        description: 禁用本地缓存
         required: false
         default: true
         type: boolean
       deploy_pages:
-        description: Deploy to GitHub Pages if Pages is enabled
+        description: 若启用 Pages，则部署 HTML 报告
         required: false
         default: true
         type: boolean
@@ -136,25 +107,10 @@ jobs:
       - name: Run reversal scan
         if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
         run: |
-          SIDE="${{ github.event.inputs.side || 'both' }}"
-          UNIVERSE="${{ github.event.inputs.universe || 'us' }}"
-          MIN_MARKET_CAP="${{ github.event.inputs.min_market_cap || '2000000000' }}"
-          MIN_PRICE="${{ github.event.inputs.min_price || '1' }}"
-          MIN_AVG_VOLUME="${{ github.event.inputs.min_avg_volume || '750000' }}"
-          MIN_LAST_VOLUME="${{ github.event.inputs.min_last_volume || '50000' }}"
+          PRESET="${{ github.event.inputs.preset || 'main' }}"
           RECENT_CONFIRM_DAYS="${{ github.event.inputs.recent_confirm_days || '2' }}"
           WORKERS="${{ github.event.inputs.workers || '8' }}"
           SCAN_RETRIES="${{ github.event.inputs.scan_retries || '3' }}"
-
-          ETF_FLAG="--include-etfs"
-          if [ "${{ github.event.inputs.include_etfs || 'true' }}" != "true" ]; then
-            ETF_FLAG="--exclude-etfs"
-          fi
-
-          CONFIRM_VOLUME_FLAG="--require-confirm-volume"
-          if [ "${{ github.event.inputs.require_confirm_volume || 'true' }}" != "true" ]; then
-            CONFIRM_VOLUME_FLAG="--no-require-confirm-volume"
-          fi
 
           CACHE_FLAG="--no-cache"
           if [ "${{ github.event.inputs.no_cache || 'true' }}" != "true" ]; then
@@ -162,17 +118,10 @@ jobs:
           fi
 
           python scripts/scan_reversals.py \
-            --universe "$UNIVERSE" \
-            --side "$SIDE" \
-            $ETF_FLAG \
-            --min-market-cap "$MIN_MARKET_CAP" \
-            --min-price "$MIN_PRICE" \
-            --min-avg-volume "$MIN_AVG_VOLUME" \
-            --min-last-volume "$MIN_LAST_VOLUME" \
+            --preset "$PRESET" \
             --recent-confirm-days "$RECENT_CONFIRM_DAYS" \
             --workers "$WORKERS" \
             --scan-retries "$SCAN_RETRIES" \
-            $CONFIRM_VOLUME_FLAG \
             $CACHE_FLAG \
             --html reports/site/index.html \
             --json reports/reversal_signals.json

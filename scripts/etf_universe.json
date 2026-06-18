@@ -1,0 +1,14 @@
+{
+  "core": [
+    "SPY", "QQQ", "DIA", "IWM", "IVV", "VOO", "VTI", "RSP",
+    "XLK", "XLF", "XLE", "XLV", "XLI", "XLP", "XLY", "XLB", "XLU", "XLC",
+    "SMH", "SOXX",
+    "GLD", "SLV", "TLT", "IEF", "HYG", "LQD", "BND", "AGG"
+  ],
+  "theme": [
+    "BOTZ", "AIQ", "HACK", "CIBR", "IGV", "SKYY", "ARKQ"
+  ],
+  "manual_exceptions": [
+    "DRAM", "NASA", "FOTO", "USO", "AIPO"
+  ]
+}

@@ -17,6 +17,7 @@ env/
 __pycache__/
 *.pyc
 .venv/
+.venv-backtest/
 
 # Build outputs
 dist/
@@ -47,3 +48,5 @@ coverage/
 TASKS.md
 MEMORY.md
 .claude/worktrees/
+
+docs/superpowers/
