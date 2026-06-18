@@ -22,7 +22,7 @@ from reversal_lib.models import Candle, PrefilterMeta, ScanResult
 from reversal_lib.data import resolve_prefiltered_symbols
 from reversal_lib.signals import generate_signals
 from reversal_lib.strategy_filters import signal_passes_filters
-from reversal_lib.presets import apply_strategy_preset
+from reversal_lib.presets import apply_strategy_preset, describe_strategy_preset
 
 API_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=2y&interval=1d&includePrePost=false&events=div%2Csplits"
 WIKI_SP500 = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
@@ -1065,7 +1065,9 @@ def render_html_report(results: list[ScanResult], output_path: str, args: argpar
 <div class="meta">S/R：S1/S2/R1/R2 自动识别；交易位：Stop/T1/T2；均线数值显示在图右侧</div>
 <div class="chart"><div class="chart-wrap">{r.chart_svg or ''}</div></div>
 </section>""")
-    title = f"Confirmed {args.side.title()} Reversals ({len(results)})"
+    preset_label = args.preset or 'custom'
+    preset_description = describe_strategy_preset(args.preset)
+    title = f"反转扫描报告（{preset_label} / {len(results)}）"
     doc = f"""<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -1129,13 +1131,19 @@ tr:hover td:first-child{{background:#0b1220;}}
 <body>
 <div class="page">
 <h1>最近{args.recent_confirm_days}日已确认{("双向" if args.side == "both" else ("看涨" if args.side == "bullish" else "看跌"))}反转信号</h1>
-<p class="sub">按评分、市值与流动性排序</p>
+<p class="sub">preset 优先驱动，按评分、市值与流动性排序</p>
 <section class="card">
 <h3>运行摘要</h3>
 <div class="meta">生成时间：{generated_at}</div>
-<div class="meta">命中数量：{len(results)} · Universe={html.escape(args.universe)} · Side={html.escape(args.side)} · Include ETFs={args.include_etfs}</div>
-<div class="meta">参数：min_market_cap={args.min_market_cap} · min_price={args.min_price} · min_avg_volume={args.min_avg_volume} · min_last_volume={args.min_last_volume} · top_dollar_volume={args.top_dollar_volume} · recent_confirm_days={args.recent_confirm_days} · require_confirm_volume={args.require_confirm_volume}</div>
+<div class="meta">命中数量：{len(results)} · preset={html.escape(preset_label)} · universe={html.escape(args.universe)} · side={html.escape(args.side)} · include_etfs={args.include_etfs}</div>
+<div class="meta">当前 HTML 报告已按 preset-first 方式展示，GitHub Action 默认也会跟随同名 preset 运行。</div>
+<div class="meta">策略条件：min_r_multiple={args.min_r_multiple} · require_confirm_volume={args.require_confirm_volume} · require_fresh_sma_cross_up={args.require_fresh_sma_cross_up} · sma_cross_mode={html.escape(args.sma_cross_mode)} · require_rsi_above={args.require_rsi_above} · require_macd_bullish={args.require_macd_bullish} · require_above_sma200={args.require_above_sma200}</div>
+<div class="meta">运行参数：recent_confirm_days={args.recent_confirm_days} · workers={args.workers} · scan_retries={args.scan_retries} · no_cache={args.no_cache}</div>
 <div class="meta">输出文件：{html.escape(output_path)}</div>
+</section>
+<section class="card">
+<h3>preset 策略说明</h3>
+<div class="meta">{html.escape(preset_description)}</div>
 </section>
 <section class="card mobile-summary">
 <h3>结果列表</h3>
@@ -1149,7 +1157,7 @@ tr:hover td:first-child{{background:#0b1220;}}
 </table>
 </div>
 </section>
-{''.join(chart_blocks) if chart_blocks else '<section class="card">No confirmed bullish reversal signals found.</section>'}
+{''.join(chart_blocks) if chart_blocks else '<section class="card">当前条件下未发现已确认反转信号。</section>'}
 <script>
 (function(){{
   function scrollChartsToRight(){{
