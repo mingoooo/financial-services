@@ -15,6 +15,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="回测反转形态策略")
     parser.add_argument("--symbols")
     parser.add_argument("--preset", choices=["main", "high_quality"])
+    parser.add_argument("--entry-mode", choices=["next_open", "confirm_close"], default="confirm_close")
     parser.add_argument("--require-rsi-above", type=float)
     parser.add_argument("--require-above-sma200", action="store_true")
     parser.add_argument("--require-macd-bullish", action="store_true")
@@ -99,8 +100,8 @@ def main() -> int:
             highs = [c.high for c in candles]
             lows = [c.low for c in candles]
             closes = [c.close for c in candles]
-            signals = generate_signals(candles, symbol=symbol, side=args.side, require_confirm_volume=args.require_confirm_volume, min_r_multiple=args.min_r_multiple, require_trend_alignment=args.require_trend_alignment, require_location_alignment=args.require_location_alignment, location_tolerance_ratio=args.location_tolerance_ratio, allowed_patterns=allowed_patterns, require_fresh_sma_cross_up=args.require_fresh_sma_cross_up, sma_cross_mode=args.sma_cross_mode, require_macd_bullish=args.require_macd_bullish, require_rsi_above=args.require_rsi_above, require_above_sma200=args.require_above_sma200)
-            trades, stats = run_backtesting_py(signals, dates, opens, highs, lows, closes)
+            signals = generate_signals(candles, symbol=symbol, side=args.side, require_confirm_volume=args.require_confirm_volume, min_r_multiple=args.min_r_multiple, require_trend_alignment=args.require_trend_alignment, require_location_alignment=args.require_location_alignment, location_tolerance_ratio=args.location_tolerance_ratio, allowed_patterns=allowed_patterns, require_fresh_sma_cross_up=args.require_fresh_sma_cross_up, sma_cross_mode=args.sma_cross_mode, require_macd_bullish=args.require_macd_bullish, require_rsi_above=args.require_rsi_above, require_above_sma200=args.require_above_sma200, entry_mode=args.entry_mode)
+            trades, stats = run_backtesting_py(signals, dates, opens, highs, lows, closes, entry_mode=args.entry_mode)
             all_signals.extend(signals)
             all_trades.extend(trades)
             all_stats.append(stats)

@@ -25,7 +25,7 @@ class ReversalSignalStrategy(Strategy):
             return
         if self.position:
             return
-        entry_price = float(self.data.Close[-1])
+        entry_price = float(signal.planned_entry_price)
         if signal.side == 'bullish':
             risk = entry_price - signal.stop_loss
             if risk <= 0:
@@ -60,7 +60,7 @@ def _build_frame(dates: list[str], opens: list[float], highs: list[float], lows:
     return frame
 
 
-def run_backtesting_py(signals: list[Signal], dates: list[str], opens: list[float], highs: list[float], lows: list[float], closes: list[float]) -> tuple[list[TradeRecord], dict]:
+def run_backtesting_py(signals: list[Signal], dates: list[str], opens: list[float], highs: list[float], lows: list[float], closes: list[float], entry_mode: str = 'next_open') -> tuple[list[TradeRecord], dict]:
     if not dates:
         return [], {}
     frame = _build_frame(dates, opens, highs, lows, closes)
@@ -68,11 +68,15 @@ def run_backtesting_py(signals: list[Signal], dates: list[str], opens: list[floa
     signal_map: dict[int, Signal] = {}
     for signal in signals:
         confirm_idx = by_date.get(signal.confirm_date)
-        if confirm_idx is not None:
-            signal_map[confirm_idx] = signal
+        if confirm_idx is None:
+            continue
+        entry_idx = confirm_idx if entry_mode == 'confirm_close' else confirm_idx + 1
+        if entry_idx < len(dates):
+            signal_map[entry_idx] = signal
     ReversalSignalStrategy.signals = signals
     ReversalSignalStrategy.signal_index_by_bar = signal_map
-    backtest = Backtest(frame, ReversalSignalStrategy, cash=100000, commission=0.0, exclusive_orders=True, trade_on_close=True, finalize_trades=True)
+    trade_on_close = entry_mode == 'confirm_close'
+    backtest = Backtest(frame, ReversalSignalStrategy, cash=100000, commission=0.0, exclusive_orders=True, trade_on_close=trade_on_close, finalize_trades=True)
     stats = backtest.run()
     trades_df = stats.get('_trades')
     trades: list[TradeRecord] = []
@@ -81,7 +85,13 @@ def run_backtesting_py(signals: list[Signal], dates: list[str], opens: list[floa
 
     pending_by_date: dict[str, list[Signal]] = {}
     for signal in signals:
-        pending_by_date.setdefault(signal.confirm_date, []).append(signal)
+        entry_idx = by_date.get(signal.confirm_date)
+        if entry_idx is None:
+            continue
+        effective_entry_idx = entry_idx if entry_mode == 'confirm_close' else entry_idx + 1
+        if effective_entry_idx >= len(dates):
+            continue
+        pending_by_date.setdefault(dates[effective_entry_idx], []).append(signal)
 
     def pop_matching_signal(entry_date: str, side: str) -> Signal | None:
         candidates = pending_by_date.get(entry_date, [])

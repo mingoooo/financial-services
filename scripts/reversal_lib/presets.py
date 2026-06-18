@@ -4,9 +4,9 @@ from __future__ import annotations
 def describe_strategy_preset(preset: str | None) -> str:
     normalized = (preset or '').strip().lower()
     if normalized == 'main':
-        return '主策略：sp500 + core ETF，仅做 bullish，要求确认量能、至少 2R 结构空间、刚站上 20SMA 或 50SMA，且 RSI(14) > 50。'
+        return '主策略：sp500 + core ETF，仅做 bullish，要求确认量能、至少 2R 结构空间、刚站上 20SMA 或 50SMA，且 RSI(14) > 50；默认按确认日收盘价入场。'
     if normalized == 'high_quality':
-        return '高质量版：在主策略基础上，额外要求 MACD 处于 bullish / cross_up 状态，以减少交易数换取更高信号质量。'
+        return '高质量版：在主策略基础上，额外要求 MACD 处于 bullish / cross_up 状态，以减少交易数换取更高信号质量；默认按确认日收盘价入场。'
     return '自定义参数：当前运行使用了非预设或部分覆盖后的参数组合，请结合页面中的实际参数摘要理解结果。'
 
 

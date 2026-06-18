@@ -63,6 +63,7 @@ def generate_signals(
     require_macd_bullish: bool = False,
     require_rsi_above: float | None = None,
     require_above_sma200: bool = False,
+    entry_mode: str = 'next_open',
 ) -> list[Signal]:
     signals: list[Signal] = []
     if len(candles) < 25:
@@ -72,6 +73,7 @@ def generate_signals(
         candidate = candles[idx]
         confirm = candles[idx + 1]
         entry = candles[idx + 2]
+        planned_entry_price = confirm.close if entry_mode == 'confirm_close' else entry.open
         avg_vol20 = sum(c.volume for c in candles[idx - 19:idx + 1]) / 20
         avg_dollar_volume_20 = sum(c.close * c.volume for c in candles[idx - 19:idx + 1]) / 20
 
@@ -101,7 +103,7 @@ def generate_signals(
                 if require_confirm_volume:
                     confirmed = confirmed and confirm.volume >= avg_vol20
                 if confirmed and (not require_trend_alignment or trend == 'bullish') and (not require_location_alignment or location in {'near_support', 'near_both'}) and sma_cross_ok and (not require_macd_bullish or macd_context in {'bullish', 'cross_up'}) and (require_rsi_above is None or (rsi_value is not None and rsi_value > require_rsi_above)) and (not require_above_sma200 or above_sma200):
-                    risk = entry.open - stop_anchor
+                    risk = planned_entry_price - stop_anchor
                     structural_target = min(resistances) if resistances else None
                     structural_reward = (structural_target - confirm.close) if structural_target is not None else None
                     structural_rr = (structural_reward / risk) if (structural_reward is not None and risk > 0) else None
@@ -117,9 +119,11 @@ def generate_signals(
                             candidate_date=time.strftime('%Y-%m-%d', time.gmtime(candidate.ts)),
                             confirm_date=time.strftime('%Y-%m-%d', time.gmtime(confirm.ts)),
                             confirm_close=round(confirm.close, 2),
+                            planned_entry_price=round(planned_entry_price, 2),
+                            entry_mode=entry_mode,
                             stop_loss=round(stop_anchor, 2),
-                            first_target=round(entry.open + risk, 2),
-                            second_target=round(entry.open + risk * 2, 2),
+                            first_target=round(planned_entry_price + risk, 2),
+                            second_target=round(planned_entry_price + risk * 2, 2),
                             confirm_volume=round(confirm.volume, 0),
                             avg_volume_20=round(avg_vol20, 0),
                             avg_dollar_volume_20=round(avg_dollar_volume_20, 0),
@@ -146,7 +150,7 @@ def generate_signals(
                 if require_confirm_volume:
                     confirmed = confirmed and confirm.volume >= avg_vol20
                 if confirmed and (not require_trend_alignment or trend == 'bearish') and (not require_location_alignment or location in {'near_resistance', 'near_both'}):
-                    risk = stop_anchor - entry.open
+                    risk = stop_anchor - planned_entry_price
                     structural_target = max(supports) if supports else None
                     structural_reward = (confirm.close - structural_target) if structural_target is not None else None
                     structural_rr = (structural_reward / risk) if (structural_reward is not None and risk > 0) else None
@@ -162,9 +166,11 @@ def generate_signals(
                             candidate_date=time.strftime('%Y-%m-%d', time.gmtime(candidate.ts)),
                             confirm_date=time.strftime('%Y-%m-%d', time.gmtime(confirm.ts)),
                             confirm_close=round(confirm.close, 2),
+                            planned_entry_price=round(planned_entry_price, 2),
+                            entry_mode=entry_mode,
                             stop_loss=round(stop_anchor, 2),
-                            first_target=round(entry.open - risk, 2),
-                            second_target=round(entry.open - risk * 2, 2),
+                            first_target=round(planned_entry_price - risk, 2),
+                            second_target=round(planned_entry_price - risk * 2, 2),
                             confirm_volume=round(confirm.volume, 0),
                             avg_volume_20=round(avg_vol20, 0),
                             avg_dollar_volume_20=round(avg_dollar_volume_20, 0),

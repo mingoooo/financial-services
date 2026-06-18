@@ -56,6 +56,8 @@ class Signal:
     candidate_date: str
     confirm_date: str
     confirm_close: float
+    planned_entry_price: float
+    entry_mode: str
     stop_loss: float
     first_target: float
     second_target: float

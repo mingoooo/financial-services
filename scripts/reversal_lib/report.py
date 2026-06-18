@@ -82,6 +82,7 @@ h1,h2{{margin:0 0 8px;}}
 <div class='meta'>当前回测报告已与扫描脚本共享同一套策略过滤层，并以 preset 为主要驱动方式。</div>
 <div class='meta'>建议优先使用 `main` 或 `high_quality` preset，避免在多处手工维护分散参数。</div>
 <div class='meta'>{preset_description}</div>
+<div class='meta'>当前默认回测入场方式：确认日收盘价入场（`confirm_close`）。</div>
 </section>
 <section class='card'>
 <h2>回测汇总</h2>

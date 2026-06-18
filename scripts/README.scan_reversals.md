@@ -33,14 +33,16 @@
 
 默认参数：
 
-- `--universe us`
-- `--include-etfs`
-- `--side both`
+- `--preset main`
 - `--min-market-cap 2000000000`
 - `--min-price 1`
 - `--min-avg-volume 750000`
 - `--min-last-volume 50000`
 - `--require-confirm-volume`
+- `--min-r-multiple 2`
+- `--require-fresh-sma-cross-up`
+- `--sma-cross-mode either`
+- `--require-rsi-above 50`
 - `--recent-confirm-days 2`
 - `--scan-retries 3`
 
@@ -52,7 +54,7 @@
 
 ## 常用命令
 
-### 1. 默认同时扫描看涨与看跌反转
+### 1. 默认扫描正式主策略
 
 ```bash
 python3 scripts/scan_reversals.py
@@ -161,12 +163,11 @@ python3 scripts/check.py
 
 ```bash
 python3 scripts/scan_reversals.py \
-  --universe us \
-  --side both \
+  --preset main \
   --recent-confirm-days 2 \
   --workers 8 \
   --no-cache \
-  --html reports/reversal_report.html \
+  --html reports/site/index.html \
   --json reports/reversal_signals.json
 ```
 
@@ -176,25 +177,44 @@ python3 scripts/scan_reversals.py \
 
 - Workflow: `.github/workflows/scan-reversals.yml`
 - 默认上传 artifact：`reports/site/index.html` 与 `reports/reversal_signals.json`
-- 可选发布 GitHub Pages：手动触发时把 `deploy_pages` 设为 `true`
+- `push` / `schedule` 默认会更新 GitHub Pages
+- 手动触发时可通过 `deploy_pages=false` 跳过 Pages 发布
 - 定时运行时间为：**工作日 22:15 UTC**，并在 workflow 内用纽约时间做收盘后窗口判断
+- workflow 运行后会尝试发送 Telegram 通知（需配置 GitHub Secrets）
 
-说明：如果仓库尚未开启 Pages，workflow 仍会成功生成 artifact；只有在手动启用 `deploy_pages=true` 时才尝试发布 Pages。
+所需 Secrets：
+
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_CHAT_ID`
+
+说明：如果仓库尚未开启 Pages，workflow 仍会成功生成 artifact；Telegram 通知脚本会在没有 Secrets 时自动跳过。
 
 ## GitHub Actions 可调参数
 
 手动运行 `Scan Reversals` workflow 时，可以在 GitHub 页面直接设置这些参数：
 
-- `side`
-- `universe`
-- `include_etfs`
-- `min_market_cap`
-- `min_price`
-- `min_avg_volume`
-- `min_last_volume`
+- `preset`
 - `recent_confirm_days`
 - `workers`
 - `scan_retries`
-- `require_confirm_volume`
 - `no_cache`
 - `deploy_pages`
+
+## 扩展时段数据验证
+
+如果你要评估“盘后开盘价 / 盘前开盘价”回测是否可行，可以先跑：
+
+```bash
+. .venv-backtest/bin/activate
+python scripts/check_extended_hours_data.py \
+  --symbols AAPL,QQQ,SPY,SMH,GLD \
+  --period 5d \
+  --interval 1m \
+  --output /tmp/extended-hours-check.json
+```
+
+这个脚本会用 `yfinance` 的 `prepost=True` 拉取分钟数据，先验证：
+
+- 是否有扩展时段数据
+- 返回条数是否稳定
+- 时间索引是否符合预期

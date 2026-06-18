@@ -98,7 +98,7 @@ jobs:
         if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
         run: |
           python -m pip install --upgrade pip
-          pip install finvizfinance
+          pip install finvizfinance yfinance
 
       - name: Prepare report directory
         if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
@@ -150,3 +150,15 @@ jobs:
         if: (github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true') && (github.event_name != 'workflow_dispatch' || github.event.inputs.deploy_pages == 'true')
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Send Telegram notification
+        if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          PAGES_URL=""
+          if [ -n "${{ steps.deployment.outputs.page_url }}" ]; then
+            PAGES_URL="${{ steps.deployment.outputs.page_url }}"
+          fi
+          python scripts/notify_telegram_scan.py reports/reversal_signals.json "$PAGES_URL"
