@@ -1066,8 +1066,9 @@ def render_html_report(results: list[ScanResult], output_path: str, args: argpar
 <div class="chart"><div class="chart-wrap">{r.chart_svg or ''}</div></div>
 </section>""")
     preset_label = args.preset or 'custom'
+    pages_label = 'main preset' if preset_label == 'main' else f'{preset_label} preset'
     preset_description = describe_strategy_preset(args.preset)
-    title = f"反转扫描报告（{preset_label} / {len(results)}）"
+    title = f"反转扫描报告（{pages_label} / {len(results)}）"
     doc = f"""<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -1130,12 +1131,12 @@ tr:hover td:first-child{{background:#0b1220;}}
 </head>
 <body>
 <div class="page">
-<h1>最近{args.recent_confirm_days}日已确认{("双向" if args.side == "both" else ("看涨" if args.side == "bullish" else "看跌"))}反转信号</h1>
-<p class="sub">preset 优先驱动，按评分、市值与流动性排序</p>
+<h1>{html.escape(pages_label)}：最近{args.recent_confirm_days}日已确认{("双向" if args.side == "both" else ("看涨" if args.side == "bullish" else "看跌"))}反转信号</h1>
+<p class="sub">preset 优先驱动，按评分、市值与流动性排序；GitHub Pages 默认展示主策略结果</p>
 <section class="card">
 <h3>运行摘要</h3>
 <div class="meta">生成时间：{generated_at}</div>
-<div class="meta">命中数量：{len(results)} · preset={html.escape(preset_label)} · universe={html.escape(args.universe)} · side={html.escape(args.side)} · include_etfs={args.include_etfs}</div>
+<div class="meta">命中数量：{len(results)} · preset={html.escape(preset_label)} · 页面标签={html.escape(pages_label)} · universe={html.escape(args.universe)} · side={html.escape(args.side)} · include_etfs={args.include_etfs}</div>
 <div class="meta">当前 HTML 报告已按 preset-first 方式展示，GitHub Action 默认也会跟随同名 preset 运行。</div>
 <div class="meta">策略条件：min_r_multiple={args.min_r_multiple} · require_confirm_volume={args.require_confirm_volume} · require_fresh_sma_cross_up={args.require_fresh_sma_cross_up} · sma_cross_mode={html.escape(args.sma_cross_mode)} · require_rsi_above={args.require_rsi_above} · require_macd_bullish={args.require_macd_bullish} · require_above_sma200={args.require_above_sma200}</div>
 <div class="meta">运行参数：recent_confirm_days={args.recent_confirm_days} · workers={args.workers} · scan_retries={args.scan_retries} · no_cache={args.no_cache}</div>
@@ -1144,6 +1145,13 @@ tr:hover td:first-child{{background:#0b1220;}}
 <section class="card">
 <h3>preset 策略说明</h3>
 <div class="meta">{html.escape(preset_description)}</div>
+</section>
+<section class="card">
+<h3>数据版本信息</h3>
+<div class="meta">页面标签：{html.escape(pages_label)}</div>
+<div class="meta">当前 JSON 元数据字段：preset / pages_label / preset_description / result_count / recent_confirm_days / universe / side / include_etfs / workers / scan_retries / no_cache</div>
+<div class="meta">配套 JSON 文件：reports/reversal_signals.json</div>
+<div class="meta">如需脚本消费结果，请优先读取 JSON 顶层的 meta 与 results 两个字段。</div>
 </section>
 <section class="card mobile-summary">
 <h3>结果列表</h3>
@@ -1307,7 +1315,25 @@ def main() -> int:
         for msg in scan_failures[:10]:
             print(f"- {msg}", file=sys.stderr)
     if args.json_out:
-        Path(args.json_out).write_text(json.dumps([asdict(r) for r in results], indent=2), encoding="utf-8")
+        preset_label = args.preset or 'custom'
+        pages_label = 'main preset' if preset_label == 'main' else f'{preset_label} preset'
+        payload = {
+            'meta': {
+                'preset': preset_label,
+                'pages_label': pages_label,
+                'preset_description': describe_strategy_preset(args.preset),
+                'recent_confirm_days': args.recent_confirm_days,
+                'universe': args.universe,
+                'side': args.side,
+                'include_etfs': args.include_etfs,
+                'workers': args.workers,
+                'scan_retries': args.scan_retries,
+                'no_cache': args.no_cache,
+                'result_count': len(results),
+            },
+            'results': [asdict(r) for r in results],
+        }
+        Path(args.json_out).write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return 0
 
 

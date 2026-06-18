@@ -137,16 +137,16 @@ jobs:
           if-no-files-found: error
 
       - name: Configure Pages
-        if: (github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true') && github.event.inputs.deploy_pages == 'true'
+        if: (github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true') && (github.event_name != 'workflow_dispatch' || github.event.inputs.deploy_pages == 'true')
         uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
-        if: (github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true') && github.event.inputs.deploy_pages == 'true'
+        if: (github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true') && (github.event_name != 'workflow_dispatch' || github.event.inputs.deploy_pages == 'true')
         uses: actions/upload-pages-artifact@v3
         with:
           path: reports/site
 
       - name: Deploy to GitHub Pages
-        if: (github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true') && github.event.inputs.deploy_pages == 'true'
+        if: (github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true') && (github.event_name != 'workflow_dispatch' || github.event.inputs.deploy_pages == 'true')
         id: deployment
         uses: actions/deploy-pages@v4
