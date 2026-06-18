@@ -38,7 +38,7 @@ coverage/
 .coverage
 *.cover
 .pytest_cache/
-.cache/
+# .cache/
 
 # Package files
 *.egg-info/
