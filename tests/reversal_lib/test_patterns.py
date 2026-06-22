@@ -8,10 +8,10 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 
 from reversal_lib.domain.models import PatternHit
 from reversal_lib.models import Candle
-from reversal_lib.patterns_layer.bullish import detect_bullish_pattern_hit
-from reversal_lib.patterns_layer.bearish import detect_bearish_pattern_hit
-from reversal_lib.patterns_layer.levels import find_support_levels, find_resistance_levels
-from reversal_lib.patterns_layer.scoring import compute_signal_score
+from reversal_lib.patterns.bullish import detect_bullish_pattern_hit
+from reversal_lib.patterns.bearish import detect_bearish_pattern_hit
+from reversal_lib.patterns.levels import find_support_levels, find_resistance_levels
+from reversal_lib.patterns.scoring import compute_signal_score
 
 
 def test_bullish_pattern_detection_returns_pattern_hit() -> None:

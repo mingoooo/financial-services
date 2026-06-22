@@ -1,9 +1,8 @@
-from __future__ import annotations
-
-from reversal_lib.patterns.bearish import (
+from .bearish import (
     detect_bearish_pattern,
     detect_bearish_pattern_hit,
     has_prior_uptrend,
+    is_bearish,
     is_bearish_engulfing,
     is_bearish_harami,
     is_dark_cloud_cover,
@@ -11,13 +10,12 @@ from reversal_lib.patterns.bearish import (
     is_hanging_man,
     is_shooting_star,
 )
-from reversal_lib.patterns.bullish import (
+from .bullish import (
     body_bottom,
     body_top,
     detect_bullish_pattern,
     detect_bullish_pattern_hit,
     has_prior_downtrend,
-    is_bearish,
     is_bullish,
     is_bullish_engulfing,
     is_bullish_harami,
@@ -30,13 +28,13 @@ from reversal_lib.patterns.bullish import (
     is_small_body,
     real_body,
 )
-from reversal_lib.patterns.levels import (
+from .levels import (
     detect_support_resistance_levels,
     detect_support_resistance_levels_from_window,
     find_resistance_levels,
     find_support_levels,
 )
-from reversal_lib.patterns.scoring import (
+from .scoring import (
     bearish_confirmation_ok,
     bearish_confirmation_reason,
     bullish_confirmation_ok,

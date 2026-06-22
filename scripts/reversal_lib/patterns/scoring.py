@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from reversal_lib.models import Candle
-from reversal_lib.patterns_layer.bullish import body_bottom, body_top
+from reversal_lib.patterns.bullish import body_bottom, body_top
 
 
 def clamp_score(value: float) -> float:

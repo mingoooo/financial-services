@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from reversal_lib.domain.models import PatternHit
 from reversal_lib.models import Candle
-from reversal_lib.patterns_layer.bullish import body_bottom, body_top, is_bullish, is_hammer, is_long_body, is_small_body, real_body
+from reversal_lib.patterns.bullish import body_bottom, body_top, is_bullish, is_hammer, is_long_body, is_small_body, real_body
 
 
 def is_bearish(candle: Candle) -> bool:
