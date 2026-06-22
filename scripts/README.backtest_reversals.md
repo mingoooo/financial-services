@@ -203,3 +203,42 @@ GitHub Action 现在也支持用 `preset` 驱动扫描：
 - 策略参数不再在 workflow 里逐项暴露
 - 扫描逻辑默认跟随 `preset`
 - 如果要改策略本身，应优先改 `preset` 或共享策略代码，而不是改 workflow 输入
+
+## 参数实验工作流
+
+现在支持通过配置文件批量运行多组策略回测：
+
+- 配置文件：`scripts/reversal_experiments.yaml`
+- 实验入口：`scripts/run_reversal_experiments.py`
+
+示例：
+
+```bash
+python3 scripts/run_reversal_experiments.py
+python3 scripts/run_reversal_experiments.py --experiments main_current,main_relaxed_combo
+```
+
+输出目录默认位于：
+
+- `reports/reversal-experiments/<run_id>/`
+
+其中包含：
+
+- 每个实验单独的 `summary.json` / `csv/` / `report.html`
+- 总榜 `leaderboard.json` / `leaderboard.csv` / `index.html`
+
+回测汇总已新增：
+
+- `sharpe_ratio`
+- `sharpe_basis`（当前为 `trade_returns`）
+
+## Regression fixtures
+
+Deterministic regression fixtures live under `tests/fixtures/reversal/` and are used by `tests/reversal_lib/test_backtest_pipeline.py`.
+
+- `main_preset_fixture.json`: frozen `META` 5y candles, currently expected to backtest to 2 trades, `win_rate=100.0`, `average_return_pct=3.6092`, `total_pnl=7297.7603` under `preset=main`.
+- `high_quality_fixture.json`: frozen `APLE` 5y candles, currently expected to backtest to 1 trade, `win_rate=100.0`, `average_return_pct=2.095`, `total_pnl=2094.9013` under `preset=high_quality`.
+- `no_signal_fixture.json`: frozen `AAPL` 5y candles, expected to backtest to 0 trades.
+
+These fixtures intentionally avoid live Yahoo / Finviz dependencies during test runs.
+

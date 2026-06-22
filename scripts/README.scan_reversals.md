@@ -35,14 +35,12 @@
 
 - `--preset main`
 - `--min-market-cap 2000000000`
-- `--min-price 1`
-- `--min-avg-volume 750000`
-- `--min-last-volume 50000`
+- `--min-price 5`
+- `--min-avg-volume 300000`
 - `--require-confirm-volume`
-- `--min-r-multiple 2`
-- `--require-fresh-sma-cross-up`
-- `--sma-cross-mode either`
-- `--require-rsi-above 50`
+- `--confirm-volume-multiplier 1.5`
+- `--min-r-multiple 1.5`
+- `--require-standard-uptrend`
 - `--recent-confirm-days 2`
 - `--scan-retries 3`
 
@@ -51,6 +49,9 @@
 - 只显示最近 `2` 个自然日确认的信号
 - 对临时错误自动重试
 - 按 `score -> market_cap -> avg_dollar_volume_20` 排序
+- `main` / `high_quality` 现在要求 `close > SMA20 > SMA50`
+- `main` 默认按确认日收盘进场、以确认日最低点止损、按最近阻力位止盈
+- 可通过参数切回形态锚点止损或固定 R 倍数目标
 
 ## 常用命令
 
@@ -127,6 +128,7 @@ HTML 报表额外包含：
 - `--top-dollar-volume`：预筛后只保留成交额最高前 N 名
 - `--recent-confirm-days`：只保留最近 N 个自然日确认的信号
 - `--no-require-confirm-volume`：关闭确认日放量要求
+- `--confirm-volume-multiplier`：确认日成交量至少为 `AvgVol20` 的多少倍
 - `--scan-retries`：单只股票失败重试次数
 - 网络请求默认超时已调长，降低慢响应导致的失败
 - `--no-cache`：本次运行不读写本地缓存
@@ -218,3 +220,14 @@ python scripts/check_extended_hours_data.py \
 - 是否有扩展时段数据
 - 返回条数是否稳定
 - 时间索引是否符合预期
+
+## Regression fixtures
+
+Deterministic regression fixtures live under `tests/fixtures/reversal/` and are used by `tests/reversal_lib/test_scan_pipeline.py`.
+
+- `main_preset_fixture.json`: frozen `META` 5y candles, currently expected to produce 2 `preset=main` bullish signals (`2021-10-28`, `2023-07-27`).
+- `high_quality_fixture.json`: frozen `APLE` 5y candles, currently expected to produce 1 `preset=high_quality` bullish signal (`2024-06-11`).
+- `no_signal_fixture.json`: frozen `AAPL` 5y candles, expected to produce 0 signals.
+
+These fixtures intentionally avoid live Yahoo / Finviz dependencies during test runs.
+
