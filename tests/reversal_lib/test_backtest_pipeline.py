@@ -2,16 +2,15 @@ from __future__ import annotations
 
 import json
 import sys
-import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
 
-from reversal_lib.backtest import build_summary, run_backtesting_py
-from reversal_lib.models import Candle
+from reversal_lib.domain.requests import UniverseRequest
+from reversal_lib.pipeline import backtest_pipeline
 from reversal_lib.presets import apply_strategy_preset
-from reversal_lib.signals import generate_signals
+from reversal_lib.strategy.spec import StrategySpec
 
 FIXTURE_DIR = ROOT / 'tests' / 'fixtures' / 'reversal'
 
@@ -21,7 +20,7 @@ def _load_candles(name: str) -> list[Candle]:
     return [Candle(**item) for item in payload]
 
 
-def _preset_options(preset: str) -> dict:
+def _preset_spec(preset: str) -> StrategySpec:
     base = {
         'side': 'bullish',
         'require_confirm_volume': True,
@@ -40,40 +39,44 @@ def _preset_options(preset: str) -> dict:
         'stop_mode': 'confirm_low',
         'target_mode': 'nearest_resistance',
     }
-    return apply_strategy_preset(base, preset)
-
-
-def _run_fixture(fixture_name: str, symbol: str, preset: str):
-    candles = _load_candles(fixture_name)
-    options = _preset_options(preset)
-    signals = generate_signals(
-        candles,
-        symbol=symbol,
+    options = apply_strategy_preset(base, preset)
+    return StrategySpec(
         side=options['side'],
+        min_r_multiple=options['min_r_multiple'],
         require_confirm_volume=options['require_confirm_volume'],
         confirm_volume_multiplier=options['confirm_volume_multiplier'],
-        min_r_multiple=options['min_r_multiple'],
-        require_trend_alignment=options['require_trend_alignment'],
-        require_location_alignment=options['require_location_alignment'],
-        location_tolerance_ratio=options['location_tolerance_ratio'],
-        allowed_patterns=None,
         require_fresh_sma_cross_up=options['require_fresh_sma_cross_up'],
         sma_cross_mode=options['sma_cross_mode'],
+        require_standard_uptrend=options['require_trend_alignment'],
         require_macd_bullish=options['require_macd_bullish'],
         require_rsi_above=options['require_rsi_above'],
         require_above_sma200=options['require_above_sma200'],
         entry_mode=options['entry_mode'],
         stop_mode=options['stop_mode'],
         target_mode=options['target_mode'],
+        indicator_config={
+            'require_trend_alignment': options['require_trend_alignment'],
+            'require_location_alignment': options['require_location_alignment'],
+            'location_tolerance_ratio': options['location_tolerance_ratio'],
+            'allowed_patterns': None,
+        },
     )
-    dates = [time.strftime('%Y-%m-%d', time.gmtime(candle.ts)) for candle in candles]
-    opens = [candle.open for candle in candles]
-    highs = [candle.high for candle in candles]
-    lows = [candle.low for candle in candles]
-    closes = [candle.close for candle in candles]
-    trades, stats = run_backtesting_py(signals, dates, opens, highs, lows, closes, entry_mode=options['entry_mode'])
-    summary = build_summary(trades, symbols_total=1, symbols_processed=1, symbols_failed=0, stats_list=[stats] if stats else [])
-    return signals, trades, summary
+
+
+def _run_fixture(fixture_name: str, symbol: str, preset: str):
+    candles = _load_candles(fixture_name)
+    spec = _preset_spec(preset)
+    original_fetch = backtest_pipeline.fetch_candles
+    original_run_scan = backtest_pipeline.run_scan
+    from reversal_lib.pipeline.scan_pipeline import scan_candles
+    backtest_pipeline.fetch_candles = lambda requested_symbol, range_str='5y': candles if requested_symbol == symbol else []
+    backtest_pipeline.run_scan = lambda current_spec, request, range_str: scan_candles(candles, symbol=symbol, market_cap=None, spec=current_spec)
+    try:
+        result = backtest_pipeline.run_backtest(spec, UniverseRequest(universe='us', symbols=[symbol]), '5y')
+    finally:
+        backtest_pipeline.fetch_candles = original_fetch
+        backtest_pipeline.run_scan = original_run_scan
+    return result.signals, result.trades, result.summary
 
 
 def test_main_fixture_backtest_summary_is_locked() -> None:
