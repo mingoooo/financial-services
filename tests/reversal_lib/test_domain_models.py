@@ -31,6 +31,15 @@ def test_pattern_hit_requires_core_fields() -> None:
     assert hit.candidate_date == "2026-06-20"
 
 
+def test_pattern_hit_missing_required_fields_raises_type_error() -> None:
+    with pytest.raises(TypeError):
+        PatternHit(  # type: ignore[call-arg]
+            symbol="AAPL",
+            pattern="bullish_engulfing",
+            candidate_index=12,
+        )
+
+
 def test_indicator_context_supports_optional_indicator_values() -> None:
     context = IndicatorContext(
         trend_context="uptrend",
@@ -81,6 +90,28 @@ def test_signal_candidate_requires_pattern_hit_and_risk_fields() -> None:
     assert signal.stop_loss == pytest.approx(402.0)
 
 
+def test_signal_candidate_missing_required_fields_raises_type_error() -> None:
+    hit = PatternHit(
+        symbol="MSFT",
+        pattern="hammer",
+        candidate_index=5,
+        candidate_date="2026-06-18",
+    )
+
+    with pytest.raises(TypeError):
+        SignalCandidate(  # type: ignore[call-arg]
+            hit=hit,
+            side="long",
+            confirm_close=410.5,
+            planned_entry_price=411.0,
+            stop_loss=402.0,
+            first_target=420.0,
+            second_target=428.0,
+            confirm_volume=1200000,
+            avg_volume_20=900000,
+        )
+
+
 def test_trade_plan_requires_signal_and_execution_plan_fields() -> None:
     hit = PatternHit(
         symbol="NVDA",
@@ -111,6 +142,35 @@ def test_trade_plan_requires_signal_and_execution_plan_fields() -> None:
 
     assert plan.signal.hit.pattern == "morning_star"
     assert plan.target_price == pytest.approx(160.0)
+
+
+def test_trade_plan_missing_required_fields_raises_type_error() -> None:
+    hit = PatternHit(
+        symbol="NVDA",
+        pattern="morning_star",
+        candidate_index=20,
+        candidate_date="2026-06-17",
+    )
+    signal = SignalCandidate(
+        hit=hit,
+        side="long",
+        confirm_close=150.0,
+        planned_entry_price=151.0,
+        stop_loss=145.0,
+        first_target=160.0,
+        second_target=166.0,
+        confirm_volume=30000000,
+        avg_volume_20=25000000,
+        avg_dollar_volume_20=4500000000,
+    )
+
+    with pytest.raises(TypeError):
+        TradePlan(  # type: ignore[call-arg]
+            signal=signal,
+            entry_date="2026-06-20",
+            entry_price=151.0,
+            stop_loss=145.0,
+        )
 
 
 def test_backtest_result_groups_pipeline_outputs() -> None:
@@ -159,6 +219,11 @@ def test_universe_request_requires_scan_identity() -> None:
     assert request.universe == "sp500"
     assert request.limit is None
     assert request.as_of_date is None
+
+
+def test_universe_request_missing_universe_raises_type_error() -> None:
+    with pytest.raises(TypeError):
+        UniverseRequest()  # type: ignore[call-arg]
 
 
 def test_legacy_models_module_reexports_staged_models() -> None:

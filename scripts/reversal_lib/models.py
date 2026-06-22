@@ -109,8 +109,6 @@ class BacktestSummary:
     total_pnl: float
     max_drawdown_pct: float
     profit_factor: float
-    sharpe_ratio: float = 0.0
-    sharpe_basis: str = 'trade_returns'
 
 
 from reversal_lib.domain.models import (  # noqa: E402
