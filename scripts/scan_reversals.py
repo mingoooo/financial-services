@@ -18,8 +18,8 @@ import urllib.parse
 from urllib.request import HTTPCookieProcessor, Request, build_opener, urlopen
 
 from finvizfinance.screener.overview import Overview
-from reversal_lib.models import Candle, PrefilterMeta, ScanResult
-from reversal_lib.data import resolve_prefiltered_symbols
+from reversal_lib.models import Candle, PrefilterMeta, ScanResult, UniverseRequest
+from reversal_lib.data.prefilter import resolve_prefiltered_universe
 from reversal_lib.signals import generate_signals
 from reversal_lib.strategy_filters import signal_passes_filters
 from reversal_lib.presets import apply_strategy_preset, describe_strategy_preset
@@ -643,7 +643,7 @@ def bearish_confirmation_ok(pattern: str, candles: list[Candle], idx: int, confi
     return confirm.close < body_bottom(candidate)
 
 
-def scan_symbol(symbol: str, require_confirm_volume: bool, market_cap: float | None = None, side: str = "both") -> ScanResult | None:
+def scan_symbol(symbol: str, require_confirm_volume: bool, confirm_volume_multiplier: float = 1.0, market_cap: float | None = None, side: str = "both") -> ScanResult | None:
     candles = fetch_candles(symbol)
     if len(candles) < 25:
         return None
@@ -655,14 +655,12 @@ def scan_symbol(symbol: str, require_confirm_volume: bool, market_cap: float | N
         scan_sides = [side] if side in {"bullish", "bearish"} else ["bullish", "bearish"]
         for current_side in scan_sides:
             if current_side == "bullish":
-                if not has_prior_downtrend(candles, idx):
-                    continue
                 pattern, stop_anchor = detect_bullish_pattern(candles, idx)
                 if not pattern or stop_anchor is None:
                     continue
                 if not bullish_confirmation_ok(pattern, candles, idx, confirm):
                     continue
-                if require_confirm_volume and confirm.volume < avg_vol20:
+                if require_confirm_volume and confirm.volume < avg_vol20 * confirm_volume_multiplier:
                     continue
                 risk = confirm.close - stop_anchor
                 if risk <= 0:
@@ -695,7 +693,7 @@ def scan_symbol(symbol: str, require_confirm_volume: bool, market_cap: float | N
                     continue
                 if not bearish_confirmation_ok(pattern, candles, idx, confirm):
                     continue
-                if require_confirm_volume and confirm.volume < avg_vol20:
+                if require_confirm_volume and confirm.volume < avg_vol20 * confirm_volume_multiplier:
                     continue
                 risk = stop_anchor - confirm.close
                 if risk <= 0:
@@ -733,11 +731,11 @@ def is_transient_scan_error(exc: Exception) -> bool:
     return False
 
 
-def scan_symbol_with_retries(symbol: str, require_confirm_volume: bool, market_cap: float | None = None, retries: int = 3, side: str = "bullish") -> ScanResult | None:
+def scan_symbol_with_retries(symbol: str, require_confirm_volume: bool, confirm_volume_multiplier: float = 1.0, market_cap: float | None = None, retries: int = 3, side: str = "bullish") -> ScanResult | None:
     last_exc: Exception | None = None
     for attempt in range(1, retries + 1):
         try:
-            return scan_symbol(symbol, require_confirm_volume, market_cap, side)
+            return scan_symbol(symbol, require_confirm_volume, confirm_volume_multiplier, market_cap, side)
         except (URLError, HTTPError, KeyError, IndexError, ValueError, RuntimeError) as exc:
             last_exc = exc
             if attempt >= retries:
@@ -1138,7 +1136,7 @@ tr:hover td:first-child{{background:#0b1220;}}
 <div class="meta">生成时间：{generated_at}</div>
 <div class="meta">命中数量：{len(results)} · preset={html.escape(preset_label)} · 页面标签={html.escape(pages_label)} · universe={html.escape(args.universe)} · side={html.escape(args.side)} · include_etfs={args.include_etfs}</div>
 <div class="meta">当前 HTML 报告已按 preset-first 方式展示，GitHub Action 默认也会跟随同名 preset 运行。</div>
-<div class="meta">策略条件：min_r_multiple={args.min_r_multiple} · require_confirm_volume={args.require_confirm_volume} · require_fresh_sma_cross_up={args.require_fresh_sma_cross_up} · sma_cross_mode={html.escape(args.sma_cross_mode)} · require_rsi_above={args.require_rsi_above} · require_macd_bullish={args.require_macd_bullish} · require_above_sma200={args.require_above_sma200}</div>
+<div class="meta">策略条件：min_price={args.min_price} · min_avg_volume={args.min_avg_volume} · min_last_volume={args.min_last_volume} · min_r_multiple={args.min_r_multiple} · require_confirm_volume={args.require_confirm_volume} · confirm_volume_multiplier={args.confirm_volume_multiplier} · require_fresh_sma_cross_up={args.require_fresh_sma_cross_up} · sma_cross_mode={html.escape(args.sma_cross_mode)} · require_standard_uptrend={args.require_standard_uptrend} · require_rsi_above={args.require_rsi_above} · require_macd_bullish={args.require_macd_bullish} · require_above_sma200={args.require_above_sma200} · entry_mode={html.escape(args.entry_mode)} · stop_mode={html.escape(args.stop_mode)} · target_mode={html.escape(args.target_mode)}</div>
 <div class="meta">运行参数：recent_confirm_days={args.recent_confirm_days} · workers={args.workers} · scan_retries={args.scan_retries} · no_cache={args.no_cache}</div>
 <div class="meta">输出文件：{html.escape(output_path)}</div>
 </section>
@@ -1198,21 +1196,25 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--scan-mode", choices=["strategy", "raw"], default="strategy")
     parser.add_argument("--require-fresh-sma-cross-up", action="store_true", default=True)
     parser.add_argument("--sma-cross-mode", choices=["either", "20", "50"], default="either")
-    parser.add_argument("--require-rsi-above", type=float, default=50)
+    parser.add_argument("--require-rsi-above", type=float, default=None)
     parser.add_argument("--require-macd-bullish", action="store_true", default=False)
-    parser.add_argument("--min-last-volume", type=float, default=50_000, help="Minimum last-day volume required")
+    parser.add_argument("--min-last-volume", type=float, default=0, help="Minimum last-day volume required")
     parser.add_argument("--min-market-cap", type=float, default=2_000_000_000, help="Minimum market cap required for Finviz prefilter")
-    parser.add_argument("--min-price", type=float, default=1, help="Minimum last price required")
-    parser.add_argument("--min-avg-volume", type=float, default=750_000, help="Minimum average daily volume required")
+    parser.add_argument("--min-price", type=float, default=5, help="Minimum last price required")
+    parser.add_argument("--min-avg-volume", type=float, default=300_000, help="Minimum average daily volume required")
     parser.add_argument("--top-dollar-volume", type=int, default=0, help="Keep only top N symbols by estimated dollar volume after metadata prefilter")
     parser.add_argument("--require-confirm-volume", action="store_true", default=True)
     parser.add_argument("--no-require-confirm-volume", action="store_false", dest="require_confirm_volume")
+    parser.add_argument("--confirm-volume-multiplier", type=float, default=1.5, help="Require confirm volume to be at least N times AvgVol20")
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--workers", type=int, default=16)
     parser.add_argument("--json", dest="json_out")
     parser.add_argument("--recent-confirm-days", type=int, default=2, help="Only keep signals whose confirmation date is within the last N calendar days")
     parser.add_argument("--html", dest="html_out", help="Write an HTML report with summary table and per-symbol daily charts")
     parser.add_argument("--side", choices=["both", "bullish", "bearish"], default="bullish", help="Scan bullish, bearish, or both confirmed reversal patterns")
+    parser.add_argument("--entry-mode", choices=["confirm_close", "next_open"], default="confirm_close")
+    parser.add_argument("--stop-mode", choices=["pattern_anchor", "confirm_low", "tighter_of_pattern_and_confirm_low"], default="pattern_anchor")
+    parser.add_argument("--target-mode", choices=["nearest_resistance", "r_multiple"], default="nearest_resistance")
     parser.add_argument("--scan-retries", type=int, default=3, help="Retry transient per-symbol scan failures up to N total attempts")
     parser.add_argument("--no-cache", action="store_true", help="Disable all local cache reads and writes for this run")
     return parser.parse_args()
@@ -1234,7 +1236,8 @@ def main() -> int:
         log(f"using explicit symbol list: {len(prefiltered)} symbol(s)")
     else:
         etf_groups = [item.strip() for item in args.etf_groups.split(',') if item.strip()] if args.etf_groups else None
-        prefiltered = resolve_prefiltered_symbols(args.universe, include_etfs=args.include_etfs, min_market_cap=args.min_market_cap, min_price=args.min_price, min_avg_volume=args.min_avg_volume, min_last_volume=args.min_last_volume, top_dollar_volume=args.top_dollar_volume, limit=args.limit, etf_groups=etf_groups, range_str='5y')
+        request = UniverseRequest(universe=args.universe, limit=args.limit or None)
+        prefiltered = resolve_prefiltered_universe(request, include_etfs=args.include_etfs, min_market_cap=args.min_market_cap, min_price=args.min_price, min_avg_volume=args.min_avg_volume, min_last_volume=args.min_last_volume, top_dollar_volume=args.top_dollar_volume, etf_groups=etf_groups, range_str='5y')
         symbols = [m.symbol for m in prefiltered]
         log(f"resolved {len(prefiltered)} symbols for universe={args.universe}, include_etfs={args.include_etfs}")
     log(f"universe prep completed in {time.time() - universe_start:.1f}s")
@@ -1260,7 +1263,7 @@ def main() -> int:
             processed += 1
             try:
                 candles = future.result()
-                signals = generate_signals(candles, symbol=meta.symbol, side=args.side, require_confirm_volume=args.require_confirm_volume, market_cap=meta.market_cap, min_r_multiple=2.0)
+                signals = generate_signals(candles, symbol=meta.symbol, side=args.side, require_confirm_volume=args.require_confirm_volume, confirm_volume_multiplier=args.confirm_volume_multiplier, market_cap=meta.market_cap, min_r_multiple=args.min_r_multiple, require_rsi_above=args.require_rsi_above, entry_mode=args.entry_mode, stop_mode=args.stop_mode, target_mode=args.target_mode)
                 for signal in signals:
                     if args.scan_mode == 'strategy':
                         passed, filt_meta = signal_passes_filters(
@@ -1268,6 +1271,7 @@ def main() -> int:
                             candles,
                             require_fresh_sma_cross_up=args.require_fresh_sma_cross_up,
                             sma_cross_mode=args.sma_cross_mode,
+                            require_standard_uptrend=args.require_standard_uptrend,
                             require_macd_bullish=args.require_macd_bullish,
                             require_rsi_above=args.require_rsi_above,
                             require_above_sma200=args.require_above_sma200,
