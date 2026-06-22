@@ -54,13 +54,21 @@ def load_strategy_spec(preset: str | None, overrides: dict) -> StrategySpec:
     base['indicator_config'] = dict(base.get('indicator_config', {}))
 
     merged = dict(base)
+    indicator_overrides = dict(merged.get('indicator_config', {}))
     for key, value in dict(overrides).items():
         if key == 'indicator_config':
-            merged['indicator_config'] = normalize_indicator_config(value)
+            indicator_overrides.update(normalize_indicator_config(value))
+        elif key in {
+            'require_trend_alignment',
+            'require_location_alignment',
+            'location_tolerance_ratio',
+            'allowed_patterns',
+        }:
+            indicator_overrides[key] = value
         elif key in StrategySpec.__dataclass_fields__:
             merged[key] = value
 
-    merged['indicator_config'] = normalize_indicator_config(merged.get('indicator_config'))
+    merged['indicator_config'] = normalize_indicator_config(indicator_overrides)
     return StrategySpec(**merged)
 
 
@@ -68,7 +76,7 @@ def apply_strategy_preset(options: dict, preset: str | None) -> dict:
     if not preset:
         return options
 
-    spec = load_strategy_spec(preset, overrides={})
+    spec = load_strategy_spec(preset, overrides=options)
     merged = dict(options)
     merged.update(spec.to_legacy_options())
 
