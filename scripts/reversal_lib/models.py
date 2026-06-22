@@ -109,3 +109,34 @@ class BacktestSummary:
     total_pnl: float
     max_drawdown_pct: float
     profit_factor: float
+    sharpe_ratio: float = 0.0
+    sharpe_basis: str = 'trade_returns'
+
+
+from reversal_lib.domain.models import (  # noqa: E402
+    BacktestResult,
+    IndicatorContext,
+    PatternHit,
+    SignalCandidate,
+    TradePlan,
+)
+from reversal_lib.domain.requests import (  # noqa: E402
+    SymbolBatchRequest,
+    UniverseRequest,
+)
+
+__all__ = [
+    "BacktestResult",
+    "BacktestSummary",
+    "Candle",
+    "IndicatorContext",
+    "PatternHit",
+    "PrefilterMeta",
+    "ScanResult",
+    "Signal",
+    "SignalCandidate",
+    "SymbolBatchRequest",
+    "TradePlan",
+    "TradeRecord",
+    "UniverseRequest",
+]
