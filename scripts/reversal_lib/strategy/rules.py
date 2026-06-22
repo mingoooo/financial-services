@@ -5,6 +5,20 @@ from reversal_lib.indicators.context import ComputedIndicatorContext
 from reversal_lib.strategy.spec import StrategySpec
 
 
+def _structural_r_multiple(signal: SignalCandidate) -> float | None:
+    entry_price = signal.planned_entry_price
+    if signal.side == 'bullish':
+        risk = entry_price - signal.stop_loss
+        if risk <= 0 or signal.first_target is None:
+            return None
+        return (signal.first_target - entry_price) / risk
+
+    risk = signal.stop_loss - entry_price
+    if risk <= 0 or signal.first_target is None:
+        return None
+    return (entry_price - signal.first_target) / risk
+
+
 def evaluate_signal(
     signal: SignalCandidate,
     context: ComputedIndicatorContext,
@@ -43,6 +57,9 @@ def evaluate_signal(
     uptrend_ok = (not spec.require_standard_uptrend) or indicator_context.trend_context == 'bullish'
     confirm_volume_ok = (not spec.require_confirm_volume) or context.confirm_volume_ok
 
+    structural_r_multiple = _structural_r_multiple(signal)
+    structural_r_ok = structural_r_multiple is not None and structural_r_multiple >= spec.min_r_multiple
+
     accepted = all([
         trend_ok,
         location_ok,
@@ -52,5 +69,10 @@ def evaluate_signal(
         sma200_ok,
         uptrend_ok,
         confirm_volume_ok,
+        structural_r_ok,
     ])
-    return accepted, SignalCandidate(**{**signal.__dict__, 'indicator_context': IndicatorContext(**indicator_context.__dict__)})
+    return accepted, SignalCandidate(**{
+        **signal.__dict__,
+        'indicator_context': IndicatorContext(**indicator_context.__dict__),
+        'structural_r_multiple': round(structural_r_multiple, 4) if structural_r_multiple is not None else None,
+    })

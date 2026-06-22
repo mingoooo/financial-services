@@ -28,15 +28,12 @@ def build_trade_plan(
         risk = entry_price - resolved_stop
         structural_target = min(resistances) if resistances else None
         target_price = structural_target if (target_mode == 'nearest_resistance' and structural_target is not None) else (entry_price + risk)
-        structural_r_multiple = ((structural_target - entry_price) / risk) if (structural_target is not None and risk > 0) else None
     else:
         resolved_stop = max(signal.stop_loss, confirm.high) if stop_mode == 'tighter_of_pattern_and_confirm_low' else (confirm.high if stop_mode == 'confirm_low' else signal.stop_loss)
         risk = resolved_stop - entry_price
         structural_target = max(supports) if supports else None
         target_price = structural_target if (target_mode == 'nearest_resistance' and structural_target is not None) else (entry_price - risk)
-        structural_r_multiple = ((entry_price - structural_target) / risk) if (structural_target is not None and risk > 0) else None
 
-    signal.structural_r_multiple = round(structural_r_multiple, 4) if structural_r_multiple is not None else None
     return TradePlan(
         signal=signal,
         entry_date=time.strftime('%Y-%m-%d', time.gmtime(entry_candle.ts)),

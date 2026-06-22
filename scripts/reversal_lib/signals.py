@@ -179,8 +179,6 @@ def generate_signals(
                 continue
 
             plan = build_trade_plan(evaluated, candles, stop_mode=stop_mode, target_mode=target_mode)
-            if evaluated.structural_r_multiple is None or evaluated.structural_r_multiple < min_r_multiple:
-                continue
 
             if trade_side == 'bullish':
                 risk = plan.entry_price - plan.stop_loss

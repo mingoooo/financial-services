@@ -181,6 +181,20 @@ def test_evaluate_signal_accepts_and_rejects_based_on_strategy_spec() -> None:
     assert rejected_by_macd is False
 
 
+def test_evaluate_signal_owns_structural_r_multiple_threshold() -> None:
+    candles, signal = _candidate_from_fixture()
+    prepared = prepare_indicator_context_inputs(candles)
+    context = build_indicator_context(candles, signal.hit.candidate_index, signal.confirm_close, inputs=prepared)
+
+    accepted, enriched = evaluate_signal(signal, context, load_strategy_spec('main', overrides={'min_r_multiple': 1.5}))
+    assert accepted is True
+    assert enriched.structural_r_multiple == 1.5085
+
+    rejected, enriched_rejected = evaluate_signal(signal, context, load_strategy_spec('main', overrides={'min_r_multiple': 1.6}))
+    assert rejected is False
+    assert enriched_rejected.structural_r_multiple == 1.5085
+
+
 def test_build_trade_plan_derives_expected_entry_stop_target_fields() -> None:
     candles, signal = _candidate_from_fixture()
     plan = build_trade_plan(signal, candles, stop_mode='confirm_low', target_mode='nearest_resistance')
@@ -188,4 +202,4 @@ def test_build_trade_plan_derives_expected_entry_stop_target_fields() -> None:
     assert plan.entry_price == 316.92
     assert plan.stop_loss == 308.11
     assert plan.target_price == 330.21
-    assert plan.signal.structural_r_multiple == 1.5085
+    assert plan.signal.structural_r_multiple is None

@@ -72,8 +72,6 @@ def _staged_generate(candles: list[Candle], symbol: str, preset: str):
             if not accepted:
                 continue
             plan = build_trade_plan(enriched, candles, stop_mode=spec.stop_mode, target_mode=spec.target_mode)
-            if enriched.structural_r_multiple is None or enriched.structural_r_multiple < spec.min_r_multiple:
-                continue
             staged.append((side, pattern, plan.entry_date, round(plan.stop_loss, 2), round(plan.target_price, 2)))
     return staged
 
