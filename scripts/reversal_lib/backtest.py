@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from datetime import datetime
+import math
+import statistics
 
 import pandas as pd
 from backtesting import Backtest, Strategy
@@ -136,6 +138,34 @@ def run_backtesting_py(signals: list[Signal], dates: list[str], opens: list[floa
     return trades, dict(stats)
 
 
+def candles_to_ohlcv(candles) -> tuple[list[str], list[float], list[float], list[float], list[float]]:
+    dates = [datetime.utcfromtimestamp(c.ts).strftime('%Y-%m-%d') for c in candles]
+    opens = [c.open for c in candles]
+    highs = [c.high for c in candles]
+    lows = [c.low for c in candles]
+    closes = [c.close for c in candles]
+    return dates, opens, highs, lows, closes
+
+
+def run_symbol_backtest(signals: list[Signal], candles, *, entry_mode: str = 'next_open') -> tuple[list[TradeRecord], dict]:
+    dates, opens, highs, lows, closes = candles_to_ohlcv(candles)
+    return run_backtesting_py(signals, dates, opens, highs, lows, closes, entry_mode=entry_mode)
+
+
+def calculate_trade_sharpe_ratio(return_pcts: list[float], risk_free_rate: float = 0.0) -> float:
+    if len(return_pcts) < 2:
+        return 0.0
+    excess_returns = [value - risk_free_rate for value in return_pcts]
+    try:
+        stdev = statistics.stdev(excess_returns)
+    except statistics.StatisticsError:
+        return 0.0
+    if stdev == 0:
+        return 0.0
+    mean = statistics.fmean(excess_returns)
+    return round((mean / stdev) * math.sqrt(len(excess_returns)), 4)
+
+
 def build_summary(trades: list[TradeRecord], symbols_total: int, symbols_processed: int, symbols_failed: int, stats_list: list[dict] | None = None) -> BacktestSummary:
     returns = [trade.return_pct for trade in trades]
     wins = [trade for trade in trades if trade.pnl > 0]
@@ -164,6 +194,8 @@ def build_summary(trades: list[TradeRecord], symbols_total: int, symbols_process
         total_pnl=round(sum(trade.pnl for trade in trades), 4),
         max_drawdown_pct=round(max_drawdown, 4),
         profit_factor=round((gross_profit / gross_loss), 4) if gross_loss else 0.0,
+        sharpe_ratio=calculate_trade_sharpe_ratio(returns),
+        sharpe_basis='trade_returns',
     )
 
 
@@ -171,3 +203,14 @@ def summary_to_dict(summary: BacktestSummary) -> dict:
     payload = asdict(summary)
     payload['generated_at'] = datetime.utcnow().isoformat() + 'Z'
     return payload
+
+
+__all__ = [
+    'ReversalSignalStrategy',
+    'run_backtesting_py',
+    'candles_to_ohlcv',
+    'run_symbol_backtest',
+    'calculate_trade_sharpe_ratio',
+    'build_summary',
+    'summary_to_dict',
+]

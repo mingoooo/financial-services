@@ -9,20 +9,16 @@ import random
 import statistics
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict
 from pathlib import Path
 from http.cookiejar import CookieJar
-from urllib.error import HTTPError, URLError
 import urllib.parse
 from urllib.request import HTTPCookieProcessor, Request, build_opener, urlopen
 
 from finvizfinance.screener.overview import Overview
 from reversal_lib.models import Candle, PrefilterMeta, ScanResult, UniverseRequest
-from reversal_lib.data.prefilter import resolve_prefiltered_universe
-from reversal_lib.signals import generate_signals
-from reversal_lib.strategy_filters import signal_passes_filters
-from reversal_lib.presets import apply_strategy_preset, describe_strategy_preset
+from reversal_lib.pipeline.scan_pipeline import run_scan
+from reversal_lib.presets import apply_strategy_preset, describe_strategy_preset, load_strategy_spec
 
 API_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=2y&interval=1d&includePrePost=false&events=div%2Csplits"
 WIKI_SP500 = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
@@ -1220,6 +1216,63 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _build_universe_request(args: argparse.Namespace) -> UniverseRequest:
+    symbols = [item.strip().upper() for item in args.symbols.split(',')] if args.symbols else []
+    return UniverseRequest(
+        universe=args.universe,
+        limit=args.limit or None,
+        symbols=symbols,
+    )
+
+
+def _build_strategy_spec(args: argparse.Namespace):
+    overrides = {
+        'side': args.side,
+        'min_r_multiple': args.min_r_multiple,
+        'require_confirm_volume': args.require_confirm_volume,
+        'confirm_volume_multiplier': args.confirm_volume_multiplier,
+        'require_fresh_sma_cross_up': args.require_fresh_sma_cross_up,
+        'sma_cross_mode': args.sma_cross_mode,
+        'require_standard_uptrend': args.require_standard_uptrend,
+        'require_macd_bullish': args.require_macd_bullish,
+        'require_rsi_above': args.require_rsi_above,
+        'require_above_sma200': args.require_above_sma200,
+        'entry_mode': args.entry_mode,
+        'stop_mode': args.stop_mode,
+        'target_mode': args.target_mode,
+        'indicator_config': {
+            'require_trend_alignment': args.require_standard_uptrend,
+            'require_location_alignment': False,
+            'location_tolerance_ratio': 0.02,
+            'allowed_patterns': None,
+        },
+    }
+    return load_strategy_spec(args.preset, overrides)
+
+
+def _candidate_to_scan_result(signal) -> ScanResult:
+    return ScanResult(
+        symbol=signal.hit.symbol,
+        pattern=signal.hit.pattern,
+        candidate_date=signal.hit.candidate_date,
+        confirm_date=signal.hit.confirm_date,
+        confirm_close=signal.confirm_close,
+        stop_loss=signal.stop_loss,
+        first_target=signal.first_target,
+        second_target=signal.second_target,
+        confirm_volume=signal.confirm_volume,
+        avg_volume_20=signal.avg_volume_20,
+        avg_dollar_volume_20=signal.avg_dollar_volume_20,
+        market_cap=signal.market_cap,
+        confidence='confirmed',
+        pattern_strength=signal.hit.pattern_strength,
+        confirmation_reason=signal.hit.confirmation_reason,
+        score=signal.hit.score,
+        score_detail=signal.hit.score_detail,
+        side=signal.side,
+    )
+
+
 def main() -> int:
     global NO_CACHE
     started = time.time()
@@ -1230,80 +1283,18 @@ def main() -> int:
     NO_CACHE = args.no_cache
 
     universe_start = time.time()
+    request = _build_universe_request(args)
     if args.symbols:
-        symbols = [s.strip().upper() for s in args.symbols.split(',')]
-        prefiltered = [PrefilterMeta(symbol=s, name=None, price=None, volume=None, average_volume=None, market_cap=None) for s in symbols if is_supported_symbol(s)]
-        log(f"using explicit symbol list: {len(prefiltered)} symbol(s)")
+        symbols = [s for s in request.symbols if is_supported_symbol(s)]
+        log(f"using explicit symbol list: {len(symbols)} symbol(s)")
     else:
-        etf_groups = [item.strip() for item in args.etf_groups.split(',') if item.strip()] if args.etf_groups else None
-        request = UniverseRequest(universe=args.universe, limit=args.limit or None)
-        prefiltered = resolve_prefiltered_universe(request, include_etfs=args.include_etfs, min_market_cap=args.min_market_cap, min_price=args.min_price, min_avg_volume=args.min_avg_volume, min_last_volume=args.min_last_volume, top_dollar_volume=args.top_dollar_volume, etf_groups=etf_groups, range_str='5y')
-        symbols = [m.symbol for m in prefiltered]
-        log(f"resolved {len(prefiltered)} symbols for universe={args.universe}, include_etfs={args.include_etfs}")
+        log(f"delegating scan pipeline for universe={args.universe}, include_etfs={args.include_etfs}")
     log(f"universe prep completed in {time.time() - universe_start:.1f}s")
 
-    if args.top_dollar_volume:
-        prefiltered.sort(key=lambda m: ((m.price or 0) * (m.volume or 0)), reverse=True)
-        prefiltered = prefiltered[:args.top_dollar_volume]
-        log(f"applied top-dollar-volume={args.top_dollar_volume}, scanning top {len(prefiltered)} symbols")
-    elif args.limit:
-        prefiltered = prefiltered[:args.limit]
-        log(f"applied debug limit={args.limit} after prefilter, scanning {len(prefiltered)} symbols")
-
     scan_start = time.time()
-    results: list[ScanResult] = []
     scan_failures: list[str] = []
-    log(f"starting Yahoo OHLCV scan with workers={args.workers}")
-    with ThreadPoolExecutor(max_workers=args.workers) as pool:
-        futures = {pool.submit(fetch_candles, m.symbol): m for m in prefiltered}
-        processed = 0
-        matched = 0
-        for future in as_completed(futures):
-            meta = futures[future]
-            processed += 1
-            try:
-                candles = future.result()
-                signals = generate_signals(candles, symbol=meta.symbol, side=args.side, require_confirm_volume=args.require_confirm_volume, confirm_volume_multiplier=args.confirm_volume_multiplier, market_cap=meta.market_cap, min_r_multiple=args.min_r_multiple, require_rsi_above=args.require_rsi_above, entry_mode=args.entry_mode, stop_mode=args.stop_mode, target_mode=args.target_mode)
-                for signal in signals:
-                    if args.scan_mode == 'strategy':
-                        passed, filt_meta = signal_passes_filters(
-                            signal,
-                            candles,
-                            require_fresh_sma_cross_up=args.require_fresh_sma_cross_up,
-                            sma_cross_mode=args.sma_cross_mode,
-                            require_standard_uptrend=args.require_standard_uptrend,
-                            require_macd_bullish=args.require_macd_bullish,
-                            require_rsi_above=args.require_rsi_above,
-                            require_above_sma200=args.require_above_sma200,
-                        )
-                        if not passed:
-                            continue
-                    result = ScanResult(
-                        symbol=signal.symbol,
-                        pattern=signal.pattern,
-                        candidate_date=signal.candidate_date,
-                        confirm_date=signal.confirm_date,
-                        confirm_close=signal.confirm_close,
-                        stop_loss=signal.stop_loss,
-                        first_target=signal.first_target,
-                        second_target=signal.second_target,
-                        confirm_volume=signal.confirm_volume,
-                        avg_volume_20=signal.avg_volume_20,
-                        avg_dollar_volume_20=signal.avg_dollar_volume_20,
-                        market_cap=signal.market_cap,
-                        confidence='confirmed',
-                        pattern_strength=signal.pattern_strength,
-                        confirmation_reason=signal.confirmation_reason,
-                        score=signal.score,
-                        score_detail=signal.score_detail,
-                        side=signal.side,
-                    )
-                    results.append(result)
-                    matched += 1
-            except (URLError, HTTPError, KeyError, IndexError, ValueError, RuntimeError) as exc:
-                scan_failures.append(f"{meta.symbol}: {exc}")
-            if processed % 25 == 0 or processed == len(prefiltered):
-                log(f"scan progress {processed}/{len(prefiltered)} matches={matched} failures={len(scan_failures)}")
+    spec = _build_strategy_spec(args)
+    results = [_candidate_to_scan_result(signal) for signal in run_scan(spec, request, '5y')]
 
     results = [r for r in results if is_recent_confirm_date(r.confirm_date, args.recent_confirm_days)]
     results.sort(key=lambda r: ((r.score or 0), (r.market_cap or 0), r.avg_dollar_volume_20), reverse=True)
