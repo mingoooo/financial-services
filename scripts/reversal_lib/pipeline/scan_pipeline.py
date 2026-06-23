@@ -34,7 +34,7 @@ def scan_candles(candles: list[Candle], *, symbol: str, market_cap: float | None
 
     for idx in range(20, len(candles) - 2):
         confirm = candles[idx + 1]
-        sr_window = candles[max(0, idx + 2 - 50):idx + 2]
+        sr_window = candles[max(0, idx + 1 - 50):idx + 1]
         supports, resistances = detect_support_resistance_levels_from_window(sr_window)
         context = build_indicator_context(
             candles,
@@ -43,19 +43,31 @@ def scan_candles(candles: list[Candle], *, symbol: str, market_cap: float | None
             location_tolerance_ratio,
             confirm.volume,
             spec.confirm_volume_multiplier,
-            context_inputs=context_inputs,
-            supports=supports,
-            resistances=resistances,
+            inputs=context_inputs,
         )
 
         def maybe_append(side: str, pattern_result, confirmation_reason_builder) -> None:
             if not pattern_result:
                 return
-            pattern_name, stop_loss, first_target, second_target = pattern_result
+            pattern_name, stop_loss = pattern_result
+            if not pattern_name or stop_loss is None:
+                return
+            if side == 'bullish':
+                fallback_risk = confirm.close - stop_loss
+                if fallback_risk <= 0:
+                    return
+                first_target = min(resistances) if resistances else (confirm.close + fallback_risk * 2)
+                second_target = resistances[1] if len(resistances) > 1 else (confirm.close + fallback_risk * 2)
+            else:
+                fallback_risk = stop_loss - confirm.close
+                if fallback_risk <= 0:
+                    return
+                first_target = max(supports) if supports else (confirm.close - fallback_risk * 2)
+                second_target = supports[-2] if len(supports) > 1 else (confirm.close - fallback_risk * 2)
             if allowed_patterns_set is not None and pattern_name not in allowed_patterns_set:
                 return
-            pattern_strength = pattern_strength_label(candles, idx, idx + 1, side)
-            confirmation_reason = confirmation_reason_builder(candles, idx, idx + 1)
+            pattern_strength = pattern_strength_label(pattern_name, side)
+            confirmation_reason = confirmation_reason_builder(pattern_name)
             avg_volume_20 = sum(c.volume for c in candles[idx - 19:idx + 1]) / 20.0
             avg_dollar_volume_20 = sum(c.close * c.volume for c in candles[idx - 19:idx + 1]) / 20.0
             score, score_detail = compute_signal_score(pattern_strength, confirm.volume, avg_volume_20, market_cap, avg_dollar_volume_20)
@@ -97,7 +109,16 @@ def scan_candles(candles: list[Candle], *, symbol: str, market_cap: float | None
 
 
 def run_scan(spec: StrategySpec, universe_request: UniverseRequest, range_str: str) -> list[SignalCandidate]:
-    prefiltered = resolve_prefiltered_universe(universe_request, range_str=range_str)
+    prefiltered = resolve_prefiltered_universe(
+        universe_request,
+        include_etfs=bool(universe_request.include_etfs) if universe_request.include_etfs is not None else False,
+        min_price=universe_request.min_price if universe_request.min_price is not None else 1.0,
+        min_avg_volume=universe_request.min_avg_volume if universe_request.min_avg_volume is not None else 750_000,
+        min_last_volume=universe_request.min_last_volume if universe_request.min_last_volume is not None else 50_000,
+        min_market_cap=universe_request.min_market_cap if universe_request.min_market_cap is not None else 2_000_000_000,
+        etf_groups=universe_request.etf_groups or None,
+        range_str=range_str,
+    )
     all_signals: list[SignalCandidate] = []
     for item in prefiltered:
         candles = fetch_candles(item.symbol, range_str=range_str)

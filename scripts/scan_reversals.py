@@ -1222,6 +1222,12 @@ def _build_universe_request(args: argparse.Namespace) -> UniverseRequest:
         universe=args.universe,
         limit=args.limit or None,
         symbols=symbols,
+        min_price=args.min_price,
+        min_avg_volume=args.min_avg_volume,
+        min_last_volume=args.min_last_volume,
+        min_market_cap=args.min_market_cap,
+        include_etfs=args.include_etfs,
+        etf_groups=[item.strip() for item in args.etf_groups.split(',') if item.strip()],
     )
 
 

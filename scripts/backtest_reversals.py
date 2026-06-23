@@ -11,7 +11,7 @@ import time
 
 import yaml
 
-from reversal_lib.report import write_html_report, write_json_summary, write_signal_csv, write_trade_csv
+from reversal_lib.reporting import write_html_report, write_json_summary, write_signal_csv, write_trade_csv
 from reversal_lib.presets import apply_strategy_preset
 from reversal_lib.models import UniverseRequest
 from reversal_lib.pipeline.backtest_pipeline import run_backtest
@@ -69,7 +69,7 @@ def _build_strategy_spec(args: argparse.Namespace, allowed_patterns: set[str] | 
         confirm_volume_multiplier=args.confirm_volume_multiplier,
         require_fresh_sma_cross_up=args.require_fresh_sma_cross_up,
         sma_cross_mode=args.sma_cross_mode,
-        require_standard_uptrend=args.require_trend_alignment,
+        require_standard_uptrend=getattr(args, 'require_standard_uptrend', False),
         require_macd_bullish=args.require_macd_bullish,
         require_rsi_above=args.require_rsi_above,
         require_above_sma200=args.require_above_sma200,
@@ -136,7 +136,17 @@ def main() -> int:
     for key, value in preset_options.items():
         setattr(args, key, value)
     allowed_patterns = {item.strip() for item in args.allowed_patterns.split("|") if item.strip()} if args.allowed_patterns else None
-    request = UniverseRequest(universe=args.universe, limit=args.max_symbols or None, symbols=[item.strip().upper() for item in args.symbols.split(',')] if args.symbols else [])
+    request = UniverseRequest(
+        universe=args.universe,
+        limit=args.max_symbols or None,
+        symbols=[item.strip().upper() for item in args.symbols.split(',')] if args.symbols else [],
+        min_price=args.min_price,
+        min_avg_volume=args.min_avg_volume,
+        min_last_volume=args.min_last_volume,
+        min_market_cap=args.min_market_cap,
+        include_etfs=args.include_etfs,
+        etf_groups=[item.strip() for item in args.etf_groups.split(',') if item.strip()],
+    )
     spec = _build_strategy_spec(args, allowed_patterns)
     processing_started_at = time.perf_counter()
     result = run_backtest(spec, request, args.range)

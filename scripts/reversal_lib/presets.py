@@ -82,12 +82,23 @@ def apply_strategy_preset(options: dict, preset: str | None) -> dict:
 
     normalized = preset.strip().lower()
     if normalized in {'main', 'high_quality'}:
-        merged.update({
+        defaults = {
             'universe': 'sp500',
             'include_etfs': True,
             'etf_groups': 'core',
             'min_price': 5.0,
             'min_avg_volume': 300_000,
             'min_last_volume': 0,
-        })
+        }
+        parser_defaults = {
+            'universe': 'sp500',
+            'include_etfs': False,
+            'etf_groups': '',
+            'min_price': 1.0,
+            'min_avg_volume': 0,
+            'min_last_volume': 0,
+        }
+        for key, value in defaults.items():
+            if merged.get(key) == parser_defaults.get(key):
+                merged[key] = value
     return merged

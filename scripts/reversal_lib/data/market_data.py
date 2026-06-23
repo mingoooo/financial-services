@@ -5,10 +5,12 @@ import sys
 import time
 from dataclasses import asdict
 from http.cookiejar import CookieJar
+from urllib.error import HTTPError
 from urllib.request import HTTPCookieProcessor, Request, build_opener, urlopen
 
 from .cache import load_cache, save_cache
 from ..models import Candle
+from pathlib import Path
 
 API_URL = 'https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range}&interval=1d&includePrePost=false&events=div%2Csplits'
 USER_AGENT = 'Mozilla/5.0 (compatible; bullish-reversal-scanner/1.0)'
@@ -49,21 +51,52 @@ def fetch_candles(symbol: str, max_age_seconds: int | None = None, range_str: st
     if cached:
         return [Candle(**item) for item in cached]
 
-    warm_yahoo_session()
-    url = API_URL.format(symbol=symbol, range=range_str)
-    payload = fetch_json(url)
-    result = payload['chart']['result'][0]
-    timestamps = result.get('timestamp') or []
-    quote = result['indicators']['quote'][0]
+    legacy_cache = Path('.cache/bullish-reversal-scanner') / f'ohlcv_{symbol}_{range_str}.json'
+    if legacy_cache.exists():
+        try:
+            payload = json.loads(legacy_cache.read_text())
+            candles = [Candle(**item) for item in payload]
+            save_cache('candles', cache_key, [asdict(candle) for candle in candles])
+            return candles
+        except (json.JSONDecodeError, TypeError, ValueError, KeyError):
+            pass
+
     candles: list[Candle] = []
-    for idx, ts in enumerate(timestamps):
-        open_ = quote['open'][idx]
-        high = quote['high'][idx]
-        low = quote['low'][idx]
-        close = quote['close'][idx]
-        volume = quote['volume'][idx]
-        if None in (open_, high, low, close, volume):
-            continue
-        candles.append(Candle(ts=ts, open=open_, high=high, low=low, close=close, volume=volume))
+    try:
+        warm_yahoo_session()
+        url = API_URL.format(symbol=symbol, range=range_str)
+        payload = fetch_json(url)
+        result = payload['chart']['result'][0]
+        timestamps = result.get('timestamp') or []
+        quote = result['indicators']['quote'][0]
+        for idx, ts in enumerate(timestamps):
+            open_ = quote['open'][idx]
+            high = quote['high'][idx]
+            low = quote['low'][idx]
+            close = quote['close'][idx]
+            volume = quote['volume'][idx]
+            if None in (open_, high, low, close, volume):
+                continue
+            candles.append(Candle(ts=ts, open=open_, high=high, low=low, close=close, volume=volume))
+    except (HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
+        log(f'yahoo chart fetch failed for {symbol}: {exc}; falling back to yfinance')
+        import yfinance as yf
+
+        history = yf.Ticker(symbol).history(period=range_str, interval='1d', auto_adjust=False)
+        if history is not None and not history.empty:
+            for ts, row in history.iterrows():
+                open_ = row.get('Open')
+                high = row.get('High')
+                low = row.get('Low')
+                close = row.get('Close')
+                volume = row.get('Volume')
+                if None in (open_, high, low, close, volume):
+                    continue
+                if any(value != value for value in (open_, high, low, close, volume)):
+                    continue
+                candles.append(Candle(ts=int(ts.timestamp()), open=float(open_), high=float(high), low=float(low), close=float(close), volume=float(volume)))
+
+    if not candles:
+        return []
     save_cache('candles', cache_key, [asdict(candle) for candle in candles])
     return candles

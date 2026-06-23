@@ -50,6 +50,7 @@ def _to_legacy_signal(signal: SignalCandidate, candles: list[Candle], spec: Stra
 
 def run_backtest(spec: StrategySpec, universe_request: UniverseRequest, range_str: str) -> BacktestResult:
     signal_candidates = run_scan(spec, universe_request, range_str)
+    requested_symbols_total = len(universe_request.symbols) if universe_request.symbols else 0
     by_symbol: dict[str, list[SignalCandidate]] = {}
     for signal in signal_candidates:
         by_symbol.setdefault(signal.hit.symbol, []).append(signal)
@@ -82,7 +83,8 @@ def run_backtest(spec: StrategySpec, universe_request: UniverseRequest, range_st
             stats_list.append(stats)
         processed += 1
 
-    summary = build_summary(trades, symbols_total=len(by_symbol), symbols_processed=processed, symbols_failed=failed, stats_list=stats_list)
+    symbols_total = max(len(by_symbol), requested_symbols_total)
+    summary = build_summary(trades, symbols_total=symbols_total, symbols_processed=processed, symbols_failed=failed, stats_list=stats_list)
     return BacktestResult(signals=legacy_signals, trade_plans=trade_plans, trades=trades, summary=summary)
 
 

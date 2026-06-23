@@ -194,8 +194,6 @@ def build_summary(trades: list[TradeRecord], symbols_total: int, symbols_process
         total_pnl=round(sum(trade.pnl for trade in trades), 4),
         max_drawdown_pct=round(max_drawdown, 4),
         profit_factor=round((gross_profit / gross_loss), 4) if gross_loss else 0.0,
-        sharpe_ratio=calculate_trade_sharpe_ratio(returns),
-        sharpe_basis='trade_returns',
     )
 
 

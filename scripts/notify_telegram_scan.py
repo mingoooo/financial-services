@@ -5,6 +5,7 @@ import os
 import sys
 import urllib.parse
 import urllib.request
+from urllib.error import HTTPError, URLError
 from pathlib import Path
 
 
@@ -41,8 +42,16 @@ def _send_telegram(bot_token: str, chat_id: str, text: str) -> None:
     url = f'https://api.telegram.org/bot{bot_token}/sendMessage'
     data = urllib.parse.urlencode({'chat_id': chat_id, 'text': text}).encode('utf-8')
     req = urllib.request.Request(url, data=data, method='POST')
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        body = resp.read().decode('utf-8', errors='ignore')
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            body = resp.read().decode('utf-8', errors='ignore')
+    except HTTPError as exc:
+        error_body = exc.read().decode('utf-8', errors='ignore') if exc.fp else ''
+        if exc.code == 404:
+            raise RuntimeError('Telegram API 返回 404。通常是 TELEGRAM_BOT_TOKEN 配置错误、被截断，或不是 BotFather 返回的完整 token。') from exc
+        raise RuntimeError(f'Telegram HTTPError {exc.code}: {error_body or exc.reason}') from exc
+    except URLError as exc:
+        raise RuntimeError(f'Telegram URLError: {exc.reason}') from exc
     payload = json.loads(body)
     if not payload.get('ok'):
         raise RuntimeError(f'Telegram sendMessage failed: {body}')
@@ -61,7 +70,11 @@ def main() -> int:
         return 0
     payload = _load_payload(json_path)
     message = _build_message(payload, pages_url)
-    _send_telegram(bot_token, chat_id, message)
+    try:
+        _send_telegram(bot_token, chat_id, message)
+    except Exception as exc:
+        print(f'Telegram notification failed: {exc}', file=sys.stderr)
+        return 1
     print('Telegram notification sent.')
     return 0
 

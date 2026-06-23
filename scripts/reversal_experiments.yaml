@@ -1,0 +1,59 @@
+defaults:
+  range: 5y
+  entry_mode: confirm_close
+  universe: sp500
+  side: bullish
+  include_etfs: true
+  etf_groups: core
+  require_confirm_volume: true
+  min_r_multiple: 2.0
+  sma_cross_mode: either
+  require_fresh_sma_cross_up: true
+  require_macd_bullish: false
+  require_rsi_above: 50.0
+  require_above_sma200: false
+  top_dollar_volume: 0
+  min_last_volume: 50000
+  min_avg_volume: 750000
+  min_price: 1.0
+  min_market_cap: 2000000000
+
+presets:
+  main_current:
+    preset: main
+  main_no_fresh_cross:
+    preset: main
+    require_fresh_sma_cross_up: false
+  main_rsi45:
+    preset: main
+    require_rsi_above: 45.0
+  main_r15:
+    preset: main
+    min_r_multiple: 1.5
+  main_relaxed_combo:
+    preset: main
+    require_fresh_sma_cross_up: false
+    require_rsi_above: 45.0
+    min_r_multiple: 1.5
+  high_quality_current:
+    preset: high_quality
+
+experiments:
+  - name: main_current
+    use: main_current
+  - name: main_no_fresh_cross
+    use: main_no_fresh_cross
+  - name: main_rsi45
+    use: main_rsi45
+  - name: main_r15
+    use: main_r15
+  - name: main_relaxed_combo
+    use: main_relaxed_combo
+  - name: high_quality_current
+    use: high_quality_current
+
+  - name: grid_demo
+    use: main_current
+    grid:
+      min_r_multiple: [1.5, 2.0]
+      require_rsi_above: [45.0, 50.0]
