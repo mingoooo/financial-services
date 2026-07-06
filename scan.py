@@ -114,6 +114,42 @@ def get_fast_info(symbol):
         return None, {}, {}
 
 
+def current_extended_price(ticker_obj, fast, info, symbol):
+    try:
+        hist = ticker_obj.history(period="2d", interval="1m", auto_adjust=False, prepost=True)
+        if hist is not None and not hist.empty:
+            close_series = hist["Close"].dropna()
+            if not close_series.empty:
+                return safe_float(close_series.iloc[-1])
+    except Exception as exc:
+        log(f"extended minute price failed for {symbol}: {exc}")
+    for value in [
+        info.get("preMarketPrice"),
+        info.get("postMarketPrice"),
+        fast.get("lastPrice"),
+        fast.get("regularMarketPrice"),
+        info.get("regularMarketPrice"),
+    ]:
+        number = safe_float(value)
+        if number is not None:
+            return number
+    return None
+
+
+def previous_close_from_daily(ticker_obj, symbol):
+    try:
+        hist = ticker_obj.history(period="7d", interval="1d", auto_adjust=False, prepost=False)
+        if hist is None or hist.empty:
+            return None
+        closes = hist["Close"].dropna().tolist()
+        if not closes:
+            return None
+        return safe_float(closes[-1])
+    except Exception as exc:
+        log(f"previous close failed for {symbol}: {exc}")
+        return None
+
+
 def last_two_daily_closes(symbol):
     hist = get_history(symbol, period="7d", interval="1d", auto_adjust=False, prepost=False)
     if hist is None or hist.empty or len(hist) < 2:
@@ -128,7 +164,13 @@ def build_market_snapshot():
     out = []
     for name, symbol in MARKET_SYMBOLS.items():
         log(f"market snapshot: {name} {symbol}")
-        last, prev_close = last_two_daily_closes(symbol)
+        ticker, fast, info = get_fast_info(symbol)
+        prev_close = previous_close_from_daily(ticker, symbol) if ticker is not None else None
+        last = current_extended_price(ticker, fast, info, symbol) if ticker is not None else None
+        if last is None or prev_close is None:
+            daily_last, daily_prev = last_two_daily_closes(symbol)
+            last = last if last is not None else daily_last
+            prev_close = prev_close if prev_close is not None else daily_prev
         change_pct = None
         if last is not None and prev_close not in (None, 0):
             change_pct = (last / prev_close - 1) * 100
@@ -155,7 +197,7 @@ def candidate_from_quote(quote, source):
     symbol = quote.get("symbol") or quote.get("ticker")
     if not symbol:
         return None
-    price = safe_float(quote.get("regularMarketPrice") or quote.get("postMarketPrice") or quote.get("preMarketPrice"))
+    price = safe_float(quote.get("preMarketPrice") or quote.get("postMarketPrice") or quote.get("regularMarketPrice"))
     prev_close = safe_float(quote.get("regularMarketPreviousClose") or quote.get("regularMarketPreviousCloseRaw"))
     gap_pct = safe_float(quote.get("regularMarketChangePercent"))
     market_cap = safe_float(quote.get("marketCap"))
@@ -179,16 +221,15 @@ def fallback_candidates():
         log(f"fallback candidate: {symbol}")
         try:
             ticker, fast, info = get_fast_info(symbol)
-            hist = ticker.history(period="7d", interval="1d", auto_adjust=False, prepost=False) if ticker else None
-            if hist is None or hist.empty or len(hist) < 2:
+            if ticker is None:
                 continue
-            last_close = safe_float(hist["Close"].dropna().tolist()[-1])
-            prev_close = safe_float(hist["Close"].dropna().tolist()[-2])
-            gap_pct = (last_close / prev_close - 1) * 100 if last_close is not None and prev_close not in (None, 0) else None
+            current_price = current_extended_price(ticker, fast, info, symbol)
+            prev_close = previous_close_from_daily(ticker, symbol)
+            gap_pct = (current_price / prev_close - 1) * 100 if current_price is not None and prev_close not in (None, 0) else None
             results.append({
                 "ticker": symbol,
                 "company_name": info.get("shortName") or info.get("longName") or symbol,
-                "price": last_close,
+                "price": current_price,
                 "prev_close": prev_close,
                 "gap_pct": gap_pct,
                 "market_cap": safe_float(fast.get("marketCap") or info.get("marketCap")),
@@ -458,6 +499,7 @@ def intraday_levels(symbol):
         total_v = work["Volume"].fillna(0).cumsum().replace(0, math.nan)
         vwap_series = total_pv / total_v
         return {
+            "current_extended_price": safe_float(work["Close"].dropna().iloc[-1]) if not work["Close"].dropna().empty else None,
             "vwap": safe_float(vwap_series.dropna().iloc[-1]) if not vwap_series.dropna().empty else None,
             "hod": safe_float(work["High"].max()),
             "lod": safe_float(work["Low"].min()),
@@ -540,8 +582,10 @@ def enrich_gapper(base, market_news):
         out.update(extract_catalysts(symbol, out.get("company_name"), ticker_news, market_news))
         out["next_earnings_date"] = next_earnings_date(ticker, symbol)
         out["market_cap"] = out.get("market_cap") or safe_float(fast.get("marketCap") or info.get("marketCap"))
-        out["price"] = out.get("price") or safe_float(fast.get("lastPrice") or fast.get("regularMarketPrice"))
+        out["price"] = out.get("current_extended_price") or out.get("price") or current_extended_price(ticker, fast, info, symbol)
         out["prev_close"] = out.get("prev_close") or out.get("prior_close")
+        if out.get("gap_pct") is None and out.get("price") is not None and out.get("prev_close") not in (None, 0):
+            out["gap_pct"] = (out["price"] / out["prev_close"] - 1) * 100
         gap = out.get("gap_pct")
         price = out.get("price")
         mcap = out.get("market_cap")

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-06T02:07:17.114810+00:00",
+  "generated_at": "2026-07-06T07:10:31.916363+00:00",
   "candidate_source": "yfinance_day_gainers+most_actives",
   "trading_day_note": "Raw premarket packet only. No analysis, no conviction, no watchlist bucketing.",
   "scan_params": {
@@ -86,65 +86,65 @@
     {
       "name": "S&P 500",
       "symbol": "^GSPC",
-      "last": 7483.240234375,
-      "prev_close": 7483.22998046875,
-      "change_pct": 0.00013702513856905796
+      "last": 7483.24,
+      "prev_close": 7483.240234375,
+      "change_pct": -3.1319988824662914e-06
     },
     {
       "name": "Dow",
       "symbol": "^DJI",
-      "last": 52900.0703125,
-      "prev_close": 52305.23828125,
-      "change_pct": 1.137232236762853
+      "last": 52900.07,
+      "prev_close": 52900.0703125,
+      "change_pct": -5.907364597490528e-07
     },
     {
       "name": "Nasdaq",
       "symbol": "^IXIC",
-      "last": 25832.669921875,
-      "prev_close": 26040.029296875,
-      "change_pct": -0.7963100679955204
+      "last": 25832.672,
+      "prev_close": 25832.669921875,
+      "change_pct": 8.044561417008822e-06
     },
     {
       "name": "Russell 2000",
       "symbol": "^RUT",
-      "last": 2996.110107421875,
-      "prev_close": 3012.590087890625,
-      "change_pct": -0.5470369345963344
+      "last": 2996.1104,
+      "prev_close": 2996.110107421875,
+      "change_pct": 9.765266106853687e-06
     },
     {
       "name": "VIX",
       "symbol": "^VIX",
-      "last": 16.149999618530273,
-      "prev_close": 16.59000015258789,
-      "change_pct": -2.6522033153145053
+      "last": 15.8100004196167,
+      "prev_close": 16.149999618530273,
+      "change_pct": -2.1052582473343517
     },
     {
       "name": "US 10Y",
       "symbol": "^TNX",
-      "last": 4.485000133514404,
-      "prev_close": 4.474999904632568,
-      "change_pct": 0.22346880659112056
+      "last": 4.484999656677246,
+      "prev_close": 4.485000133514404,
+      "change_pct": -1.0631820379636281e-05
     },
     {
       "name": "US 3M",
       "symbol": "^IRX",
       "last": 3.6679999828338623,
-      "prev_close": 3.700000047683716,
-      "change_pct": -0.8648666064176469
+      "prev_close": 3.6679999828338623,
+      "change_pct": 0.0
     },
     {
       "name": "WTI Oil",
       "symbol": "CL=F",
-      "last": 68.8499984741211,
-      "prev_close": 68.69000244140625,
-      "change_pct": 0.23292477366168018
+      "last": 68.72000122070312,
+      "prev_close": 68.72000122070312,
+      "change_pct": 0.0
     },
     {
       "name": "Dollar (DXY)",
       "symbol": "DX-Y.NYB",
-      "last": 100.95500183105469,
-      "prev_close": 100.86000061035156,
-      "change_pct": 0.094191176014502
+      "last": 101.07599639892578,
+      "prev_close": 101.07599639892578,
+      "change_pct": 0.0
     }
   ],
   "econ_calendar": {
@@ -153,26 +153,30 @@
       "country": "USD",
       "impact": "High",
       "dates": [
-        "2026-07-05",
-        "2026-07-06"
+        "2026-07-06",
+        "2026-07-07"
       ]
     },
-    "today_date": "2026-07-05",
-    "tomorrow_date": "2026-07-06",
+    "today_date": "2026-07-06",
+    "tomorrow_date": "2026-07-07",
     "today": [],
     "tomorrow": [],
-    "notes": []
+    "notes": [
+      "using cached weekly feed within 4h ttl",
+      "feed may be stale"
+    ]
   },
   "gappers": [
     {
       "ticker": "SLBT",
       "company_name": "SL Science Holding Limited",
-      "price": 5.99,
+      "price": 5.4501,
       "prev_close": 4.45,
       "gap_pct": 34.606743,
       "market_cap": 3358950656.0,
       "volume": 1216225.0,
       "candidate_source": "yfinance_day_gainers",
+      "current_extended_price": 5.4501,
       "vwap": 5.701784704114942,
       "hod": 6.25,
       "lod": 4.300000190734863,
@@ -194,12 +198,13 @@
     {
       "ticker": "PLBL",
       "company_name": "Polibeli Group Ltd",
-      "price": 10.26,
+      "price": 10.1813,
       "prev_close": 8.68,
       "gap_pct": 18.202765,
       "market_cap": 3759135488.0,
       "volume": 848246.0,
       "candidate_source": "yfinance_day_gainers",
+      "current_extended_price": 10.1813,
       "vwap": 10.151632918606632,
       "hod": 10.899900436401367,
       "lod": 8.268,
@@ -221,12 +226,13 @@
     {
       "ticker": "KEEL",
       "company_name": "Keel Infrastructure Corp.",
-      "price": 4.59,
+      "price": 4.5899,
       "prev_close": 5.38,
       "gap_pct": -14.684014,
       "market_cap": 2771573760.0,
       "volume": 49897299.0,
       "candidate_source": "yfinance_most_actives",
+      "current_extended_price": 4.5899,
       "vwap": 4.821508078829957,
       "hod": 5.48,
       "lod": 4.519999980926514,
@@ -239,8 +245,15 @@
       "avg_volume_20d": 65815650.0,
       "today_volume": 49666700.0,
       "rvol": 0.7546335863886476,
-      "catalyst_found": false,
-      "catalyst_headlines": [],
+      "catalyst_found": true,
+      "catalyst_headlines": [
+        {
+          "publisher": "Yahoo Finance",
+          "source": "Google News Markets",
+          "title": "As Global Markets Reach New Heights, ELEKTROS Strengthens Its Vision for the Next Generation of High-Speed EV Charging Infrastructure - Yahoo Finance",
+          "link": "https://news.google.com/rss/articles/CBMinwFBVV95cUxQd3M4ek5PdGFPN0N1U1pYSVJsU0lMLVp6Ti1kbWhlTzJ1N0dqWDZJbm94blE3S21YV2JuanpVNUxxTTF6enVoSmxZOE92bVF1UEcyQ0puc2ROSF9kZW55MnpvT193UnBSZG4tUFh1cWZmcmxwWkFSbDQxd3AyUDEyMlNETXNKaktxQnR2ZzU3TXFrTURXeklUNzBBTkdEMEk?oc=5"
+        }
+      ],
       "next_earnings_date": "2026-08-10 08:00:00-04:00",
       "day_eligible": false,
       "swing_eligible": false
@@ -248,12 +261,13 @@
     {
       "ticker": "GPC",
       "company_name": "Genuine Parts Company",
-      "price": 132.57,
+      "price": 130.33,
       "prev_close": 117.4,
       "gap_pct": 12.9216,
       "market_cap": 18443419648.0,
       "volume": 4432544.0,
       "candidate_source": "yfinance_day_gainers",
+      "current_extended_price": 130.33,
       "vwap": 130.17870186296693,
       "hod": 135.44000244140625,
       "lod": 116.76000213623047,
@@ -275,12 +289,13 @@
     {
       "ticker": "SLS",
       "company_name": "SELLAS Life Sciences Group, Inc",
-      "price": 14.98,
+      "price": 14.8199,
       "prev_close": 13.2699995,
       "gap_pct": 12.8862095,
       "market_cap": 2945555968.0,
       "volume": 17275558.0,
       "candidate_source": "yfinance_day_gainers",
+      "current_extended_price": 14.8199,
       "vwap": 14.406205004045185,
       "hod": 15.050000190734863,
       "lod": 12.64,
@@ -302,12 +317,13 @@
     {
       "ticker": "CAR",
       "company_name": "Avis Budget Group, Inc.",
-      "price": 163.44,
+      "price": 161.05,
       "prev_close": 146.94,
       "gap_pct": 11.229074,
       "market_cap": 5773515264.0,
       "volume": 543098.0,
       "candidate_source": "yfinance_day_gainers",
+      "current_extended_price": 161.05,
       "vwap": 155.79867173993483,
       "hod": 164.0,
       "lod": 145.0,
@@ -329,12 +345,13 @@
     {
       "ticker": "AVAV",
       "company_name": "AeroVironment, Inc.",
-      "price": 190.89,
+      "price": 192.0,
       "prev_close": 172.44,
       "gap_pct": 10.699372,
       "market_cap": 9660567552.0,
       "volume": 4167391.0,
       "candidate_source": "yfinance_day_gainers",
+      "current_extended_price": 192.0,
       "vwap": 192.64336871144457,
       "hod": 200.3800048828125,
       "lod": 174.7365,
@@ -356,12 +373,13 @@
     {
       "ticker": "IREN",
       "company_name": "IREN LIMITED",
-      "price": 38.82,
+      "price": 39.1679,
       "prev_close": 43.32,
       "gap_pct": -10.387812,
       "market_cap": 13873440768.0,
       "volume": 60368806.0,
       "candidate_source": "yfinance_most_actives",
+      "current_extended_price": 39.1679,
       "vwap": 39.7948114169523,
       "hod": 43.9597,
       "lod": 37.65999984741211,
@@ -383,12 +401,13 @@
     {
       "ticker": "NKTR",
       "company_name": "Nektar Therapeutics",
-      "price": 71.04,
+      "price": 71.17,
       "prev_close": 64.39,
       "gap_pct": 10.327693,
       "market_cap": 2400159744.0,
       "volume": 1120778.0,
       "candidate_source": "yfinance_day_gainers",
+      "current_extended_price": 71.17,
       "vwap": 67.65982695536424,
       "hod": 71.5,
       "lod": 64.3,
@@ -410,12 +429,13 @@
     {
       "ticker": "BB",
       "company_name": "BlackBerry Limited",
-      "price": 11.51,
+      "price": 11.36,
       "prev_close": 12.81,
       "gap_pct": -10.1483,
       "market_cap": 6746015744.0,
       "volume": 50661124.0,
       "candidate_source": "yfinance_most_actives",
+      "current_extended_price": 11.36,
       "vwap": 11.85341433357903,
       "hod": 13.029500007629395,
       "lod": 11.199999809265137,
@@ -437,12 +457,13 @@
     {
       "ticker": "MRNA",
       "company_name": "Moderna, Inc.",
-      "price": 79.76,
+      "price": 80.4399,
       "prev_close": 72.5,
       "gap_pct": 10.013797,
       "market_cap": 31647674368.0,
       "volume": 14111998.0,
       "candidate_source": "yfinance_day_gainers",
+      "current_extended_price": 80.4399,
       "vwap": 78.3612157819242,
       "hod": 81.4000015258789,
       "lod": 71.65,
@@ -464,12 +485,13 @@
     {
       "ticker": "IMNM",
       "company_name": "Immunome, Inc.",
-      "price": 23.61,
+      "price": 23.5,
       "prev_close": 21.490002,
       "gap_pct": 9.865047,
       "market_cap": 2673841920.0,
       "volume": 1869683.0,
       "candidate_source": "yfinance_day_gainers",
+      "current_extended_price": 23.5,
       "vwap": 22.843539302767645,
       "hod": 23.670000076293945,
       "lod": 21.260000228881836,
@@ -484,7 +506,7 @@
       "rvol": 1.0705591926273406,
       "catalyst_found": false,
       "catalyst_headlines": [],
-      "next_earnings_date": null,
+      "next_earnings_date": "2026-08-06 16:00:00-04:00",
       "day_eligible": false,
       "swing_eligible": false
     }
@@ -555,76 +577,12 @@
       "published": "Thu, 02 Jul 2026 23:20:58 GMT"
     },
     {
-      "source": "CNBC",
-      "publisher": "CNBC",
-      "title": "Trump bought Apple, Nvidia and other tech giants before tariff reversal fueled rebound",
-      "summary": "The day before President Donald Trump walked back his tariff policy turned out to be one of his busiest days of 2025 for stock buying.",
-      "link": "https://www.cnbc.com/2026/07/02/trump-aapl-nvda-tariffs-disclosures.html",
-      "published": "Thu, 02 Jul 2026 21:03:39 GMT"
-    },
-    {
-      "source": "CNBC",
-      "publisher": "CNBC",
-      "title": "Amazon has deployed enough satellites to launch Leo service later this year",
-      "summary": "Leo will compete with SpaceX's Starlink, which had a four-year start over Amazon and has more than 10,000 satellites in its constellation.",
-      "link": "https://www.cnbc.com/2026/07/02/amazon-has-deployed-enough-satellites-to-launch-leo-service-this-year.html",
-      "published": "Thu, 02 Jul 2026 18:28:35 GMT"
-    },
-    {
       "source": "Google News Markets",
       "publisher": "Bloomberg.com",
       "title": "Chip Stock Bulls Count on Samsung to Soothe AI Trade Jitters - Bloomberg.com",
       "summary": "Chip Stock Bulls Count on Samsung to Soothe AI Trade Jitters Bloomberg.com",
       "link": "https://news.google.com/rss/articles/CBMisAFBVV95cUxQYmt3bldzOWxKZVphUWM1amhIRmpjczNZaWlrdnhycFRIaDNPV0lveEVGb1VqR25hSnhjM3BSVG1mNGhyTkI5bjN6dHBIYTFvWldIZnBaNzV0T1pmQ05UWlhsNktoY3NSb1h6UW9OWFV0R1VYRjRpTjFYMzVHbUg0bDZSeDRXQU16dlFJSTNHOUNOcnFkb1hQeU5tVGJZeUluU2YxT1dOc2JJTWZvQUFpMA?oc=5",
       "published": "Sun, 05 Jul 2026 23:53:18 GMT"
-    },
-    {
-      "source": "Google News Markets",
-      "publisher": "TradingView",
-      "title": "Bioventus, Inc. Class A Earnings and Revenue – LS:A2APNA - TradingView",
-      "summary": "Bioventus, Inc. Class A Earnings and Revenue – LS:A2APNA TradingView",
-      "link": "https://news.google.com/rss/articles/CBMidEFVX3lxTE5DanZhTlZHNWlaSnVTSGF6UnhVMTVVOEhndGxReDVFaDBXTzUtZEIya3Y0Qm9DQ2RLcnZianNWNzFVN3RJRTBYbGZ1c0JCQ1BCSFR0REwxc0Y5Y1ZNNEZmZkxtMk9oNWpVTkhZV28tMWVpUGpl?oc=5",
-      "published": "Sun, 05 Jul 2026 23:34:35 GMT"
-    },
-    {
-      "source": "Google News Markets",
-      "publisher": "The Globe and Mail",
-      "title": "Why Robinhood Stock Jumped This Week - The Globe and Mail",
-      "summary": "Why Robinhood Stock Jumped This Week The Globe and Mail",
-      "link": "https://news.google.com/rss/articles/CBMiwAFBVV95cUxOYjRRdV9pTU1Sb0tHX0N3dTNWbDRWaTZoMnVlSjJRcy1KRmxSRDVHVXdGaWxhMGFKM05qNldFOG9OTFM4NFhRc0V0RnJUZGVPWExLWVNGQzc0Q1h0bHlwMFk5NFd3NEZ1V3pQaDRBTEgxdUw2TDN0cUxvME12SVJNXzNrSjhsNTNySnBNeG9CMG5JQ1duU2FCWnRXMzVoVG82Mm1KWnhXRHNQSzVtRlU5WlBTZGNXMTFCamV2bWV0dmU?oc=5",
-      "published": "Sun, 05 Jul 2026 23:32:23 GMT"
-    },
-    {
-      "source": "Google News Markets",
-      "publisher": "CMC Markets",
-      "title": "The Week Ahead: US services PMI, Fed minutes, Delta earnings - CMC Markets",
-      "summary": "The Week Ahead: US services PMI, Fed minutes, Delta earnings CMC Markets",
-      "link": "https://news.google.com/rss/articles/CBMipAFBVV95cUxPMnh5S2tvMnJUVWdvNXRCOUhsVGFDRDZXQnE3cEluWnNFRDNNMWpNZHJHYVl6WE8tZE1IRzdna3JwdVNpWjF4ancyS0ZuWXpZUUFFRnV2RFROdmEzOWoyLTczb01ERWZkdnplZ2c0b0dqVFVqYXdsZXg4QlJyMkJhZHpGamJkQlIyd0o1eDJRNDBiTkFJVl9XRWJxNGdYd1NlOGg0Sw?oc=5",
-      "published": "Sun, 05 Jul 2026 23:20:42 GMT"
-    },
-    {
-      "source": "Google News Markets",
-      "publisher": "Tampa Bay Times",
-      "title": "Save Social Security by removing the cap on earnings | Letters - Tampa Bay Times",
-      "summary": "Save Social Security by removing the cap on earnings | Letters Tampa Bay Times",
-      "link": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxOYmJXMV93YzV2bGZKZkVZb05tTGUyWUNLRWVQZGJXMEdWYUhLSjI5eWpEbl9zOTdDNHFrRzNxcGE1Mk5OV25CZjZ1V0Z3YjY1aTRnSWJ0Wml0OTg2QTBRR3VNWUduR3ZwdjFDVS1LRDRMZlpZQ2FMbmpzYlI2Vm5YcVFWdzR1NGtBRG5vUjVjc2tNdjhVM2F5ckhuSjUwZU4yOVZ5a1ZGdy0?oc=5",
-      "published": "Sun, 05 Jul 2026 23:19:26 GMT"
-    },
-    {
-      "source": "Google News Markets",
-      "publisher": "simplywall.st",
-      "title": "Weak Statutory Earnings May Not Tell The Whole Story For Heiwa (TSE:6412) - simplywall.st",
-      "summary": "Weak Statutory Earnings May Not Tell The Whole Story For Heiwa (TSE:6412) simplywall.st",
-      "link": "https://news.google.com/rss/articles/CBMi2AFBVV95cUxPWGtRTjl6ZkNUbGt0Vk9FYWtEcVV6b0hGdV9ySFdzOUM3R1FfWS1TWHozZ2JsQzM0NDdXTlNWOFdZVnVRRk5mY1NsMkQ2enNMTm1iODRJMFdOSlJGMUt3WDNvVmVsU29NX05wcDVaRXVSeWJ0MTVIQ19jVm9KeW84YVFlWnRBbzlHTmk3cTM0Q2tQWDhfUm5lNGNFR01LM29QdXlZbTVHZ0daaW9wSkVWdVF3VllXNmFKRmUtVzhtY2F4WTFhYTJFR19MeU5NZS0zaGdDRU5ydUfSAdgBQVVfeXFMT1hrUU45emZDVGxrdFZPRWFrRHFVem9IRnVfckhXczlDN0dRX1ktU1h6M2dibEMzNDQ3V05TVjhXWVZ1UUZOZmNTbDJENnpzTE5tYjg0STBXTkpSRjFLd1gzb1ZlbFNvTV9OcHA1WkV1UnlidDE1SENfY1ZvSnlvOGFRZVp0QW85R05pN3EzNENrUFg4X1JuZTRjRUdNSzNvUHV5WW01R2dHWmlvcEpFVnVRd1ZZVzZhSkZlLVc4bWNheFkxYWEyRUdfTHlOTWUtM2hnQ0VOcnVH?oc=5",
-      "published": "Sun, 05 Jul 2026 23:08:18 GMT"
-    },
-    {
-      "source": "Google News Markets",
-      "publisher": "simplywall.st",
-      "title": "Chuetsu Pulp & Paper's (TSE:3877) Earnings Seem To Be Promising - simplywall.st",
-      "summary": "Chuetsu Pulp & Paper's (TSE:3877) Earnings Seem To Be Promising simplywall.st",
-      "link": "https://news.google.com/rss/articles/CBMi1gFBVV95cUxPMVZKTzUxN2JqYnEzT3NSWjdQN0VXbk81WXBGWm01UG4zdjlUaWtWa2VoX1FGOS1zSm95ZEJZYVN0SlJmT3dDWEYyRWN3dmctMm5hSXdEQXl1Q3pZUXF1YldNdGlkWURqdnpoaXVudWtpUjE3Q2F1dFNCUkJKOUVORU9YQ012TEhSdFBoZ1NodTc3QmJvc2RLOTBnUlRoenIzU1lCUXVIU3FwSG5tQ0dQRmJfdFU4bEpUak5YbjFxdVhvSWVBeXhtTHdpdFZPYUpWb3Z5NzVB0gHbAUFVX3lxTE5IZlZOakt5ZWNrMkVVWmZ5dl9lamVFVlRLWTNteGIzZHRCVmFaVnZxYktPcGZTdnR4ekxrMDhONVg3NVFGb2ZyT3Q2aUp2UG4yVVRMeHljSmpzeXRJdHVsdlhpNGRUczJNVklxaE1lVUNwenc5ZEhxbXgzRnpCMWM0QXlmSER2Q2QxeGg1QlcxODBaUFZJMlFHYTZnUV81UnppY0hKYTlPRllBMWdEQlQwNXdpcjgxNWM3cnVmMloxaE1xaEx5TWdhMllhbEE5UlpBZENKUVc0YjY0cw?oc=5",
-      "published": "Sun, 05 Jul 2026 23:08:17 GMT"
     },
     {
       "source": "Google News Markets",
@@ -635,20 +593,84 @@
       "published": "Sun, 05 Jul 2026 22:57:16 GMT"
     },
     {
-      "source": "Google News Markets",
-      "publisher": "Screen Daily",
-      "title": "2026 film festivals and markets calendar: latest dates - Screen Daily",
-      "summary": "2026 film festivals and markets calendar: latest dates Screen Daily",
-      "link": "https://news.google.com/rss/articles/CBMipAFBVV95cUxOZkE0MTRabzdEUTJEbGxOQWd3dVVIS25BVlhYRlg5U2hXbGRQSk9ibi1iaUNLemwzMC1VRFhiRUN4VWZCajRMLXJlZU9sdkt4VG9PUXM0RUJBTnQweUszU0pGbzZxUlMwTDBIUXJkQjVPLW1kTjd6NHcwQUZLOWJ5dEZrMzdMMUx4SjFvQTZLVWRlb2xLVFEtbWtXWUk1UWtKeFNXYQ?oc=5",
-      "published": "Sun, 05 Jul 2026 22:53:27 GMT"
+      "source": "CNBC",
+      "publisher": "CNBC",
+      "title": "What caused the pre-holiday chip stock slump and what to do about it",
+      "summary": "The problem is that we have seen this horror movie before.",
+      "link": "https://www.cnbc.com/2026/07/05/jim-cramer-what-caused-the-pre-holiday-chip-stock-slump-and-what-to-do-about-it.html",
+      "published": "Sun, 05 Jul 2026 22:31:26 GMT"
+    },
+    {
+      "source": "MarketWatch Top",
+      "publisher": "MarketWatch Top",
+      "title": "OPEC+ raises output levels again despite tumbling crude prices",
+      "summary": "Major oil producers on Sunday agreed once again to modestly increase their crude production, although, as in previous months, the hike is largely symbolic until a peace deal between the U.S. and Iran sticks and the Strait of Hormuz is fully reopened to shipping traffic.",
+      "link": "https://www.marketwatch.com/story/opec-raises-output-levels-again-despite-tumbling-crude-prices-534791c8?mod=mw_rss_topstories",
+      "published": "Sun, 05 Jul 2026 22:30:00 GMT"
     },
     {
       "source": "Google News Markets",
-      "publisher": "Tech Times",
-      "title": "Prediction Markets Hit $3.9B in World Cup Volume as State Injunctions Mount - Tech Times",
-      "summary": "Prediction Markets Hit $3.9B in World Cup Volume as State Injunctions Mount Tech Times",
-      "link": "https://news.google.com/rss/articles/CBMivwFBVV95cUxPZHR5WVBfcFdpdzN3ZnJoenl2M3o2Z3YxMWVlcjk0aFQxMjZWbGpJZVFKSEl6VDZuQUpkdzhxSEFjTHZzY1hTUFdPRUlmNjZuRGhhV0k5dEdaVDVMU3ptRFJoWDZ1Zm9HRW9ONDJCU2hhbkNQRDZBNlhTMEZhTTl1Z2ZVc1g4NTlQcGpBOTdtNm8ySkRvSlMzU1plUGJ2bFZ4QkQzREdpUW9La3pWbVVMSE03RDY3QmlUaElwSUtLMA?oc=5",
-      "published": "Sun, 05 Jul 2026 22:42:32 GMT"
+      "publisher": "Bloomberg.com",
+      "title": "Oil Edges Lower on OPEC Increase, Dollar Steady: Markets Wrap - Bloomberg.com",
+      "summary": "Oil Edges Lower on OPEC Increase, Dollar Steady: Markets Wrap Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMilAFBVV95cUxNQms1OXFMOUJXelktWldaTmFkR0E0NHoyQWx6THBGZV9zVUI3UXFiQ2lDaElWRG1POERvVXk4WGl6MDBBbTgzTWQzZC1Hak1SeFloQ1BValhNdlBqS2k2NmJIaG1jVkJWYUdFX0Noa3RBVVhBQVRhd3NyR1d5SFphR2hpX21iLVFHVllUT2EtNGlRRFls?oc=5",
+      "published": "Sun, 05 Jul 2026 22:19:05 GMT"
+    },
+    {
+      "source": "Google News Markets",
+      "publisher": "Yahoo Finance",
+      "title": "Ferrotec (TSE:6890) Stock Still Looks Overvalued As Earnings Expectations Stay High - Yahoo Finance",
+      "summary": "Ferrotec (TSE:6890) Stock Still Looks Overvalued As Earnings Expectations Stay High Yahoo Finance",
+      "link": "https://news.google.com/rss/articles/CBMimgFBVV95cUxNWXpHdEhTSGlaSmZjOUhVS2tlVnY5d2ZrSWFVdnprQ2RNZGo1N2tacE9DWi1zVnZrdFRZLXo3Y0VUQlVpUWtBOGpJdC1hRnZXZ2JJeHBPUllsbDhNOGhfOVB0Y3p1enBCVi1CS0MwU3U5VXpDM0lJNFpMM2VzX241Mk1JQjQydm5rQUZLTTk1QVpWbVdWOGxlMmFR?oc=5",
+      "published": "Sun, 05 Jul 2026 22:09:58 GMT"
+    },
+    {
+      "source": "Google News Markets",
+      "publisher": "Yahoo Sports",
+      "title": "Marcellus Wiley’s Net Worth in 2026: Wife, NFL Career, Earnings and More - Yahoo Sports",
+      "summary": "Marcellus Wiley’s Net Worth in 2026: Wife, NFL Career, Earnings and More Yahoo Sports",
+      "link": "https://news.google.com/rss/articles/CBMihgFBVV95cUxPRklzRnZxOGpYRjR6cWJLbl8xLTF4Y21XWVB5MjBoN1BXM24tOUJRT0xUVmJXQW5OVGhFbnoySmptS24tbUd2UnExamp4SkxxR1BWejd4ak93RFczMnpFNHZFTFZfRWREVjdNYkQ0YkVtSlBfVkFLYXM1b0JselNrN2NzeXVaQQ?oc=5",
+      "published": "Sun, 05 Jul 2026 20:51:07 GMT"
+    },
+    {
+      "source": "Google News Markets",
+      "publisher": "Fortune",
+      "title": "Stock market outlook: S&P 500 to lose much of 2026 gains as 'speculation is hitting extreme levels' - Fortune",
+      "summary": "Stock market outlook: S&P 500 to lose much of 2026 gains as 'speculation is hitting extreme levels' Fortune",
+      "link": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxNT3ZaR3hsVkZ1UWF0QzUyUlY2SDM3Vk5zNmZFQ0VZdWgwd3lYRmdHaEFNeTgyTnAzVHBJUXE3dF9EMTVzNjBHNWc3UnFHaGtPUlN6R1gyVlgtWDZueFFYMmZrcHVDR05RMGQ2WkJIZ0xaY0MyVk1xXzZZNEF2SGlRNFRyVGFSYjZacEN5eEluODNuUEk0TU5jekJYNndzSTJPNE44ZlIyNl8?oc=5",
+      "published": "Sun, 05 Jul 2026 19:43:00 GMT"
+    },
+    {
+      "source": "Google News Markets",
+      "publisher": "Forbes",
+      "title": "What 30 Years In Markets Taught Me About Investment Conviction - Forbes",
+      "summary": "What 30 Years In Markets Taught Me About Investment Conviction Forbes",
+      "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxQSWplTl93T1lrWlNud3dkVmt1eFdtaE9TYWRvTG9lTkVCV21EdndQLVpPaUUzWmx0YVliVWI0Z2s4dnVYbVM1T2VnTi03SVF2WktweHJLSlA0TVBWNE1GN0dXU0Z0WHZPUEl4N29XRGIwZ0F0YjhtOW9YNDByM3BxUjFfVktSUTFKRWNKZktnNXcwX0s1VUpTMEpRVzVZa3l0V3FBRkNWS296cHA0bDlPX0RB?oc=5",
+      "published": "Sun, 05 Jul 2026 19:33:15 GMT"
+    },
+    {
+      "source": "Google News Markets",
+      "publisher": "Yahoo Finance",
+      "title": "As Global Markets Reach New Heights, ELEKTROS Strengthens Its Vision for the Next Generation of High-Speed EV Charging Infrastructure - Yahoo Finance",
+      "summary": "As Global Markets Reach New Heights, ELEKTROS Strengthens Its Vision for the Next Generation of High-Speed EV Charging Infrastructure Yahoo Finance",
+      "link": "https://news.google.com/rss/articles/CBMinwFBVV95cUxQd3M4ek5PdGFPN0N1U1pYSVJsU0lMLVp6Ti1kbWhlTzJ1N0dqWDZJbm94blE3S21YV2JuanpVNUxxTTF6enVoSmxZOE92bVF1UEcyQ0puc2ROSF9kZW55MnpvT193UnBSZG4tUFh1cWZmcmxwWkFSbDQxd3AyUDEyMlNETXNKaktxQnR2ZzU3TXFrTURXeklUNzBBTkdEMEk?oc=5",
+      "published": "Sun, 05 Jul 2026 19:33:00 GMT"
+    },
+    {
+      "source": "Google News Markets",
+      "publisher": "Deseret News",
+      "title": "Opinion: Prediction markets violate Utah’s gambling laws with sports betting - Deseret News",
+      "summary": "Opinion: Prediction markets violate Utah’s gambling laws with sports betting Deseret News",
+      "link": "https://news.google.com/rss/articles/CBMimAFBVV95cUxQbDd5am93YjhoOFZONUppNFU4cXI0VzBWa29jTmloYkhQT2N5c0RIbS1DYy1EMHhZekZucVdRcUgzWFI1SnpLYWU1MVExTG9hb0RaNDZ3WmJBRzFFTkZPb09XUGxwVTgzZ3ZuYVVoaThtRFhUVmYwY05FU1BPMG1WSlhwRWNWc25SOUdUcWxxRUh0U1cwZWZRRQ?oc=5",
+      "published": "Sun, 05 Jul 2026 19:00:00 GMT"
+    },
+    {
+      "source": "Google News Markets",
+      "publisher": "Current Publishing",
+      "title": "Column: Buy from farmers markets, reduce food miles - Current Publishing",
+      "summary": "Column: Buy from farmers markets, reduce food miles Current Publishing",
+      "link": "https://news.google.com/rss/articles/CBMilgFBVV95cUxQVnZHa1RXZnU0V3M3UDdoOWFyUGl0dXpYc1JQVVFRM1hXek8wYUx6c1lUemdZQThSX05rcUlMLXlBN3NOQ1U2bkF3UFRzS0FVODVhTkNma3NYdlhQeVl4OUpUYXNYTjJ0RE1XeGl2b2t1cnh3Q0FMOXZWRFphR2tYQXU2dWc0QmNKUkw3UXp6VW1QcW9xcVE?oc=5",
+      "published": "Sun, 05 Jul 2026 18:11:44 GMT"
     }
   ],
   "gaps_to_fill": [
