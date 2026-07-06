@@ -114,7 +114,8 @@ jobs:
           print(datetime.now(ZoneInfo('America/New_York')).strftime('%Y-%m-%d'))
           PY
           )
-          cp reports/premarket_.html reports/site/index.html
+          cp reports/premarket_zh.html reports/site/index.html
+          cp reports/premarket_.html reports/site/index_en.html
           cp reports/premarket_zh.html reports/site/index_zh.html
 
       - name: Upload reports artifact
