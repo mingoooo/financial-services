@@ -161,11 +161,11 @@ TABLE_MAP = {
 }
 
 PHRASE_MAP = [
-    ("No clean catalyst headline found", "没有找到干净的催化标题"),
+    ("No clean catalyst headline found", "没有找到清晰的催化标题"),
     ("No codex_view.md provided. Packet only.", "未提供 codex_view.md。这里只是 packet 整理结果。"),
     ("No clean day setup passed the hard rules in this packet", "这份 packet 里没有日内 setup 通过硬规则"),
     ("No swing name passed the hard rules in this packet", "这份 packet 里没有波段名字通过硬规则"),
-    ("Stand aside and wait for cleaner confirmation", "先站一边，等更干净的确认"),
+    ("Stand aside and wait for cleaner confirmation", "先站一边，等更清晰的确认"),
     ("Starter idea only. Swing entries and exits are still not finalized.", "这里只是起步观察想法。波段入场和出场规则还没最终定稿。"),
     ("light data day", "数据面偏轻的一天"),
     ("Econ feed unavailable.", "经济日历源当前不可用。"),
@@ -173,7 +173,7 @@ PHRASE_MAP = [
     ("Candidate source:", "候选来源："),
     ("Hard-screened gappers in packet:", "packet 里通过初筛的跳空名单数量："),
     ("This is still raw data first. Quality judgment is limited because no separate view files were supplied.", "这份内容本质上还是原始数据整理，因为没有单独的视角文件，所以质量判断能力有限。"),
-    ("Trend Join names need a clean push through premarket high and then a fresh high of day.", "顺势跟随类型的名字，必须先干净突破盘前高，然后再打出新的日内高点。"),
+    ("Trend Join names need a clean push through premarket high and then a fresh high of day.", "顺势跟随类型的名字，必须先清晰突破盘前高，然后再打出新的日内高点。"),
     ("If a gapper cannot stay above prior-day high, the setup gets a lot less interesting fast.", "如果一个跳空名字连前一日高点都站不住，这个 setup 的吸引力会很快下降。"),
     ("RVOL here is a keyless stand-in based on full-day relative volume, not a true premarket feed.", "这里的 RVOL 只是基于全天相对成交量的无 key 近似值，不是真正的盘前 feed。"),
     ("No high-impact USD event listed for tomorrow in the cached/live feed.", "缓存或实时 feed 里没有列出明天的美元高影响事件。"),
@@ -181,7 +181,7 @@ PHRASE_MAP = [
     ("Failed day screen:", "未通过日内筛选："),
     ("Failed swing screen:", "未通过波段筛选："),
     ("Weak catalyst match:", "催化匹配偏弱："),
-    ("Usually missing RVOL, prior-high reclaim, or clean structure.", "通常是缺 RVOL、没有重新站上前高，或者结构不够干净。"),
+    ("Usually missing RVOL, prior-high reclaim, or clean structure.", "通常是缺 RVOL、没有重新站上前高，或者结构不够清晰。"),
     ("Usually missing real catalyst, 200d context, or valid open rules.", "通常是缺真实催化、200 日线背景不够，或者开盘条件不成立。"),
     ("The headline match filter stayed strict on purpose.", "标题匹配过滤器是故意保持严格的。"),
     ("Agreement: unavailable because no separate Claude or Codex view files were provided.", "共同结论：当前不可用，因为没有单独提供 Claude 或 Codex 视角文件。"),

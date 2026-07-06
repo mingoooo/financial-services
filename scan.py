@@ -584,7 +584,7 @@ def enrich_gapper(base, market_news):
         out["market_cap"] = out.get("market_cap") or safe_float(fast.get("marketCap") or info.get("marketCap"))
         out["price"] = out.get("current_extended_price") or out.get("price") or current_extended_price(ticker, fast, info, symbol)
         out["prev_close"] = out.get("prev_close") or out.get("prior_close")
-        if out.get("gap_pct") is None and out.get("price") is not None and out.get("prev_close") not in (None, 0):
+        if out.get("price") is not None and out.get("prev_close") not in (None, 0):
             out["gap_pct"] = (out["price"] / out["prev_close"] - 1) * 100
         gap = out.get("gap_pct")
         price = out.get("price")

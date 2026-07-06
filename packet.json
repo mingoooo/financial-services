@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-06T07:10:31.916363+00:00",
+  "generated_at": "2026-07-06T07:50:07.126995+00:00",
   "candidate_source": "yfinance_day_gainers+most_actives",
   "trading_day_note": "Raw premarket packet only. No analysis, no conviction, no watchlist bucketing.",
   "scan_params": {
@@ -114,9 +114,9 @@
     {
       "name": "VIX",
       "symbol": "^VIX",
-      "last": 15.8100004196167,
-      "prev_close": 16.149999618530273,
-      "change_pct": -2.1052582473343517
+      "last": 16.360000610351562,
+      "prev_close": 16.360000610351562,
+      "change_pct": 0.0
     },
     {
       "name": "US 10Y",
@@ -135,16 +135,16 @@
     {
       "name": "WTI Oil",
       "symbol": "CL=F",
-      "last": 68.72000122070312,
-      "prev_close": 68.72000122070312,
+      "last": 68.37999725341797,
+      "prev_close": 68.37999725341797,
       "change_pct": 0.0
     },
     {
       "name": "Dollar (DXY)",
       "symbol": "DX-Y.NYB",
-      "last": 101.07599639892578,
-      "prev_close": 101.07599639892578,
-      "change_pct": 0.0
+      "last": 101.0260009765625,
+      "prev_close": 101.0250015258789,
+      "change_pct": 0.0009893102385527541
     }
   ],
   "econ_calendar": {
@@ -172,7 +172,7 @@
       "company_name": "SL Science Holding Limited",
       "price": 5.4501,
       "prev_close": 4.45,
-      "gap_pct": 34.606743,
+      "gap_pct": 22.474157303370788,
       "market_cap": 3358950656.0,
       "volume": 1216225.0,
       "candidate_source": "yfinance_day_gainers",
@@ -200,7 +200,7 @@
       "company_name": "Polibeli Group Ltd",
       "price": 10.1813,
       "prev_close": 8.68,
-      "gap_pct": 18.202765,
+      "gap_pct": 17.296082949308754,
       "market_cap": 3759135488.0,
       "volume": 848246.0,
       "candidate_source": "yfinance_day_gainers",
@@ -228,7 +228,7 @@
       "company_name": "Keel Infrastructure Corp.",
       "price": 4.5899,
       "prev_close": 5.38,
-      "gap_pct": -14.684014,
+      "gap_pct": -14.685873605947952,
       "market_cap": 2771573760.0,
       "volume": 49897299.0,
       "candidate_source": "yfinance_most_actives",
@@ -263,7 +263,7 @@
       "company_name": "Genuine Parts Company",
       "price": 130.33,
       "prev_close": 117.4,
-      "gap_pct": 12.9216,
+      "gap_pct": 11.013628620102223,
       "market_cap": 18443419648.0,
       "volume": 4432544.0,
       "candidate_source": "yfinance_day_gainers",
@@ -291,7 +291,7 @@
       "company_name": "SELLAS Life Sciences Group, Inc",
       "price": 14.8199,
       "prev_close": 13.2699995,
-      "gap_pct": 12.8862095,
+      "gap_pct": 11.679732919356933,
       "market_cap": 2945555968.0,
       "volume": 17275558.0,
       "candidate_source": "yfinance_day_gainers",
@@ -319,7 +319,7 @@
       "company_name": "Avis Budget Group, Inc.",
       "price": 161.05,
       "prev_close": 146.94,
-      "gap_pct": 11.229074,
+      "gap_pct": 9.602558867565003,
       "market_cap": 5773515264.0,
       "volume": 543098.0,
       "candidate_source": "yfinance_day_gainers",
@@ -347,7 +347,7 @@
       "company_name": "AeroVironment, Inc.",
       "price": 192.0,
       "prev_close": 172.44,
-      "gap_pct": 10.699372,
+      "gap_pct": 11.343075852470431,
       "market_cap": 9660567552.0,
       "volume": 4167391.0,
       "candidate_source": "yfinance_day_gainers",
@@ -375,7 +375,7 @@
       "company_name": "IREN LIMITED",
       "price": 39.1679,
       "prev_close": 43.32,
-      "gap_pct": -10.387812,
+      "gap_pct": -9.58471837488457,
       "market_cap": 13873440768.0,
       "volume": 60368806.0,
       "candidate_source": "yfinance_most_actives",
@@ -403,7 +403,7 @@
       "company_name": "Nektar Therapeutics",
       "price": 71.17,
       "prev_close": 64.39,
-      "gap_pct": 10.327693,
+      "gap_pct": 10.52958533933841,
       "market_cap": 2400159744.0,
       "volume": 1120778.0,
       "candidate_source": "yfinance_day_gainers",
@@ -431,7 +431,7 @@
       "company_name": "BlackBerry Limited",
       "price": 11.36,
       "prev_close": 12.81,
-      "gap_pct": -10.1483,
+      "gap_pct": -11.319281811085101,
       "market_cap": 6746015744.0,
       "volume": 50661124.0,
       "candidate_source": "yfinance_most_actives",
@@ -459,7 +459,7 @@
       "company_name": "Moderna, Inc.",
       "price": 80.4399,
       "prev_close": 72.5,
-      "gap_pct": 10.013797,
+      "gap_pct": 10.951586206896536,
       "market_cap": 31647674368.0,
       "volume": 14111998.0,
       "candidate_source": "yfinance_day_gainers",
@@ -487,7 +487,7 @@
       "company_name": "Immunome, Inc.",
       "price": 23.5,
       "prev_close": 21.490002,
-      "gap_pct": 9.865047,
+      "gap_pct": 9.35317735196115,
       "market_cap": 2673841920.0,
       "volume": 1869683.0,
       "candidate_source": "yfinance_day_gainers",
@@ -586,11 +586,19 @@
     },
     {
       "source": "Google News Markets",
-      "publisher": "PYMNTS.com",
-      "title": "Prediction Markets Score Thanks to World Cup’s Popularity - PYMNTS.com",
-      "summary": "Prediction Markets Score Thanks to World Cup’s Popularity PYMNTS.com",
-      "link": "https://news.google.com/rss/articles/CBMiowFBVV95cUxQN3M2ZUoyd1NsNVNIZG1UTEwwOUIyMHQzUjBGT3V1LTFKWUM4X2tSOHRPbDJoOHhPeDZwV3V2WXBwcEZYdTFNeTdPZGJxZWlaeFFoVm85R0tWbUMtZVVrWHJWbGxvNlNMbHlGOG9oaWxHU1hVSGpfZkR1bDdCSXdGZWJfZnpPcGZSbFlCa0V3bTdLc2dRRG5xMmNxSjJkNE8tVzhF?oc=5",
-      "published": "Sun, 05 Jul 2026 22:57:16 GMT"
+      "publisher": "Reuters",
+      "title": "Samsung likely to post 18-fold jump in profit on surging AI demand for memory - Reuters",
+      "summary": "Samsung likely to post 18-fold jump in profit on surging AI demand for memory Reuters",
+      "link": "https://news.google.com/rss/articles/CBMiuwFBVV95cUxQdGJMNzJxUHljaTQ1aDhlVHRYUEQ5WVZOX0xOallVeUNlR0E2cHFSeEh6S2tzZ0VWXzdrY1B3czNRanpQTk5fNmhtTlE0TmtiYmRwOE9VQ05Cd2VaSVpIY2pVa29YM3FLQ0ZIOXNUVGxyUGdaNjNlQUZSOXVibEZYalk0a0pnbWlvc0pSaGd1bVdSUXl0NVpNNlMzMF84RkZJQ0hyMWxQUnA2Tjh2b0RhZW5Yb0M4d1Y0cVdr?oc=5",
+      "published": "Sun, 05 Jul 2026 23:07:00 GMT"
+    },
+    {
+      "source": "Google News Markets",
+      "publisher": "Tampa Bay Times",
+      "title": "Save Social Security by removing the cap on earnings | Letters - Tampa Bay Times",
+      "summary": "Save Social Security by removing the cap on earnings | Letters Tampa Bay Times",
+      "link": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxOYmJXMV93YzV2bGZKZkVZb05tTGUyWUNLRWVQZGJXMEdWYUhLSjI5eWpEbl9zOTdDNHFrRzNxcGE1Mk5OV25CZjZ1V0Z3YjY1aTRnSWJ0Wml0OTg2QTBRR3VNWUduR3ZwdjFDVS1LRDRMZlpZQ2FMbmpzYlI2Vm5YcVFWdzR1NGtBRG5vUjVjc2tNdjhVM2F5ckhuSjUwZU4yOVZ5a1ZGdy0?oc=5",
+      "published": "Sun, 05 Jul 2026 22:41:32 GMT"
     },
     {
       "source": "CNBC",
@@ -610,14 +618,6 @@
     },
     {
       "source": "Google News Markets",
-      "publisher": "Bloomberg.com",
-      "title": "Oil Edges Lower on OPEC Increase, Dollar Steady: Markets Wrap - Bloomberg.com",
-      "summary": "Oil Edges Lower on OPEC Increase, Dollar Steady: Markets Wrap Bloomberg.com",
-      "link": "https://news.google.com/rss/articles/CBMilAFBVV95cUxNQms1OXFMOUJXelktWldaTmFkR0E0NHoyQWx6THBGZV9zVUI3UXFiQ2lDaElWRG1POERvVXk4WGl6MDBBbTgzTWQzZC1Hak1SeFloQ1BValhNdlBqS2k2NmJIaG1jVkJWYUdFX0Noa3RBVVhBQVRhd3NyR1d5SFphR2hpX21iLVFHVllUT2EtNGlRRFls?oc=5",
-      "published": "Sun, 05 Jul 2026 22:19:05 GMT"
-    },
-    {
-      "source": "Google News Markets",
       "publisher": "Yahoo Finance",
       "title": "Ferrotec (TSE:6890) Stock Still Looks Overvalued As Earnings Expectations Stay High - Yahoo Finance",
       "summary": "Ferrotec (TSE:6890) Stock Still Looks Overvalued As Earnings Expectations Stay High Yahoo Finance",
@@ -631,14 +631,6 @@
       "summary": "Marcellus Wiley’s Net Worth in 2026: Wife, NFL Career, Earnings and More Yahoo Sports",
       "link": "https://news.google.com/rss/articles/CBMihgFBVV95cUxPRklzRnZxOGpYRjR6cWJLbl8xLTF4Y21XWVB5MjBoN1BXM24tOUJRT0xUVmJXQW5OVGhFbnoySmptS24tbUd2UnExamp4SkxxR1BWejd4ak93RFczMnpFNHZFTFZfRWREVjdNYkQ0YkVtSlBfVkFLYXM1b0JselNrN2NzeXVaQQ?oc=5",
       "published": "Sun, 05 Jul 2026 20:51:07 GMT"
-    },
-    {
-      "source": "Google News Markets",
-      "publisher": "Fortune",
-      "title": "Stock market outlook: S&P 500 to lose much of 2026 gains as 'speculation is hitting extreme levels' - Fortune",
-      "summary": "Stock market outlook: S&P 500 to lose much of 2026 gains as 'speculation is hitting extreme levels' Fortune",
-      "link": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxNT3ZaR3hsVkZ1UWF0QzUyUlY2SDM3Vk5zNmZFQ0VZdWgwd3lYRmdHaEFNeTgyTnAzVHBJUXE3dF9EMTVzNjBHNWc3UnFHaGtPUlN6R1gyVlgtWDZueFFYMmZrcHVDR05RMGQ2WkJIZ0xaY0MyVk1xXzZZNEF2SGlRNFRyVGFSYjZacEN5eEluODNuUEk0TU5jekJYNndzSTJPNE44ZlIyNl8?oc=5",
-      "published": "Sun, 05 Jul 2026 19:43:00 GMT"
     },
     {
       "source": "Google News Markets",
@@ -658,19 +650,27 @@
     },
     {
       "source": "Google News Markets",
-      "publisher": "Deseret News",
-      "title": "Opinion: Prediction markets violate Utah’s gambling laws with sports betting - Deseret News",
-      "summary": "Opinion: Prediction markets violate Utah’s gambling laws with sports betting Deseret News",
-      "link": "https://news.google.com/rss/articles/CBMimAFBVV95cUxQbDd5am93YjhoOFZONUppNFU4cXI0VzBWa29jTmloYkhQT2N5c0RIbS1DYy1EMHhZekZucVdRcUgzWFI1SnpLYWU1MVExTG9hb0RaNDZ3WmJBRzFFTkZPb09XUGxwVTgzZ3ZuYVVoaThtRFhUVmYwY05FU1BPMG1WSlhwRWNWc25SOUdUcWxxRUh0U1cwZWZRRQ?oc=5",
-      "published": "Sun, 05 Jul 2026 19:00:00 GMT"
-    },
-    {
-      "source": "Google News Markets",
       "publisher": "Current Publishing",
       "title": "Column: Buy from farmers markets, reduce food miles - Current Publishing",
       "summary": "Column: Buy from farmers markets, reduce food miles Current Publishing",
       "link": "https://news.google.com/rss/articles/CBMilgFBVV95cUxQVnZHa1RXZnU0V3M3UDdoOWFyUGl0dXpYc1JQVVFRM1hXek8wYUx6c1lUemdZQThSX05rcUlMLXlBN3NOQ1U2bkF3UFRzS0FVODVhTkNma3NYdlhQeVl4OUpUYXNYTjJ0RE1XeGl2b2t1cnh3Q0FMOXZWRFphR2tYQXU2dWc0QmNKUkw3UXp6VW1QcW9xcVE?oc=5",
       "published": "Sun, 05 Jul 2026 18:11:44 GMT"
+    },
+    {
+      "source": "Google News Markets",
+      "publisher": "Yahoo Finance",
+      "title": "Pegasystems (PEGA) Stock May Be Cheap Given Its Earnings Power - Yahoo Finance",
+      "summary": "Pegasystems (PEGA) Stock May Be Cheap Given Its Earnings Power Yahoo Finance",
+      "link": "https://news.google.com/rss/articles/CBMingFBVV95cUxNX3d6V1hVbWJHQXMwRUV4ZTN3aldiT3JMZFBnbFY0OFZ1ckdlWFY0ck14N3l5d0FUd3MyUTNXdTdHek5aa1dFWWNDZnMtSTJFcnlKdHZVTjExb29ZZXFLV0ZjLUhoRFNuTkJ5Y3VFTFJlYVY2TW5SUGpLTWFaUnRaZkdPeUt0UXhxd1F3bElpNkJDZmJOQzBGdEdheHIxdw?oc=5",
+      "published": "Sun, 05 Jul 2026 17:08:32 GMT"
+    },
+    {
+      "source": "CNBC",
+      "publisher": "CNBC",
+      "title": "World Cup fans spent anywhere from $2,500 to $150,000 to see matches—they say it was worth it",
+      "summary": "Soccer fans heading to World Cup matches at MetLife Stadium shared how much they expected to spend with CNBC Make It outside New York's Penn Station.",
+      "link": "https://www.cnbc.com/2026/07/05/world-cup-fans-spent-anywhere-from-2500-to-150000-to-see-matches.html",
+      "published": "Sun, 05 Jul 2026 14:42:38 GMT"
     }
   ],
   "gaps_to_fill": [
