@@ -140,7 +140,7 @@ jobs:
           if-no-files-found: error
 
   deploy-pages:
-    if: ${{ needs.premarket.outputs.should_run == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.deploy_pages != 'false') }}
+    if: ${{ needs.premarket.outputs.should_run == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.deploy_pages == 'true') }}
     needs: premarket
     runs-on: ubuntu-latest
     outputs:
