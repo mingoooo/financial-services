@@ -45,6 +45,7 @@ jobs:
     timeout-minutes: 40
     outputs:
       should_run: ${{ steps.gate.outputs.should_run }}
+      run_label: ${{ steps.gate.outputs.run_label }}
 
     steps:
       - name: Checkout
@@ -138,21 +139,12 @@ jobs:
             reports/site/index_zh.html
           if-no-files-found: error
 
-      - name: Send Telegram notification
-        if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
-        continue-on-error: true
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          PAGES_URL=""
-          RUN_LABEL="${{ github.event.inputs.run_label || steps.gate.outputs.run_label }}"
-          python scripts/notify_telegram_premarket.py REPORT.md "$PAGES_URL" "$RUN_LABEL"
-
   deploy-pages:
-    if: ${{ needs.premarket.outputs.should_run == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.deploy_pages == 'true') }}
+    if: ${{ needs.premarket.outputs.should_run == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.deploy_pages != 'false') }}
     needs: premarket
     runs-on: ubuntu-latest
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -183,3 +175,26 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  notify-telegram:
+    needs:
+      - premarket
+      - deploy-pages
+    runs-on: ubuntu-latest
+    if: ${{ always() && needs.premarket.outputs.should_run == 'true' && (needs.deploy-pages.result == 'success' || needs.deploy-pages.result == 'skipped') }}
+    steps:
+      - name: Download report artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: premarket-report
+          path: premarket-report
+
+      - name: Send Telegram notification
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          PAGES_URL="${{ needs.deploy-pages.outputs.page_url || '' }}"
+          RUN_LABEL="${{ github.event.inputs.run_label || needs.premarket.outputs.run_label }}"
+          python scripts/notify_telegram_premarket.py premarket-report/REPORT.md "$PAGES_URL" "$RUN_LABEL"
