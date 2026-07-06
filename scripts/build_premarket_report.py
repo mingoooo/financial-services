@@ -12,7 +12,27 @@ def fmt_num(x, digits=2):
 
 
 def fmt_pct(x):
-    return 'n/a' if x is None else f"{x:+.2f}%"
+    if x is None:
+        return 'n/a'
+    if abs(x) < 0.005:
+        return 'flat'
+    if 0 < abs(x) < 0.01:
+        sign = '+' if x > 0 else '-'
+        return f"{sign}<0.01%"
+    return f"{x:+.2f}%"
+
+
+def fmt_market_cap(x):
+    if x is None:
+        return 'n/a'
+    abs_x = abs(x)
+    if abs_x >= 1_000_000_000_000:
+        return f"${x / 1_000_000_000_000:.2f}T"
+    if abs_x >= 1_000_000_000:
+        return f"${x / 1_000_000_000:.2f}B"
+    if abs_x >= 1_000_000:
+        return f"${x / 1_000_000:.2f}M"
+    return f"${x:,.0f}"
 
 
 def catalyst_line(g):
@@ -24,13 +44,46 @@ def levels_line(g):
     parts = []
     if g.get('premarket_high') is not None:
         parts.append(f"PMH {fmt_num(g.get('premarket_high'))}")
-    if g.get('hod') is not None:
+    if g.get('premarket_low') is not None:
+        parts.append(f"PML {fmt_num(g.get('premarket_low'))}")
+    if g.get('prior_day_high') is not None:
+        parts.append(f"PDH {fmt_num(g.get('prior_day_high'))}")
+    elif g.get('hod') is not None:
         parts.append(f"HOD {fmt_num(g.get('hod'))}")
-    if g.get('lod') is not None:
+    if g.get('prior_day_low') is not None:
+        parts.append(f"PDL {fmt_num(g.get('prior_day_low'))}")
+    elif g.get('lod') is not None:
         parts.append(f"LOD {fmt_num(g.get('lod'))}")
-    if g.get('vwap') is not None:
-        parts.append(f"VWAP {fmt_num(g.get('vwap'))}")
     return ' | '.join(parts) if parts else 'live levels unavailable'
+
+
+def levels_cell(g):
+    return levels_line(g).replace(' | ', ' · ')
+
+
+def day_plan_line(g):
+    if g.get('premarket_high') is not None:
+        return f"Only interested if price reclaims and holds above PMH {fmt_num(g.get('premarket_high'))}. Do not chase failed moves."
+    return "Wait for a clean break and hold above the key premarket trigger. Do not chase failed moves."
+
+
+def codex_check_line(g):
+    checks = []
+    if not g.get('catalyst_found'):
+        checks.append('catalyst not confirmed')
+    if g.get('rvol') is None:
+        checks.append('RVOL unavailable')
+    if g.get('price') is not None and g.get('prior_day_high') is not None and g.get('price') <= g.get('prior_day_high'):
+        checks.append('still below prior high')
+    return '; '.join(checks) if checks else 'hard rules passed'
+
+
+def conviction_badge(g):
+    if g.get('day_eligible') and g.get('catalyst_found'):
+        return '🟢 HIGH'
+    if g.get('day_eligible') or g.get('swing_eligible'):
+        return '🟡 MED'
+    return '🔴 LOW/skip'
 
 
 def trend_context(g):
@@ -64,7 +117,10 @@ def build_report(packet: dict) -> str:
     day_rows = []
     for g in gappers:
         if g.get('day_eligible'):
-            day_rows.append(f"| {g.get('ticker','')} | {catalyst_line(g)} | {levels_line(g)} | Wait for Trend Join confirmation above PMH and fresh HOD. No chase if it cannot hold. | Packet only. | 🟡 MED |")
+            day_rows.append(
+                f"| {g.get('ticker','')} | {catalyst_line(g)} | {levels_line(g)} | {day_plan_line(g)} | {codex_check_line(g)} | {conviction_badge(g)} |"
+                .replace(levels_line(g), levels_cell(g), 1)
+            )
     if not day_rows:
         day_rows.append('| None | No clean day setup passed the hard rules in this packet | n/a | Stand aside and wait for cleaner confirmation | Packet only. | 🔴 LOW/skip |')
 
@@ -80,7 +136,7 @@ def build_report(packet: dict) -> str:
         pre_gappers.append(
             f"### {g.get('ticker','')} | {g.get('company_name') or 'Company unknown'}\n"
             f"- Full catalyst headline: {catalyst_line(g)}\n"
-            f"- Price: {fmt_num(g.get('price'))} | Gap: {fmt_pct(g.get('gap_pct'))} | Market cap: {g.get('market_cap') or 'n/a'}\n"
+            f"- Price: {fmt_num(g.get('price'))} | Gap: {fmt_pct(g.get('gap_pct'))} | Market cap: {fmt_market_cap(g.get('market_cap'))}\n"
             f"- Live levels: {levels_line(g)}\n"
             f"- Flags: day_eligible={g.get('day_eligible')} | swing_eligible={g.get('swing_eligible')} | catalyst_found={g.get('catalyst_found')}\n"
         )

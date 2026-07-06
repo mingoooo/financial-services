@@ -1,6 +1,6 @@
 # 🧠 AI PREMARKET REPORT — Humbled Trader
 
-### 2026-07-06 03:52 AM ET · Claude + Codex (GPT-5.5), independent passes
+### 2026-07-06 12:34 PM ET · Claude + Codex (GPT-5.5), independent passes
 
 ### Watchlists built by the rules: Day = Trend Join Long · Swing = gap-up + real catalyst
 
@@ -8,7 +8,7 @@
 
 ## Summary
 
-- Tape backdrop: S&P 500 -0.00%; Nasdaq +0.00%; VIX +0.00%; US 10Y -0.00%; Dollar (DXY) +0.00%.
+- Tape backdrop: S&P 500 n/a; Nasdaq n/a; VIX n/a; US 10Y n/a; Dollar (DXY) n/a.
 - The catch we are watching: big gap names are there, but clean catalyst matching is still thin on some names.
 - Two-brain verdict: packet-based editor draft only. No separate Claude or Codex view files were provided.
 
@@ -16,85 +16,85 @@
 
 ### SLBT | SL Science Holding Limited
 - Full catalyst headline: No clean catalyst headline found
-- Price: 5.45 | Gap: +22.47% | Market cap: 3358950656.0
-- Live levels: PMH 4.50 | HOD 6.25 | LOD 4.30 | VWAP 5.70
+- Price: 5.45 | Gap: +22.47% | Market cap: $3.36B
+- Live levels: PMH 4.50 | PDH 4.95 | LOD 4.30
 - Flags: day_eligible=False | swing_eligible=False | catalyst_found=False
 
 ### PLBL | Polibeli Group Ltd
 - Full catalyst headline: No clean catalyst headline found
-- Price: 10.18 | Gap: +17.30% | Market cap: 3759135488.0
-- Live levels: PMH 9.02 | HOD 10.90 | LOD 8.27 | VWAP 10.15
+- Price: 10.18 | Gap: +17.30% | Market cap: $3.76B
+- Live levels: PMH 9.02 | PDH 8.76 | LOD 8.27
 - Flags: day_eligible=True | swing_eligible=False | catalyst_found=False
 
 ### KEEL | Keel Infrastructure Corp.
 - Full catalyst headline: As Global Markets Reach New Heights, ELEKTROS Strengthens Its Vision for the Next Generation of High-Speed EV Charging Infrastructure - Yahoo Finance
-- Price: 4.59 | Gap: -14.69% | Market cap: 2771573760.0
-- Live levels: PMH 5.48 | HOD 5.48 | LOD 4.52 | VWAP 4.82
+- Price: 4.59 | Gap: -14.69% | Market cap: $2.77B
+- Live levels: PMH 5.48 | PDH 5.58 | LOD 4.52
 - Flags: day_eligible=False | swing_eligible=False | catalyst_found=True
 
 ### GPC | Genuine Parts Company
 - Full catalyst headline: No clean catalyst headline found
-- Price: 130.33 | Gap: +11.01% | Market cap: 18443419648.0
-- Live levels: PMH 134.05 | HOD 135.44 | LOD 116.76 | VWAP 130.18
+- Price: 130.33 | Gap: +11.01% | Market cap: $18.44B
+- Live levels: PMH 134.05 | PDH 119.65 | LOD 116.76
 - Flags: day_eligible=True | swing_eligible=False | catalyst_found=False
 
 ### SLS | SELLAS Life Sciences Group, Inc
 - Full catalyst headline: No clean catalyst headline found
-- Price: 14.82 | Gap: +11.68% | Market cap: 2945555968.0
-- Live levels: PMH 13.76 | HOD 15.05 | LOD 12.64 | VWAP 14.41
+- Price: 14.82 | Gap: +11.68% | Market cap: $2.95B
+- Live levels: PMH 13.76 | PDH 14.47 | LOD 12.64
 - Flags: day_eligible=True | swing_eligible=False | catalyst_found=False
 
 ### CAR | Avis Budget Group, Inc.
 - Full catalyst headline: No clean catalyst headline found
-- Price: 161.05 | Gap: +9.60% | Market cap: 5773515264.0
-- Live levels: PMH 151.00 | HOD 164.00 | LOD 145.00 | VWAP 155.80
+- Price: 161.05 | Gap: +9.60% | Market cap: $5.77B
+- Live levels: PMH 151.00 | PDH 150.48 | LOD 145.00
 - Flags: day_eligible=False | swing_eligible=False | catalyst_found=False
 
 ### AVAV | AeroVironment, Inc.
 - Full catalyst headline: No clean catalyst headline found
-- Price: 192.00 | Gap: +11.34% | Market cap: 9660567552.0
-- Live levels: PMH 182.50 | HOD 200.38 | LOD 174.74 | VWAP 192.64
+- Price: 192.00 | Gap: +11.34% | Market cap: $9.66B
+- Live levels: PMH 182.50 | PDH 181.27 | LOD 174.74
 - Flags: day_eligible=True | swing_eligible=False | catalyst_found=False
 
 ### IREN | IREN LIMITED
 - Full catalyst headline: No clean catalyst headline found
-- Price: 39.17 | Gap: -9.58% | Market cap: 13873440768.0
-- Live levels: PMH 43.96 | HOD 43.96 | LOD 37.66 | VWAP 39.79
+- Price: 39.17 | Gap: -9.58% | Market cap: $13.87B
+- Live levels: PMH 43.96 | PDH 44.80 | LOD 37.66
 - Flags: day_eligible=False | swing_eligible=False | catalyst_found=False
 
 ### NKTR | Nektar Therapeutics
 - Full catalyst headline: No clean catalyst headline found
-- Price: 71.17 | Gap: +10.53% | Market cap: 2400159744.0
-- Live levels: PMH 65.10 | HOD 71.50 | LOD 64.30 | VWAP 67.66
+- Price: 71.17 | Gap: +10.53% | Market cap: $2.40B
+- Live levels: PMH 65.10 | PDH 69.96 | LOD 64.30
 - Flags: day_eligible=False | swing_eligible=False | catalyst_found=False
 
 ### BB | BlackBerry Limited
 - Full catalyst headline: No clean catalyst headline found
-- Price: 11.36 | Gap: -11.32% | Market cap: 6746015744.0
-- Live levels: PMH 12.86 | HOD 13.03 | LOD 11.20 | VWAP 11.85
+- Price: 11.36 | Gap: -11.32% | Market cap: $6.75B
+- Live levels: PMH 12.86 | PDH 13.59 | LOD 11.20
 - Flags: day_eligible=False | swing_eligible=False | catalyst_found=False
 
 ### MRNA | Moderna, Inc.
 - Full catalyst headline: No clean catalyst headline found
-- Price: 80.44 | Gap: +10.95% | Market cap: 31647674368.0
-- Live levels: PMH 73.94 | HOD 81.40 | LOD 71.65 | VWAP 78.36
+- Price: 80.44 | Gap: +10.95% | Market cap: $31.65B
+- Live levels: PMH 73.94 | PDH 73.91 | LOD 71.65
 - Flags: day_eligible=True | swing_eligible=False | catalyst_found=False
 
 ### IMNM | Immunome, Inc.
 - Full catalyst headline: No clean catalyst headline found
-- Price: 23.50 | Gap: +9.35% | Market cap: 2673841920.0
-- Live levels: HOD 23.67 | LOD 21.26 | VWAP 22.84
+- Price: 23.50 | Gap: +9.35% | Market cap: $2.67B
+- Live levels: PDH 21.86 | LOD 21.26
 - Flags: day_eligible=False | swing_eligible=False | catalyst_found=False
 
 ## ☀️ Day Trading Watchlist
 
 | Ticker | Catalyst | Levels (live) | Plan (Trend Join) | 🤖 Codex | Conv. |
 |---|---|---|---|---|---|
-| PLBL | No clean catalyst headline found | PMH 9.02 | HOD 10.90 | LOD 8.27 | VWAP 10.15 | Wait for Trend Join confirmation above PMH and fresh HOD. No chase if it cannot hold. | Packet only. | 🟡 MED |
-| GPC | No clean catalyst headline found | PMH 134.05 | HOD 135.44 | LOD 116.76 | VWAP 130.18 | Wait for Trend Join confirmation above PMH and fresh HOD. No chase if it cannot hold. | Packet only. | 🟡 MED |
-| SLS | No clean catalyst headline found | PMH 13.76 | HOD 15.05 | LOD 12.64 | VWAP 14.41 | Wait for Trend Join confirmation above PMH and fresh HOD. No chase if it cannot hold. | Packet only. | 🟡 MED |
-| AVAV | No clean catalyst headline found | PMH 182.50 | HOD 200.38 | LOD 174.74 | VWAP 192.64 | Wait for Trend Join confirmation above PMH and fresh HOD. No chase if it cannot hold. | Packet only. | 🟡 MED |
-| MRNA | No clean catalyst headline found | PMH 73.94 | HOD 81.40 | LOD 71.65 | VWAP 78.36 | Wait for Trend Join confirmation above PMH and fresh HOD. No chase if it cannot hold. | Packet only. | 🟡 MED |
+| PLBL | No clean catalyst headline found | PMH 9.02 · PDH 8.76 · LOD 8.27 | Only interested if price reclaims and holds above PMH 9.02. Do not chase failed moves. | catalyst not confirmed | 🟡 MED |
+| GPC | No clean catalyst headline found | PMH 134.05 · PDH 119.65 · LOD 116.76 | Only interested if price reclaims and holds above PMH 134.05. Do not chase failed moves. | catalyst not confirmed | 🟡 MED |
+| SLS | No clean catalyst headline found | PMH 13.76 · PDH 14.47 · LOD 12.64 | Only interested if price reclaims and holds above PMH 13.76. Do not chase failed moves. | catalyst not confirmed | 🟡 MED |
+| AVAV | No clean catalyst headline found | PMH 182.50 · PDH 181.27 · LOD 174.74 | Only interested if price reclaims and holds above PMH 182.50. Do not chase failed moves. | catalyst not confirmed | 🟡 MED |
+| MRNA | No clean catalyst headline found | PMH 73.94 · PDH 73.91 · LOD 71.65 | Only interested if price reclaims and holds above PMH 73.94. Do not chase failed moves. | catalyst not confirmed | 🟡 MED |
 
 ## 📈 Notable Swing Watchlist
 
@@ -104,7 +104,7 @@
 
 ## 📉 Market Trends of the Day
 
-- Tape backdrop: S&P 500 -0.00%; Nasdaq +0.00%; VIX +0.00%; US 10Y -0.00%; Dollar (DXY) +0.00%.
+- Tape backdrop: S&P 500 n/a; Nasdaq n/a; VIX n/a; US 10Y n/a; Dollar (DXY) n/a.
 - Candidate source: yfinance_day_gainers+most_actives.
 - Hard-screened gappers in packet: 12.
 - This is still raw data first. Quality judgment is limited because no separate view files were supplied.
@@ -118,7 +118,7 @@
 ## 💰 Economic Data, Rates & the Fed
 
 - Light data day on the calendar.
-- Rates snapshot: US 10Y -0.00%; US 3M +0.00%; Dollar (DXY) +0.00%.
+- Rates snapshot: US 10Y n/a; US 3M n/a; Dollar (DXY) n/a.
 
 ## 📅 Coming Up
 

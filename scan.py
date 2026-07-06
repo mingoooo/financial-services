@@ -144,6 +144,8 @@ def previous_close_from_daily(ticker_obj, symbol):
         closes = hist["Close"].dropna().tolist()
         if not closes:
             return None
+        if len(closes) >= 2:
+            return safe_float(closes[-2])
         return safe_float(closes[-1])
     except Exception as exc:
         log(f"previous close failed for {symbol}: {exc}")

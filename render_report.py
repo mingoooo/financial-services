@@ -1,4 +1,5 @@
 import sys
+import re
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -92,12 +93,17 @@ table {
   border-collapse: collapse;
   margin: 1rem 0 1.4rem;
   font-size: 0.95rem;
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 th, td {
   border: 1px solid var(--line);
   padding: 10px 12px;
   text-align: left;
   vertical-align: top;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 th {
   background: var(--head);
@@ -133,6 +139,54 @@ footer {
   text-align: center;
   margin-top: 18px;
 }
+.glossary {
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+.glossary strong {
+  display: inline-block;
+  min-width: 56px;
+}
+@media (max-width: 640px) {
+  .container {
+    padding: 18px 12px 32px;
+  }
+  header {
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+  }
+  header h1 {
+    font-size: 1.45rem;
+  }
+  main {
+    padding: 16px;
+    border-radius: 10px;
+  }
+  h2 {
+    font-size: 1.15rem;
+  }
+  h3 {
+    font-size: 1rem;
+  }
+  p, li, blockquote, th, td {
+    font-size: 0.94rem;
+  }
+  th, td {
+    padding: 8px 9px;
+  }
+  header .lang-nav a {
+    display: inline-block;
+    margin: 0 8px 8px 0;
+    padding: 6px 10px;
+    background: #eff6ff;
+    border-radius: 999px;
+  }
+}
 """
 
 SECTION_MAP = {
@@ -162,6 +216,18 @@ TABLE_MAP = {
 
 PHRASE_MAP = [
     ("No clean catalyst headline found", "没有找到清晰的催化标题"),
+    ("As Global Markets Reach New Heights, ELEKTROS Strengthens Its Vision for the Next Generation of High-Speed EV Charging Infrastructure - Yahoo Finance", "在全球市场再创新高之际，ELEKTROS 进一步强化其下一代高速电动车充电基础设施愿景 - 雅虎财经"),
+    ("Only interested if price reclaims and holds above PMH", "只在价格重新站上并稳住 PMH 后才考虑"),
+    ("Do not chase failed moves.", "失败的动作不要追。"),
+    ("Wait for a clean break and hold above the key premarket trigger. Do not chase failed moves.", "等价格干净突破并站稳关键盘前触发位。失败的动作不要追。"),
+    ("catalyst not confirmed", "催化尚未确认"),
+    ("RVOL unavailable", "RVOL 不可用"),
+    ("still below prior high", "仍在前高下方"),
+    ("hard rules passed", "硬规则已通过"),
+    ("HIGH", "高"),
+    ("MED", "中"),
+    ("LOW/skip", "低 / 跳过"),
+    ("flat", "基本持平"),
     ("No codex_view.md provided. Packet only.", "未提供 codex_view.md。这里只是 packet 整理结果。"),
     ("No clean day setup passed the hard rules in this packet", "这份 packet 里没有日内 setup 通过硬规则"),
     ("No swing name passed the hard rules in this packet", "这份 packet 里没有波段名字通过硬规则"),
@@ -193,8 +259,15 @@ PHRASE_MAP = [
     ("live levels unavailable", "实时关键位暂不可用"),
     ("trend context limited", "趋势背景信息有限"),
     ("Tape backdrop:", "盘面背景："),
+    ("S&P 500", "标普500"),
+    ("Nasdaq", "纳斯达克"),
+    ("Dollar (DXY)", "美元指数（DXY）"),
+    ("US 10Y", "美国10年期国债"),
+    ("US 3M", "美国3个月期国债"),
     ("The catch we are watching:", "今天最该盯的那个点："),
+    ("big gap names are there, but clean catalyst matching is still thin on some names.", "大幅跳空的名字是有的，但不少标的的清晰催化仍然偏弱。"),
     ("Two-brain verdict:", "双脑结论："),
+    ("packet-based editor draft only. No separate Claude or Codex view files were provided.", "当前更像基于 packet 的编辑整理稿；没有单独提供 Claude 或 Codex 的独立视角文件。"),
     ("Full catalyst headline:", "完整催化标题："),
     ("Price:", "价格："),
     ("Gap:", "跳空幅度："),
@@ -263,6 +336,16 @@ def translate_phrases(text: str) -> str:
     return out
 
 
+def polish_zh_line(text: str) -> str:
+    text = re.sub(
+        r"只在价格重新站上并稳住 PMH 后才考虑\s+([0-9]+(?:\.[0-9]+)?)\.",
+        r"只在价格重新站上并稳住 PMH \1 后才考虑。",
+        text,
+    )
+    text = text.replace("。 ", "。")
+    return text
+
+
 def localize_sections(md_text: str) -> str:
     lines = []
     for raw in md_text.splitlines():
@@ -276,6 +359,7 @@ def localize_sections(md_text: str) -> str:
                 mapped = [TABLE_MAP.get(p, p) for p in parts]
                 line = "| " + " | ".join(mapped) + " |"
         line = translate_phrases(line)
+        line = polish_zh_line(line)
         lines.append(line)
     return "\n".join(lines)
 
@@ -289,6 +373,17 @@ def build_html(md_text: str, report_date: str, footer_text: str, zh: bool) -> st
     else:
         meta = first_date_line(md_text) or report_date
     body_html = markdown.markdown(md_text, extensions=["tables", "fenced_code", "sane_lists"])
+    glossary = (
+        '<div class="glossary"><strong>术语说明</strong><br>'
+        '<strong>PMH</strong>盘前高点（Pre-Market High）<br>'
+        '<strong>PDH</strong>前一交易日高点（Prior-Day High）<br>'
+        '<strong>LOD</strong>当日低点（Low of Day）</div>'
+        if zh else
+        '<div class="glossary"><strong>Legend</strong><br>'
+        '<strong>PMH</strong>Pre-Market High<br>'
+        '<strong>PDH</strong>Prior-Day High<br>'
+        '<strong>LOD</strong>Low of Day</div>'
+    )
     lang_nav = ('<div class=\"lang-nav\"><a href=\"index.html\">中文</a><a href=\"index_en.html\">English</a></div>' if zh else '<div class=\"lang-nav\"><a href=\"index.html\">中文</a><a href=\"index_en.html\">English</a></div>')
     return f"""<!doctype html>
 <html lang=\"{'zh-CN' if zh else 'en'}\">
@@ -306,6 +401,7 @@ def build_html(md_text: str, report_date: str, footer_text: str, zh: bool) -> st
       {lang_nav}
     </header>
     <main>
+      {glossary}
       {body_html}
     </main>
     <footer>{footer_text}</footer>
