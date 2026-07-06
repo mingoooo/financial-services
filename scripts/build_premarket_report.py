@@ -145,7 +145,7 @@ def build_report(packet: dict) -> str:
 
 ### Watchlists built by the rules: Day = Trend Join Long · Swing = gap-up + real catalyst
 
-> Disclaimer: deterministic criteria decide membership, both AIs judge quality later, intraday RVOL here has a keyless caveat, and none of this is financial advice.
+> Disclaimer: deterministic criteria decide membership, both AIs judge quality later, price, gap, and live levels here use extended-hours data when available, intraday RVOL here has a keyless caveat, and none of this is financial advice.
 
 ## Summary
 
