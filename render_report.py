@@ -48,6 +48,18 @@ header .meta {
   color: var(--muted);
   font-size: 0.98rem;
 }
+header .lang-nav {
+  margin-top: 10px;
+  font-size: 0.95rem;
+}
+header .lang-nav a {
+  color: #2563eb;
+  text-decoration: none;
+  margin-right: 12px;
+}
+header .lang-nav a:hover {
+  text-decoration: underline;
+}
 main {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -277,6 +289,7 @@ def build_html(md_text: str, report_date: str, footer_text: str, zh: bool) -> st
     else:
         meta = first_date_line(md_text) or report_date
     body_html = markdown.markdown(md_text, extensions=["tables", "fenced_code", "sane_lists"])
+    lang_nav = ('<div class=\"lang-nav\"><a href=\"index.html\">中文</a><a href=\"index_en.html\">English</a></div>' if zh else '<div class=\"lang-nav\"><a href=\"index.html\">中文</a><a href=\"index_en.html\">English</a></div>')
     return f"""<!doctype html>
 <html lang=\"{'zh-CN' if zh else 'en'}\">
 <head>
@@ -290,6 +303,7 @@ def build_html(md_text: str, report_date: str, footer_text: str, zh: bool) -> st
     <header>
       <h1>{title}</h1>
       <div class=\"meta\">{meta}</div>
+      {lang_nav}
     </header>
     <main>
       {body_html}
