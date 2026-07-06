@@ -1,0 +1,348 @@
+name: Premarket Report
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - ta
+    paths:
+      - 'scan.py'
+      - 'render_report.py'
+      - 'REPORT_TEMPLATE.md'
+      - 'WATCHLIST_CRITERIA.md'
+      - 'prompt_merge.md'
+      - 'scripts/notify_telegram_premarket.py'
+      - '.github/workflows/premarket-report.yml'
+  workflow_dispatch:
+    inputs:
+      run_label:
+        description: Telegram 文案里的运行标签
+        required: false
+        default: manual run
+        type: string
+      deploy_pages:
+        description: 若启用 Pages，则部署 HTML 报告
+        required: false
+        default: true
+        type: boolean
+  schedule:
+    - cron: '30 10 * * 1-5'
+    - cron: '30 12 * * 1-5'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  premarket:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Decide whether to run now
+        id: gate
+        shell: bash
+        run: |
+          python - <<'PY'
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          import os
+
+          now_ny = datetime.now(ZoneInfo("America/New_York"))
+          weekday = now_ny.weekday()
+          should_run = weekday < 5
+          run_label = "manual run"
+          event_name = os.environ.get("GITHUB_EVENT_NAME", "")
+          if event_name == "schedule":
+              hhmm = now_ny.strftime("%H:%M")
+              if hhmm == "06:30":
+                  run_label = "开盘前 3 小时"
+              elif hhmm == "08:30":
+                  run_label = "开盘前 1 小时"
+              else:
+                  run_label = f"scheduled {hhmm} ET"
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+              fh.write(f"should_run={'true' if should_run else 'false'}\n")
+              fh.write(f"ny_time={now_ny.isoformat()}\n")
+              fh.write(f"run_label={run_label}\n")
+          PY
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+
+      - name: Skip outside weekday window
+        if: github.event_name == 'schedule' && steps.gate.outputs.should_run != 'true'
+        run: |
+          echo "Skipping scheduled run outside weekday NY window."
+          echo "NY time was: ${{ steps.gate.outputs.ny_time }}"
+
+      - name: Install dependencies
+        if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install markdown yfinance feedparser requests
+
+      - name: Prepare report directory
+        if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
+        run: mkdir -p reports/site
+
+      - name: Run premarket scan
+        if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
+        run: python scan.py
+
+      - name: Build markdown report
+        if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+
+          packet = json.loads(Path('packet.json').read_text(encoding='utf-8'))
+          now_et = datetime.now(ZoneInfo('America/New_York'))
+          date_line = now_et.strftime('%Y-%m-%d %I:%M %p ET')
+          market_snapshot = packet.get('market_snapshot', [])
+          econ = packet.get('econ_calendar', {})
+          gappers = packet.get('gappers', [])
+          snapshot_map = {item['name']: item for item in market_snapshot if item.get('name')}
+
+          def fmt_num(x, digits=2):
+              return 'n/a' if x is None else f"{x:.{digits}f}"
+
+          def fmt_pct(x):
+              return 'n/a' if x is None else f"{x:+.2f}%"
+
+          def catalyst_line(g):
+              heads = g.get('catalyst_headlines') or []
+              return heads[0]['title'] if heads else 'No clean catalyst headline found'
+
+          def levels_line(g):
+              parts = []
+              if g.get('premarket_high') is not None:
+                  parts.append(f"PMH {fmt_num(g.get('premarket_high'))}")
+              if g.get('hod') is not None:
+                  parts.append(f"HOD {fmt_num(g.get('hod'))}")
+              if g.get('lod') is not None:
+                  parts.append(f"LOD {fmt_num(g.get('lod'))}")
+              if g.get('vwap') is not None:
+                  parts.append(f"VWAP {fmt_num(g.get('vwap'))}")
+              return ' | '.join(parts) if parts else 'live levels unavailable'
+
+          def trend_context(g):
+              parts = []
+              price = g.get('price')
+              sma = g.get('sma_200')
+              if price is not None and sma is not None:
+                  parts.append('above 200d SMA' if price > sma else 'below 200d SMA')
+              if g.get('prior_day_high') is not None:
+                  parts.append(f"prior high {fmt_num(g.get('prior_day_high'))}")
+              if g.get('rvol') is not None:
+                  parts.append(f"RVOL {fmt_num(g.get('rvol'))}")
+              return ', '.join(parts) if parts else 'trend context limited'
+
+          summary_tape = []
+          for key in ['S&P 500', 'Nasdaq', 'VIX', 'US 10Y', 'Dollar (DXY)']:
+              item = snapshot_map.get(key)
+              if item:
+                  summary_tape.append(f"{key} {fmt_pct(item.get('change_pct'))}")
+          summary_tape_line = '; '.join(summary_tape) if summary_tape else 'broad tape snapshot is patchy'
+
+          day_rows = []
+          for g in gappers:
+              if g.get('day_eligible'):
+                  day_rows.append(f"| {g.get('ticker','')} | {catalyst_line(g)} | {levels_line(g)} | Wait for Trend Join confirmation above PMH and fresh HOD. No chase if it cannot hold. | Packet only. | 🟡 MED |")
+          if not day_rows:
+              day_rows.append('| None | No clean day setup passed the hard rules in this packet | n/a | Stand aside and wait for cleaner confirmation | Packet only. | 🔴 LOW/skip |')
+
+          swing_rows = []
+          for g in gappers:
+              if g.get('swing_eligible'):
+                  swing_rows.append(f"| {g.get('ticker','')} | {catalyst_line(g)} | {trend_context(g)} | Starter idea only. Swing entries and exits are still not finalized. | Packet only. | 🟡 MED |")
+          if not swing_rows:
+              swing_rows.append('| None | No swing name passed the hard rules in this packet | context limited | No starter idea today from the hard screen | Packet only. | 🔴 LOW/skip |')
+
+          pre_gappers = []
+          for g in gappers:
+              pre_gappers.append(f"### {g.get('ticker','')} | {g.get('company_name') or 'Company unknown'}\n- Full catalyst headline: {catalyst_line(g)}\n- Price: {fmt_num(g.get('price'))} | Gap: {fmt_pct(g.get('gap_pct'))} | Market cap: {g.get('market_cap') or 'n/a'}\n- Live levels: {levels_line(g)}\n- Flags: day_eligible={g.get('day_eligible')} | swing_eligible={g.get('swing_eligible')} | catalyst_found={g.get('catalyst_found')}\n")
+
+          market_trends = [
+              f"- Tape backdrop: {summary_tape_line}.",
+              f"- Candidate source: {packet.get('candidate_source') or 'unknown'}.",
+              f"- Hard-screened gappers in packet: {len(gappers)}.",
+              "- This is still raw data first. Quality judgment is limited because no separate view files were supplied.",
+          ]
+
+          tech_signals = [
+              "- Trend Join names need a clean push through premarket high and then a fresh high of day.",
+              "- If a gapper cannot stay above prior-day high, the setup gets a lot less interesting fast.",
+              "- RVOL here is a keyless stand-in based on full-day relative volume, not a true premarket feed.",
+          ]
+
+          rates_bits = []
+          for key in ['US 10Y', 'US 3M', 'Dollar (DXY)']:
+              item = snapshot_map.get(key)
+              if item:
+                  rates_bits.append(f"{key} {fmt_pct(item.get('change_pct'))}")
+          rates_line = '; '.join(rates_bits) if rates_bits else 'rates snapshot unavailable'
+
+          if econ.get('today'):
+              econ_today_lines = [f"- {e.get('time_et')}: {e.get('title')} | Forecast: {e.get('forecast') or 'n/a'} | Previous: {e.get('previous') or 'n/a'}" for e in econ.get('today', [])]
+          elif econ.get('notes') and any('unavailable' in n.lower() for n in econ.get('notes', [])):
+              econ_today_lines = ["- Econ feed unavailable.", f"- Rates snapshot: {rates_line}."]
+          else:
+              econ_today_lines = ["- Light data day on the calendar.", f"- Rates snapshot: {rates_line}."]
+          if econ_today_lines[-1] != f"- Rates snapshot: {rates_line}.":
+              econ_today_lines.append(f"- Rates snapshot: {rates_line}.")
+
+          coming = []
+          if econ.get('tomorrow'):
+              for e in econ.get('tomorrow', []):
+                  coming.append(f"- {e.get('time_et')}: {e.get('title')}")
+          else:
+              coming.append('- No high-impact USD event listed for tomorrow in the cached/live feed.')
+          notable_earnings = [f"{g.get('ticker')}: {g.get('next_earnings_date')}" for g in gappers if g.get('next_earnings_date')]
+          if notable_earnings:
+              coming.append(f"- Notable earnings dates seen in gappers: {', '.join(notable_earnings[:8])}")
+          else:
+              coming.append('- Notable earnings dates from gappers were limited or unavailable.')
+
+          skips = []
+          failed_day = [g['ticker'] for g in gappers if not g.get('day_eligible')]
+          failed_swing = [g['ticker'] for g in gappers if not g.get('swing_eligible')]
+          missing_cat = [g['ticker'] for g in gappers if not g.get('catalyst_found')]
+          if failed_day:
+              skips.append(f"- Failed day screen: {', '.join(failed_day[:8])}. Usually missing RVOL, prior-high reclaim, or clean structure.")
+          if failed_swing:
+              skips.append(f"- Failed swing screen: {', '.join(failed_swing[:8])}. Usually missing real catalyst, 200d context, or valid open rules.")
+          if missing_cat:
+              skips.append(f"- Weak catalyst match: {', '.join(missing_cat[:8])}. The headline match filter stayed strict on purpose.")
+          if not skips:
+              skips.append('- No obvious trap list was generated from the current packet.')
+
+          report = f'''# 🧠 AI PREMARKET REPORT — Humbled Trader
+
+### {date_line} · Claude + Codex (GPT-5.5), independent passes
+
+### Watchlists built by the rules: Day = Trend Join Long · Swing = gap-up + real catalyst
+
+> Disclaimer: deterministic criteria decide membership, both AIs judge quality later, intraday RVOL here has a keyless caveat, and none of this is financial advice.
+
+## Summary
+
+- Tape backdrop: {summary_tape_line}.
+- The catch we are watching: big gap names are there, but clean catalyst matching is still thin on some names.
+- Two-brain verdict: packet-based editor draft only. No separate Claude or Codex view files were provided.
+
+## 📊 Pre-Market Gappers
+
+{chr(10).join(pre_gappers)}
+## ☀️ Day Trading Watchlist
+
+| Ticker | Catalyst | Levels (live) | Plan (Trend Join) | 🤖 Codex | Conv. |
+|---|---|---|---|---|---|
+{chr(10).join(day_rows)}
+
+## 📈 Notable Swing Watchlist
+
+| Ticker | Catalyst (headline) | Trend context | Idea | 🤖 Codex | Conv. |
+|---|---|---|---|---|---|
+{chr(10).join(swing_rows)}
+
+## 📉 Market Trends of the Day
+
+{chr(10).join(market_trends)}
+
+## 📊 Technical Signals for Today
+
+{chr(10).join(tech_signals)}
+
+## 💰 Economic Data, Rates & the Fed
+
+{chr(10).join(econ_today_lines)}
+
+## 📅 Coming Up
+
+{chr(10).join(coming)}
+
+## 🚫 Skips & Traps
+
+{chr(10).join(skips)}
+
+---
+
+## 🤖 Where the two brains landed
+
+- Agreement: unavailable because no separate Claude or Codex view files were provided.
+- Rules vs discretion: no separate discretion layer was provided, so this report sticks to deterministic packet facts only.
+- Claude's sharp catch the other missed: unavailable.
+- Codex's sharp catch the other missed: unavailable.
+- trade where they agree; where they disagree, stand down or size down; never average.
+'''
+          Path('REPORT.md').write_text(report, encoding='utf-8')
+          PY
+
+      - name: Render HTML report
+        if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
+        run: |
+          python render_report.py REPORT.md $(python - <<'PY'
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          print(datetime.now(ZoneInfo('America/New_York')).strftime('%Y-%m-%d'))
+          PY
+          )
+          cp reports/premarket_.html reports/site/index.html
+          cp reports/premarket_zh.html reports/site/index_zh.html
+
+      - name: Upload reports artifact
+        if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: premarket-report
+          path: |
+            packet.json
+            REPORT.md
+            reports/premarket_.html
+            reports/premarket_zh.html
+            reports/site/index.html
+            reports/site/index_zh.html
+          if-no-files-found: error
+
+      - name: Configure Pages
+        if: (github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true') && (github.event_name != 'workflow_dispatch' || github.event.inputs.deploy_pages == 'true')
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        if: (github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true') && (github.event_name != 'workflow_dispatch' || github.event.inputs.deploy_pages == 'true')
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: reports/site
+
+      - name: Deploy to GitHub Pages
+        if: (github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true') && (github.event_name != 'workflow_dispatch' || github.event.inputs.deploy_pages == 'true')
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Send Telegram notification
+        if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          PAGES_URL=""
+          if [ -n "${{ steps.deployment.outputs.page_url }}" ]; then
+            PAGES_URL="${{ steps.deployment.outputs.page_url }}"
+          fi
+          RUN_LABEL="${{ github.event.inputs.run_label || steps.gate.outputs.run_label }}"
+          python scripts/notify_telegram_premarket.py REPORT.md "$PAGES_URL" "$RUN_LABEL"
