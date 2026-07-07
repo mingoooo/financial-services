@@ -163,14 +163,15 @@ jobs:
 
       - name: Prepare Pages payload
         run: |
-          mkdir -p reports/site
-          cp premarket-report/reports/site/index.html reports/site/index.html
-          cp premarket-report/reports/site/index_zh.html reports/site/index_zh.html
+          rm -rf pages_payload
+          mkdir -p pages_payload
+          cp premarket-report/reports/site/index.html pages_payload/index.html
+          cp premarket-report/reports/site/index_zh.html pages_payload/index_zh.html
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: reports/site
+          path: pages_payload
 
       - name: Deploy to GitHub Pages
         id: deployment
