@@ -42,6 +42,10 @@ def catalyst_line(g):
 
 def levels_line(g):
     parts = []
+    if g.get('overnight_high') is not None:
+        parts.append(f"ONH {fmt_num(g.get('overnight_high'))}")
+    if g.get('overnight_low') is not None:
+        parts.append(f"ONL {fmt_num(g.get('overnight_low'))}")
     if g.get('premarket_high') is not None:
         parts.append(f"PMH {fmt_num(g.get('premarket_high'))}")
     if g.get('premarket_low') is not None:
@@ -59,6 +63,15 @@ def levels_line(g):
 
 def levels_cell(g):
     return levels_line(g).replace(' | ', ' · ')
+
+
+def extended_volume_line(g):
+    parts = []
+    if g.get('overnight_volume') is not None:
+        parts.append(f"ON Vol {fmt_num(g.get('overnight_volume'), 0)}")
+    if g.get('premarket_volume') is not None:
+        parts.append(f"PM Vol {fmt_num(g.get('premarket_volume'), 0)}")
+    return ' | '.join(parts) if parts else 'extended-hours volume unavailable'
 
 
 def day_plan_line(g):
@@ -138,6 +151,7 @@ def build_report(packet: dict) -> str:
             f"- Full catalyst headline: {catalyst_line(g)}\n"
             f"- Price: {fmt_num(g.get('price'))} | Gap: {fmt_pct(g.get('gap_pct'))} | Market cap: {fmt_market_cap(g.get('market_cap'))}\n"
             f"- Live levels: {levels_line(g)}\n"
+            f"- Extended-hours volume: {extended_volume_line(g)}\n"
             f"- Flags: day_eligible={g.get('day_eligible')} | swing_eligible={g.get('swing_eligible')} | catalyst_found={g.get('catalyst_found')}\n"
         )
 
@@ -149,6 +163,7 @@ def build_report(packet: dict) -> str:
     ]
 
     tech_signals = [
+        "- Overnight and premarket levels are both shown when the packet contains them.",
         "- Trend Join names need a clean push through premarket high and then a fresh high of day.",
         "- If a gapper cannot stay above prior-day high, the setup gets a lot less interesting fast.",
         "- RVOL here is a keyless stand-in based on full-day relative volume, not a true premarket feed.",
