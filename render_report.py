@@ -375,15 +375,11 @@ def build_html(md_text: str, report_date: str, footer_text: str, zh: bool) -> st
     body_html = markdown.markdown(md_text, extensions=["tables", "fenced_code", "sane_lists"])
     glossary = (
         '<div class="glossary"><strong>术语说明</strong><br>'
-        '<strong>ONH</strong>夜盘高点（Overnight High）<br>'
-        '<strong>ONL</strong>夜盘低点（Overnight Low）<br>'
         '<strong>PMH</strong>盘前高点（Pre-Market High）<br>'
         '<strong>PDH</strong>前一交易日高点（Prior-Day High）<br>'
         '<strong>LOD</strong>当日低点（Low of Day）</div>'
         if zh else
         '<div class="glossary"><strong>Legend</strong><br>'
-        '<strong>ONH</strong>Overnight High<br>'
-        '<strong>ONL</strong>Overnight Low<br>'
         '<strong>PMH</strong>Pre-Market High<br>'
         '<strong>PDH</strong>Prior-Day High<br>'
         '<strong>LOD</strong>Low of Day</div>'

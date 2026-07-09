@@ -201,7 +201,7 @@ def candidate_from_quote(quote, source):
         return None
     price = safe_float(quote.get("preMarketPrice") or quote.get("postMarketPrice") or quote.get("regularMarketPrice"))
     prev_close = safe_float(quote.get("regularMarketPreviousClose") or quote.get("regularMarketPreviousCloseRaw"))
-    gap_pct = safe_float(quote.get("regularMarketChangePercent"))
+    gap_pct = (price / prev_close - 1) * 100 if price is not None and prev_close not in (None, 0) else None
     market_cap = safe_float(quote.get("marketCap"))
     volume = safe_float(quote.get("regularMarketVolume") or quote.get("volume"))
     name = quote.get("shortName") or quote.get("longName") or quote.get("displayName")
@@ -496,8 +496,7 @@ def intraday_levels(symbol):
             idx = idx.tz_convert(ET)
         work = hist.copy()
         work.index = idx
-        overnight = work.between_time("16:00", "20:00")
-        pre = work.between_time("04:00", "09:29")
+        ext = work[(work.index.time >= datetime.strptime("16:00", "%H:%M").time()) | (work.index.time <= datetime.strptime("09:29", "%H:%M").time())]
         total_pv = (work["Close"] * work["Volume"]).fillna(0).cumsum()
         total_v = work["Volume"].fillna(0).cumsum().replace(0, math.nan)
         vwap_series = total_pv / total_v
@@ -506,12 +505,9 @@ def intraday_levels(symbol):
             "vwap": safe_float(vwap_series.dropna().iloc[-1]) if not vwap_series.dropna().empty else None,
             "hod": safe_float(work["High"].max()),
             "lod": safe_float(work["Low"].min()),
-            "overnight_high": safe_float(overnight["High"].max()) if not overnight.empty else None,
-            "overnight_low": safe_float(overnight["Low"].min()) if not overnight.empty else None,
-            "overnight_volume": safe_float(overnight["Volume"].sum()) if not overnight.empty else None,
-            "premarket_high": safe_float(pre["High"].max()) if not pre.empty else None,
-            "premarket_low": safe_float(pre["Low"].min()) if not pre.empty else None,
-            "premarket_volume": safe_float(pre["Volume"].sum()) if not pre.empty else None,
+            "premarket_high": safe_float(ext["High"].max()) if not ext.empty else None,
+            "premarket_low": safe_float(ext["Low"].min()) if not ext.empty else None,
+            "premarket_volume": safe_float(ext["Volume"].sum()) if not ext.empty else None,
         }
     except Exception as exc:
         log(f"intraday levels failed for {symbol}: {exc}")
