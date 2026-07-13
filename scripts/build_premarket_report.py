@@ -111,6 +111,7 @@ def build_report(packet: dict) -> str:
     market_snapshot = packet.get('market_snapshot', [])
     econ = packet.get('econ_calendar', {})
     gappers = packet.get('gappers', [])
+    warnings = packet.get('warnings', [])
     snapshot_map = {item['name']: item for item in market_snapshot if item.get('name')}
 
     summary_tape = []
@@ -119,6 +120,7 @@ def build_report(packet: dict) -> str:
         if item:
             summary_tape.append(f"{key} {fmt_pct(item.get('change_pct'))}")
     summary_tape_line = '; '.join(summary_tape) if summary_tape else 'broad tape snapshot is patchy'
+    warning_lines = [f"- Warning: {w}" for w in warnings]
 
     day_rows = []
     for g in gappers:
@@ -216,6 +218,8 @@ def build_report(packet: dict) -> str:
 - Tape backdrop: {summary_tape_line}.
 - The catch we are watching: big gap names are there, but clean catalyst matching is still thin on some names.
 - Two-brain verdict: packet-based editor draft only. No separate Claude or Codex view files were provided.
+
+{'## ⚠️ Data Warnings\n\n' + chr(10).join(warning_lines) if warning_lines else ''}
 
 ## 📊 Pre-Market Gappers
 

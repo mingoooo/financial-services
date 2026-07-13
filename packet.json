@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-09T10:39:04.195557+00:00",
+  "generated_at": "2026-07-10T03:06:44.023624+00:00",
   "candidate_source": "fallback_universe",
   "trading_day_note": "Raw premarket packet only. No analysis, no conviction, no watchlist bucketing.",
   "scan_params": {
@@ -162,7 +162,8 @@
     "today": [],
     "tomorrow": [],
     "notes": [
-      "using cached weekly feed within 4h ttl",
+      "live fetch failed: HTTPSConnectionPool(host='nfs.faireconomy.media', port=443): Max retries exceeded with url: /ff_calendar_thisweek.json (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x10aec3380>: Failed to establish a new connection: [Errno 8] nodename nor servname provided, or not known'))",
+      "fell back to cached weekly feed",
       "feed may be stale"
     ]
   },

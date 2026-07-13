@@ -27,7 +27,7 @@ on:
         default: true
         type: boolean
   schedule:
-    - cron: '30 10 * * 1-5'
+    - cron: '00 10 * * 1-5'
     - cron: '30 12 * * 1-5'
 
 permissions:
@@ -72,7 +72,7 @@ jobs:
           event_name = os.environ.get("GITHUB_EVENT_NAME", "")
           if event_name == "schedule":
               hhmm = now_ny.strftime("%H:%M")
-              if hhmm == "06:30":
+              if hhmm == "06:00":
                   run_label = "开盘前 3 小时"
               elif hhmm == "08:30":
                   run_label = "开盘前 1 小时"

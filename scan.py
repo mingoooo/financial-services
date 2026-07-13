@@ -61,6 +61,12 @@ NAME_STOP = {
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 
+def append_warning(packet, message):
+    warnings = packet.setdefault("warnings", [])
+    if message not in warnings:
+        warnings.append(message)
+
+
 def log(msg):
     print(msg, flush=True)
 
@@ -114,6 +120,18 @@ def get_fast_info(symbol):
         return None, {}, {}
 
 
+def is_network_error(message):
+    text = (message or "").lower()
+    return any(term in text for term in [
+        "could not resolve host",
+        "name or service not known",
+        "temporary failure in name resolution",
+        "failed to perform, curl: (6)",
+        "connection",
+        "timeout",
+    ])
+
+
 def current_extended_price(ticker_obj, fast, info, symbol):
     try:
         hist = ticker_obj.history(period="2d", interval="1m", auto_adjust=False, prepost=True)
@@ -164,9 +182,12 @@ def last_two_daily_closes(symbol):
 
 def build_market_snapshot():
     out = []
+    network_failures = 0
     for name, symbol in MARKET_SYMBOLS.items():
         log(f"market snapshot: {name} {symbol}")
         ticker, fast, info = get_fast_info(symbol)
+        if ticker is None and not fast and not info:
+            network_failures += 1
         prev_close = previous_close_from_daily(ticker, symbol) if ticker is not None else None
         last = current_extended_price(ticker, fast, info, symbol) if ticker is not None else None
         if last is None or prev_close is None:
@@ -183,7 +204,7 @@ def build_market_snapshot():
             "prev_close": prev_close,
             "change_pct": change_pct,
         })
-    return out
+    return out, network_failures
 
 
 def run_predefined_screener(name):
@@ -656,8 +677,11 @@ def main():
         "gappers": [],
         "market_news": [],
         "gaps_to_fill": build_gaps_to_fill(),
+        "warnings": [],
     }
-    packet["market_snapshot"] = build_market_snapshot()
+    packet["market_snapshot"], snapshot_network_failures = build_market_snapshot()
+    if snapshot_network_failures:
+        append_warning(packet, "Some market snapshot requests failed, likely due to Yahoo/network resolution issues.")
     packet["market_news"] = build_market_news()
     packet["econ_calendar"] = fetch_econ_calendar()
     candidate_source, gappers = build_live_top_movers()
@@ -667,6 +691,8 @@ def main():
         enriched.append(enrich_gapper(gapper, packet["market_news"]))
         time.sleep(0.2)
     packet["gappers"] = enriched
+    if packet["candidate_source"] == "fallback_universe" and not packet["gappers"]:
+        append_warning(packet, "Live Yahoo data appears unavailable; the scan fell back and still produced zero qualified names.")
     PACKET_PATH.write_text(json.dumps(packet, indent=2, ensure_ascii=False))
     log(f"wrote {PACKET_PATH}")
 
