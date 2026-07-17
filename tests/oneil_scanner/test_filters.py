@@ -134,6 +134,23 @@ def test_trend_filters_use_vcp_trend_template_adapter(monkeypatch: pytest.Monkey
 
 
 
+def test_trend_filters_match_reused_vcp_trend_template_behavior() -> None:
+    frame = add_shared_preprocessing(
+        _price_frame(close_start=120.0, step=0.8),
+        benchmark=_price_frame(close_start=100.0, step=0.25),
+    )
+
+    direct = scanner_filters.vcp_trend_template.evaluate_trend_template(frame)
+    adapted = evaluate_trend_filters(frame, min_rs_proxy=0.05)
+
+    assert adapted.trend_template is not None
+    assert adapted.trend_template.passes is direct.passes
+    assert adapted.trend_template.checks == direct.checks
+    assert adapted.trend_template.reasons == direct.reasons
+    assert adapted.trend_template_pass is direct.passes
+
+
+
 def test_eligibility_filters_report_explicit_fail_reasons() -> None:
     frame = _price_frame(periods=150, close_start=8.0, step=0.01, volume=50_000)
     enriched = add_shared_preprocessing(frame)
@@ -153,15 +170,33 @@ def test_eligibility_filters_check_detector_family_specific_bars() -> None:
     result = evaluate_eligibility(
         frame,
         detector_family='momentum_continuation_family',
-        min_history=50,
         min_price=10.0,
         min_avg_dollar_volume=10_000_000.0,
     )
 
     assert result.passes is False
     assert result.metrics['required_bars'] == 120
+    assert result.metrics['effective_min_history'] == 120
     assert 'insufficient_bars_for_momentum_continuation_family' in result.reasons
     assert 'insufficient_history' not in result.reasons
+
+
+def test_eligibility_filters_respect_explicit_min_history_with_detector_family() -> None:
+    frame = add_shared_preprocessing(_price_frame(periods=150, close_start=20.0, step=0.2, volume=1_500_000))
+
+    result = evaluate_eligibility(
+        frame,
+        detector_family='momentum_continuation_family',
+        min_history=180,
+        min_price=10.0,
+        min_avg_dollar_volume=10_000_000.0,
+    )
+
+    assert result.passes is False
+    assert result.metrics['required_bars'] == 120
+    assert result.metrics['effective_min_history'] == 180
+    assert 'insufficient_history' in result.reasons
+    assert 'insufficient_bars_for_momentum_continuation_family' not in result.reasons
 
 
 
@@ -174,3 +209,17 @@ def test_eligibility_filters_exclude_identifiable_non_target_instruments() -> No
 
     assert result.passes is False
     assert 'non_target_instrument:etf' in result.reasons
+
+
+@pytest.mark.parametrize('flag_value', ['False', '0', 'N', 'no', '', 0])
+def test_eligibility_filters_ignore_false_like_non_target_flags(flag_value: object) -> None:
+    frame = add_shared_preprocessing(_price_frame(close_start=25.0, step=0.05, volume=2_000_000))
+    frame['IsETF'] = flag_value
+    frame['IsFund'] = flag_value
+    frame['IsADR'] = flag_value
+    frame['CompanyName'] = 'Sample Operating Company'
+    frame['QuoteType'] = 'EQUITY'
+
+    result = evaluate_eligibility(frame, min_price=10.0, min_avg_dollar_volume=10_000_000.0)
+
+    assert all(not reason.startswith('non_target_instrument:') for reason in result.reasons)

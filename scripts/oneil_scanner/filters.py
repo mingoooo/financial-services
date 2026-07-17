@@ -80,6 +80,24 @@ def _normalize_instrument_hint(value: Any) -> str:
     return str(value).strip().lower()
 
 
+def _coerce_bool_flag(value: Any) -> bool:
+    if value is None or pd.isna(value):
+        return False
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        return value != 0
+    if isinstance(value, float):
+        return value != 0.0
+
+    normalized = str(value).strip().lower()
+    if normalized in {'true', '1', 'y', 'yes', 't'}:
+        return True
+    if normalized in {'false', '0', 'n', 'no', 'f', ''}:
+        return False
+    return False
+
+
 def _detect_non_target_instrument(frame: pd.DataFrame) -> str | None:
     instrument_hints = [
         _normalize_instrument_hint(_latest_value(frame, 'InstrumentType')),
@@ -97,7 +115,7 @@ def _detect_non_target_instrument(frame: pd.DataFrame) -> str | None:
     }
     for column, reason in boolean_hints.items():
         value = _latest_value(frame, column)
-        if value is not None and not pd.isna(value) and bool(value):
+        if _coerce_bool_flag(value):
             return reason
 
     company_name = _normalize_instrument_hint(_latest_value(frame, 'CompanyName'))
@@ -157,7 +175,7 @@ def evaluate_eligibility(
     frame: pd.DataFrame,
     *,
     detector_family: str | None = None,
-    min_history: int = 200,
+    min_history: int | None = None,
     min_price: float = 10.0,
     min_avg_dollar_volume: float = 10_000_000.0,
     required_bars_by_family: dict[str, int] | None = None,
@@ -170,8 +188,13 @@ def evaluate_eligibility(
     required_bars = required_bars_for_detector_family(
         detector_family,
         required_bars_by_family=required_bars_by_family,
-        fallback_min_history=min_history,
+        fallback_min_history=200 if min_history is None else min_history,
     )
+    if detector_family:
+        explicit_min_history = int(min_history) if min_history is not None else required_bars
+        effective_min_history = max(required_bars, explicit_min_history)
+    else:
+        effective_min_history = 200 if min_history is None else int(min_history)
     avg_dollar_volume_value = latest.get('AvgDollarVolume20')
     if avg_dollar_volume_value is None or pd.isna(avg_dollar_volume_value):
         avg_dollar_volume_value = latest.get('DollarVolume20')
@@ -179,11 +202,13 @@ def evaluate_eligibility(
         'history_length': len(frame),
         'detector_family': detector_family,
         'required_bars': required_bars,
+        'effective_min_history': effective_min_history,
         'close': _float_or_none(latest.get('Close')),
         'avg_dollar_volume_20': _float_or_none(avg_dollar_volume_value),
     }
 
-    if len(frame) < min_history:
+    should_report_generic_history = detector_family is None or min_history is not None
+    if should_report_generic_history and len(frame) < effective_min_history:
         reasons.append('insufficient_history')
     if len(frame) < required_bars:
         family_name = detector_family or 'detector'
