@@ -10,6 +10,9 @@ from zoneinfo import ZoneInfo
 import feedparser
 import requests
 import yfinance as yf
+import socket
+
+from scripts.vcp_lib.data_sources import load_yfinance_history
 
 ET = ZoneInfo("America/New_York")
 UTC = ZoneInfo("UTC")
@@ -59,6 +62,7 @@ NAME_STOP = {
 }
 
 HEADERS = {"User-Agent": "Mozilla/5.0"}
+socket.setdefaulttimeout(8)
 
 
 def append_warning(packet, message):
@@ -103,7 +107,7 @@ def fetch_json(url, timeout=20):
 
 def get_history(symbol, **kwargs):
     try:
-        return yf.Ticker(symbol).history(**kwargs)
+        return load_yfinance_history(symbol, **kwargs)
     except Exception as exc:
         log(f"history failed for {symbol}: {exc}")
         return None
@@ -159,15 +163,31 @@ def previous_close_from_daily(ticker_obj, symbol):
         hist = ticker_obj.history(period="7d", interval="1d", auto_adjust=False, prepost=False)
         if hist is None or hist.empty:
             return None
-        closes = hist["Close"].dropna().tolist()
-        if not closes:
+        work = hist.copy()
+        if "Close" not in work:
             return None
-        if len(closes) >= 2:
-            return safe_float(closes[-2])
-        return safe_float(closes[-1])
+        if len(work) >= 2:
+            last_row = work.iloc[-1]
+            if safe_float(last_row.get("Close")) is None and any(safe_float(last_row.get(col)) is not None for col in ["Open", "High", "Low", "Volume"]):
+                fast = dict((ticker_obj.fast_info or {})) if ticker_obj is not None else {}
+                last_price = safe_float(fast.get("lastPrice"))
+                if last_price is not None:
+                    return last_price
+                work = work.iloc[:-1]
+        close_series = work["Close"].dropna()
+        if close_series.empty:
+            return None
+        return safe_float(close_series.iloc[-1])
     except Exception as exc:
         log(f"previous close failed for {symbol}: {exc}")
         return None
+
+
+def resolved_previous_close(ticker_obj, fast, info, symbol):
+    daily_prev = previous_close_from_daily(ticker_obj, symbol) if ticker_obj is not None else None
+    if daily_prev is not None:
+        return daily_prev
+    return None
 
 
 def last_two_daily_closes(symbol):
@@ -188,7 +208,7 @@ def build_market_snapshot():
         ticker, fast, info = get_fast_info(symbol)
         if ticker is None and not fast and not info:
             network_failures += 1
-        prev_close = previous_close_from_daily(ticker, symbol) if ticker is not None else None
+        prev_close = resolved_previous_close(ticker, fast, info, symbol) if ticker is not None else None
         last = current_extended_price(ticker, fast, info, symbol) if ticker is not None else None
         if last is None or prev_close is None:
             daily_last, daily_prev = last_two_daily_closes(symbol)
@@ -247,7 +267,7 @@ def fallback_candidates():
             if ticker is None:
                 continue
             current_price = current_extended_price(ticker, fast, info, symbol)
-            prev_close = previous_close_from_daily(ticker, symbol)
+            prev_close = resolved_previous_close(ticker, fast, info, symbol)
             gap_pct = (current_price / prev_close - 1) * 100 if current_price is not None and prev_close not in (None, 0) else None
             results.append({
                 "ticker": symbol,
@@ -306,7 +326,9 @@ def should_drop_news(title):
 def parse_feed(label, url):
     items = []
     try:
-        parsed = feedparser.parse(url)
+        response = requests.get(url, headers=HEADERS, timeout=8)
+        response.raise_for_status()
+        parsed = feedparser.parse(response.content)
         for entry in parsed.entries:
             title = (entry.get("title") or "").strip()
             if not title or should_drop_news(title):
@@ -540,16 +562,14 @@ def daily_metrics(symbol):
     if hist is None or hist.empty:
         return {}
     try:
-        work = hist.copy().dropna(subset=["Close"])
-        if len(work) >= 2:
-            work_no_today = work.iloc[:-1]
-            today_bar = work.iloc[-1]
-        else:
-            work_no_today = work
-            today_bar = None
-        avg20 = safe_float(work_no_today["Volume"].tail(20).mean()) if not work_no_today.empty else None
-        sma200 = safe_float(work_no_today["Close"].tail(200).mean()) if len(work_no_today) >= 1 else None
-        prior = work_no_today.iloc[-1] if not work_no_today.empty else None
+        full = hist.copy()
+        closed = full.dropna(subset=["Close"])
+        if closed.empty:
+            return {}
+        prior = closed.iloc[-1]
+        avg20 = safe_float(closed["Volume"].tail(20).mean()) if not closed.empty else None
+        sma200 = safe_float(closed["Close"].tail(200).mean()) if not closed.empty else None
+        today_bar = full.iloc[-1] if len(full) > len(closed) else None
         return {
             "sma_200": sma200,
             "prior_day_high": safe_float(prior["High"]) if prior is not None else None,
@@ -607,7 +627,7 @@ def enrich_gapper(base, market_news):
         out["next_earnings_date"] = next_earnings_date(ticker, symbol)
         out["market_cap"] = out.get("market_cap") or safe_float(fast.get("marketCap") or info.get("marketCap"))
         out["price"] = out.get("current_extended_price") or out.get("price") or current_extended_price(ticker, fast, info, symbol)
-        out["prev_close"] = out.get("prev_close") or out.get("prior_close")
+        out["prev_close"] = out.get("prev_close") or resolved_previous_close(ticker, fast, info, symbol) or out.get("prior_close")
         if out.get("price") is not None and out.get("prev_close") not in (None, 0):
             out["gap_pct"] = (out["price"] / out["prev_close"] - 1) * 100
         gap = out.get("gap_pct")
