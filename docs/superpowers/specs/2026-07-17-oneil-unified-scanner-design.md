@@ -10,16 +10,16 @@ The first version should be complete enough to scan and report all requested set
 
 - Add a unified scanner for US equities using the existing repository data flow where practical.
 - Reuse current `scripts/vcp_lib/` capabilities rather than replacing them.
-- Cover the following setup types in one report:
+- Cover the following setup families in one report:
   - `VCP`
   - `52-week high breakout`
   - `platform/consolidation breakout`
   - `high tight flag`
-  - `trend template + RS`
   - `earnings/news event-driven breakout`
   - `cup-with-handle`
   - `flat base`
   - `double bottom`
+- Include `trend template + RS` as a shared filter and scoring layer, and expose it prominently in the report for every candidate rather than treating it as a standalone final pattern detector.
 - Produce one unified report with shared ranking, shared candidate schema, and shared explanation fields.
 - Classify catalysts as `earnings`, `news`, `mixed`, or `unknown`.
 - Keep the design compatible with future integration into the O'Neil research/backtest workflow.
@@ -64,6 +64,19 @@ This approach preserves the current VCP boundary while adding a new top-level sc
 
 This would align tightly with the later research flow, but it would make the first version harder to ship as a clean standalone scanner-plus-report product.
 
+## Version-1 Scope Boundary
+
+The first shipped version still targets all requested setup families, but it should do so under one strict scope boundary:
+
+- one canonical scan entrypoint
+- one canonical candidate schema
+- one canonical report pipeline
+- all requested setup families implemented behind the same framework
+
+To control scope without weakening the promise, the design explicitly allows detector families to ship with a `strict` and `lenient` internal mode or behind family-level feature flags during development, but the public v1 release is not considered complete until every requested family is wired into the unified report output.
+
+This keeps the implementation honest about breadth while still allowing staged internal rollout and tuning.
+
 ## Recommended Approach
 
 Use **Approach B**.
@@ -105,6 +118,8 @@ Add a new package:
 Add a new entrypoint:
 
 - `scripts/scan_oneil_setups.py`
+
+This should be the canonical unified scanner entrypoint for this workflow. The design should not introduce additional permanent one-off scan entrypoints for overlapping O'Neil setup coverage. Future backtest integration should consume this scanner or its outputs rather than creating a parallel scanning path.
 
 Keep existing modules in place:
 
@@ -189,6 +204,18 @@ Useful fields include:
 
 The design should treat metadata as helpful but partially optional, since `yfinance` fields can be incomplete.
 
+### Runtime and Data-Source Constraints
+
+Because the scanner targets a broad US equity universe on top of `yfinance` plus event gathering, the implementation must explicitly handle operational limits:
+
+- batched symbol downloads rather than one-symbol-at-a-time naïve fetches where possible
+- on-disk caching for OHLCV and event responses within a scan window
+- retry and timeout handling for partial network failures
+- rate-limit aware fallbacks that downgrade coverage rather than aborting the run
+- explicit reporting of missing earnings/news evidence so sparse event coverage is visible in the output
+
+These are part of implementation readiness, not optional polish.
+
 ### Event Data
 
 Event data should be pulled from existing repository-compatible sources, not invented independently by each detector.
@@ -232,7 +259,7 @@ These should eliminate symbols that are obviously unsuitable before detector log
 
 ### Trend-Template Layer
 
-`trend template + RS` should not be a standalone final detector. Instead, it should act as both:
+`trend template + RS` is a reportable quality layer but not a standalone final pattern detector. It should act as both:
 
 - a global quality filter
 - a shared scoring input
@@ -335,6 +362,8 @@ Every candidate should include at least:
 - `volume_confirmation`
 - `catalyst_type`
 - `catalyst_summary`
+- `catalyst_confidence`
+- `catalyst_evidence_count`
 - `quality_score`
 - `setup_score`
 - `report_rank`
@@ -356,7 +385,7 @@ Selection order should consider:
 
 1. `quality_score`
 2. family priority
-3. catalyst confidence
+3. `catalyst_confidence`
 4. timing / recency
 
 Suggested family priority when scores are otherwise close:
@@ -403,8 +432,10 @@ Use a derived `report_rank` based on weighted inputs such as:
 
 - `quality_score`
 - `setup_score`
-- catalyst confidence
+- `catalyst_confidence`
 - RS strength
+
+`catalyst_confidence` should be a normalized field, for example `0-100`, derived from evidence strength such as earnings-calendar confirmation, headline/source credibility, timing proximity, and agreement between event evidence and price action.
 
 The goal is a consistent report sort order without losing family-specific nuance.
 
@@ -473,6 +504,8 @@ Each row or card should include a short explanation line, for example:
 Add a new entrypoint:
 
 - `scripts/scan_oneil_setups.py`
+
+This should be the canonical unified scanner entrypoint for this workflow. The design should not introduce additional permanent one-off scan entrypoints for overlapping O'Neil setup coverage. Future backtest integration should consume this scanner or its outputs rather than creating a parallel scanning path.
 
 Recommended first-version arguments:
 
@@ -572,11 +605,14 @@ The design is successful when the repository can support a scanner that:
 
 - runs against US equities using the existing data foundation
 - detects all requested setup families in one end-to-end pass
+- exposes `trend template + RS` consistently as a shared filter/scoring/report layer rather than as an independent final detector
 - outputs one unified JSON/CSV/HTML report
-- uses one shared candidate schema
+- uses one shared candidate schema, including catalyst confidence fields
 - de-duplicates overlapping pattern hits into primary + secondary signals
 - classifies catalyst type using both price behavior and event evidence
+- handles batching, caching, timeouts, and sparse event coverage explicitly enough that a large run can degrade gracefully
 - preserves `vcp_lib` as a reusable focused library instead of collapsing all logic into it
+- keeps `scripts/scan_oneil_setups.py` as the single canonical scanner entrypoint for this unified workflow
 
 ## Future Integration
 
