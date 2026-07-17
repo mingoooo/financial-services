@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from scripts.oneil_scanner.models import PatternCandidate
-from scripts.oneil_scanner.scoring import normalize_candidate, score_and_rank_candidates
+from scripts.oneil_scanner.scoring import _compare_primary_candidates, normalize_candidate, score_and_rank_candidates
 
 
 def _candidate(
@@ -90,6 +90,8 @@ def test_normalize_candidate_maps_setup_score_from_actionability_inputs() -> Non
     assert stale.setup_score is not None
     assert actionable.setup_score > stale.setup_score
     assert actionable.setup_score > actionable.quality_score
+    assert actionable.quality_score == 96.8
+    assert actionable.setup_score == 100.0
 
 
 def test_score_and_rank_candidates_orders_by_report_rank() -> None:
@@ -193,3 +195,25 @@ def test_primary_selection_uses_family_priority_when_quality_scores_are_close() 
 
     assert len(ranked) == 1
     assert ranked[0].pattern_family == 'event_driven_family'
+
+
+def test_grouping_does_not_chain_candidates_beyond_trigger_window() -> None:
+    ranked = score_and_rank_candidates(
+        [
+            _candidate(symbol='AAPL', trigger_date='2026-07-01', pattern_family='vcp_breakout_family', pattern_type='vcp'),
+            _candidate(symbol='AAPL', trigger_date='2026-07-05', pattern_family='vcp_breakout_family', pattern_type='platform-breakout'),
+            _candidate(symbol='AAPL', trigger_date='2026-07-09', pattern_family='vcp_breakout_family', pattern_type='52-week-high-breakout'),
+        ],
+        as_of='2026-07-18',
+        trigger_window_days=5,
+    )
+
+    assert len(ranked) == 2
+    assert sorted(candidate.trigger_date for candidate in ranked) == ['2026-07-01', '2026-07-09']
+
+
+def test_primary_comparator_returns_zero_on_exact_tie() -> None:
+    left = normalize_candidate(_candidate(symbol='MSFT', pattern_type='vcp', trigger_date='2026-07-18'), as_of='2026-07-18')
+    right = normalize_candidate(_candidate(symbol='MSFT', pattern_type='vcp', trigger_date='2026-07-18'), as_of='2026-07-18')
+
+    assert _compare_primary_candidates(left, right, as_of='2026-07-18', family_priority={'vcp_breakout_family': 2}) == 0

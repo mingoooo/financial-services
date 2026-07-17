@@ -12,10 +12,12 @@ if __package__ in (None, ''):
     from scripts.oneil_scanner.config import ScannerConfig
     from scripts.oneil_scanner.models import ScanRunSummary
     from scripts.oneil_scanner.report import write_report_bundle
+    from scripts.oneil_scanner.scoring import score_and_rank_candidates
 else:
     from .oneil_scanner.config import ScannerConfig
     from .oneil_scanner.models import ScanRunSummary
     from .oneil_scanner.report import write_report_bundle
+    from .oneil_scanner.scoring import score_and_rank_candidates
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -65,6 +67,7 @@ def main(argv: list[str] | None = None) -> int:
         report_name=config.report_name,
         out_dir=config.out_dir,
     )
+    summary.candidates = score_and_rank_candidates(summary.candidates, as_of=config.as_of)
     write_report_bundle(config, summary)
     print(json.dumps(summary.to_dict(), ensure_ascii=False))
     return 0

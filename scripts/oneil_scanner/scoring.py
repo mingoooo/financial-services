@@ -186,7 +186,9 @@ def _compare_primary_candidates(
     if left_report != right_report:
         return -1 if left_report > right_report else 1
 
-    return -1 if left.pattern_type < right.pattern_type else 1
+    if left.pattern_type != right.pattern_type:
+        return -1 if left.pattern_type < right.pattern_type else 1
+    return 0
 
 
 def _secondary_signal_label(primary: PatternCandidate, overlap: PatternCandidate) -> str:
@@ -220,7 +222,10 @@ def _group_overlapping_candidates(
                         break
                     continue
                 latest_date = max(dated_items)
-                if abs((candidate_date - latest_date).days) <= trigger_window_days:
+                earliest_date = min(dated_items)
+                new_earliest = min(earliest_date, candidate_date)
+                new_latest = max(latest_date, candidate_date)
+                if abs((new_latest - new_earliest).days) <= trigger_window_days:
                     window.append(candidate)
                     placed = True
                     break
