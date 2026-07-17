@@ -69,8 +69,27 @@ class PatternCandidate:
     notes: list[str] = field(default_factory=list)
     symbol_context: SymbolContext | None = None
 
+    def __post_init__(self) -> None:
+        if not self.catalyst_type:
+            self.catalyst_type = 'unknown'
+        if self.catalyst_confidence is None:
+            self.catalyst_confidence = 0.0
+        if self.catalyst_evidence_count is None:
+            self.catalyst_evidence_count = 0 if self.catalyst_type == 'unknown' else 1
+        if self.catalyst_summary is None:
+            self.catalyst_summary = _default_catalyst_summary(self.catalyst_type)
+
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+def _default_catalyst_summary(catalyst_type: str) -> str:
+    if catalyst_type == 'technical_breakout':
+        return 'Technical breakout without separate event catalyst requirement'
+    if catalyst_type == 'unknown':
+        return 'No usable catalyst evidence aligned with the price move'
+    label = catalyst_type.replace('_', ' ')
+    return f'{label.capitalize()} catalyst'
 
 
 @dataclass

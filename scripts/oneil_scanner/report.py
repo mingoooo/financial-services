@@ -30,6 +30,8 @@ CSV_COLUMNS = [
     'volume_confirmation',
     'catalyst_type',
     'catalyst_confidence',
+    'catalyst_evidence_count',
+    'catalyst_summary',
     'quality_score',
     'setup_score',
     'report_rank',

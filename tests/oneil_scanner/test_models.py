@@ -97,6 +97,32 @@ def test_pattern_candidate_serializes_required_contract_fields() -> None:
     assert payload['symbol_context']['symbol'] == 'AAPL'
 
 
+def test_pattern_candidate_applies_normalized_catalyst_defaults_for_technical_families() -> None:
+    candidate = PatternCandidate(
+        symbol='MSFT',
+        pattern_family='vcp_breakout_family',
+        pattern_type='vcp',
+        pattern_variant='textbook',
+        trigger_date='2026-07-16',
+        breakout_level=500.0,
+        entry_zone_low=500.0,
+        entry_zone_high=525.0,
+        stop_reference=470.0,
+        trend_template_pass=True,
+        rs_score=95.0,
+        distance_to_52w_high=0.02,
+        volume_confirmation='confirmed',
+        catalyst_type='technical_breakout',
+        catalyst_confidence=0.9,
+        quality_score=88.0,
+        setup_score=86.0,
+        report_rank=3,
+    )
+
+    assert candidate.catalyst_evidence_count == 1
+    assert candidate.catalyst_summary == 'Technical breakout without separate event catalyst requirement'
+
+
 def test_scan_run_summary_includes_grouped_candidate_support() -> None:
     summary = ScanRunSummary(
         run_metadata=RunMetadata(
