@@ -63,6 +63,8 @@ class PatternCandidate:
     quality_score: float | None
     setup_score: float | None
     report_rank: int | None
+    catalyst_evidence_count: int | None = None
+    catalyst_summary: str | None = None
     secondary_signals: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
     symbol_context: SymbolContext | None = None

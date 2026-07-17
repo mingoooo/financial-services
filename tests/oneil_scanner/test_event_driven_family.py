@@ -117,5 +117,7 @@ def test_detector_returns_follow_through_candidate_after_catalyst_holds() -> Non
     assert candidate.pattern_variant == 'news'
     assert candidate.catalyst_type == 'news'
     assert candidate.catalyst_confidence is not None and candidate.catalyst_confidence >= 0.7
+    assert candidate.catalyst_evidence_count is not None and candidate.catalyst_evidence_count >= 2
+    assert candidate.catalyst_summary is not None and 'news catalyst' in candidate.catalyst_summary.lower()
     assert any(note.startswith('catalyst_summary=') for note in candidate.notes)
     assert any(note == 'price_pattern=follow-through' for note in candidate.notes)

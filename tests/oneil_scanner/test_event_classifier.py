@@ -172,7 +172,7 @@ def test_classifier_does_not_confirm_gap_without_usable_catalyst_evidence() -> N
         },
     )
 
-    assert evidence.catalyst_type == 'none'
+    assert evidence.catalyst_type == 'unknown'
     assert evidence.event_detected is False
     assert evidence.price_pattern_triggered is True
     assert evidence.catalyst_confidence == 0.0

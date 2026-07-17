@@ -323,7 +323,7 @@ def classify_event_catalyst(
         )
 
     return CatalystEvidence(
-        catalyst_type='none',
+        catalyst_type='unknown',
         event_detected=False,
         price_pattern_triggered=price_state.triggered,
         catalyst_confidence=0.0,

@@ -75,6 +75,8 @@ def detect_event_driven_family(
             volume_confirmation=_volume_confirmation_label(trigger_volume_ratio),
             catalyst_type=evidence.catalyst_type,
             catalyst_confidence=evidence.catalyst_confidence,
+            catalyst_evidence_count=evidence.catalyst_evidence_count,
+            catalyst_summary=evidence.catalyst_summary,
             quality_score=quality_score,
             setup_score=setup_score,
             report_rank=None,
