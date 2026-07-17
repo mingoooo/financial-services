@@ -4,23 +4,25 @@ import csv
 import json
 from pathlib import Path
 
-from scripts.oneil_scanner.models import ScanSummary, SetupCandidate
+from scripts.oneil_scanner.models import GroupedCandidateSummary, PatternCandidate, RunMetadata, ScanRunSummary
 from scripts.oneil_scanner.report import write_csv, write_html, write_json
 
 
-def _summary() -> ScanSummary:
-    return ScanSummary(
-        run_timestamp='2026-07-17T10:00:00',
+def _summary() -> ScanRunSummary:
+    return ScanRunSummary(
+        run_metadata=RunMetadata(
+            run_timestamp='2026-07-17T10:00:00',
+            as_of='2026-07-16',
+            report_name='daily-oneil',
+            out_dir='reports/oneil',
+            include_news=False,
+            include_earnings=False,
+        ),
         universe='all-us',
         symbols=['AAPL'],
         limit=10,
-        as_of='2026-07-16',
-        include_news=False,
-        include_earnings=False,
-        report_name='daily-oneil',
-        out_dir='reports/oneil',
         candidates=[
-            SetupCandidate(
+            PatternCandidate(
                 symbol='AAPL',
                 pattern_family='base',
                 pattern_type='vcp',
@@ -43,6 +45,14 @@ def _summary() -> ScanSummary:
                 notes=['scaffold'],
             )
         ],
+        grouped_candidate_summaries=[
+            GroupedCandidateSummary(
+                group_key='base:vcp',
+                label='Base / VCP',
+                candidate_count=1,
+                symbols=['AAPL'],
+            )
+        ],
     )
 
 
@@ -59,6 +69,7 @@ def test_report_writers_emit_json_csv_and_html(tmp_path: Path) -> None:
     payload = json.loads(json_path.read_text(encoding='utf-8'))
     assert payload['candidate_count'] == 1
     assert payload['candidates'][0]['pattern_type'] == 'vcp'
+    assert payload['grouped_candidate_summaries'][0]['label'] == 'Base / VCP'
 
     with csv_path.open(newline='', encoding='utf-8') as handle:
         rows = list(csv.DictReader(handle))
@@ -69,10 +80,11 @@ def test_report_writers_emit_json_csv_and_html(tmp_path: Path) -> None:
     html = html_path.read_text(encoding='utf-8')
     assert 'O&#39;Neil Setup Scanner Report' in html or "O'Neil Setup Scanner Report" in html
     assert 'AAPL' in html
+    assert 'Base / VCP (1)' in html
 
 
 def test_report_writers_create_parent_directories(tmp_path: Path) -> None:
-    summary = ScanSummary.empty(
+    summary = ScanRunSummary.empty(
         run_timestamp='2026-07-17T10:00:00',
         universe='all-us',
         report_name='empty',

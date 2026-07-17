@@ -6,8 +6,8 @@ from pathlib import Path
 
 from jinja2 import Template
 
-from .config import ScanConfig
-from .models import ScanSummary
+from .config import ScannerConfig
+from .models import ScanRunSummary
 
 CSV_COLUMNS = [
     'symbol',
@@ -49,8 +49,9 @@ _HTML_TEMPLATE = Template(
 </head>
 <body>
   <h1>O'Neil Setup Scanner Report</h1>
-  <p class="muted">Report: {{ summary.report_name }} | Universe: {{ summary.universe }} | As of: {{ summary.as_of or 'latest' }}</p>
+  <p class="muted">Report: {{ summary.run_metadata.report_name }} | Universe: {{ summary.universe }} | As of: {{ summary.run_metadata.as_of or 'latest' }}</p>
   <p class="muted">Candidates: {{ summary.candidates | length }}</p>
+  <p class="muted">Groups: {% for group in summary.grouped_candidate_summaries %}{{ group.label }} ({{ group.candidate_count }}){% if not loop.last %}; {% endif %}{% else %}None{% endfor %}</p>
   <table>
     <thead>
       <tr>
@@ -60,7 +61,7 @@ _HTML_TEMPLATE = Template(
       </tr>
     </thead>
     <tbody>
-    {% for candidate in summary.candidates %}
+    {% for candidate in candidates %}
       <tr>
       {% for column in columns %}
         {% set value = candidate[column] %}
@@ -80,13 +81,13 @@ def _ensure_parent(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
 
 
-def write_json(path: str | Path, summary: ScanSummary) -> None:
+def write_json(path: str | Path, summary: ScanRunSummary) -> None:
     output = Path(path)
     _ensure_parent(output)
     output.write_text(json.dumps(summary.to_dict(), indent=2, ensure_ascii=False), encoding='utf-8')
 
 
-def write_csv(path: str | Path, summary: ScanSummary) -> None:
+def write_csv(path: str | Path, summary: ScanRunSummary) -> None:
     output = Path(path)
     _ensure_parent(output)
     with output.open('w', newline='', encoding='utf-8') as handle:
@@ -99,14 +100,14 @@ def write_csv(path: str | Path, summary: ScanSummary) -> None:
             writer.writerow({column: row.get(column) for column in CSV_COLUMNS})
 
 
-def write_html(path: str | Path, summary: ScanSummary) -> None:
+def write_html(path: str | Path, summary: ScanRunSummary) -> None:
     output = Path(path)
     _ensure_parent(output)
     rows = [candidate.to_dict() for candidate in summary.candidates]
     output.write_text(_HTML_TEMPLATE.render(summary=summary, columns=CSV_COLUMNS, candidates=rows), encoding='utf-8')
 
 
-def write_report_bundle(config: ScanConfig, summary: ScanSummary) -> dict[str, Path]:
+def write_report_bundle(config: ScannerConfig, summary: ScanRunSummary) -> dict[str, Path]:
     paths = {
         'json': config.report_path('json'),
         'csv': config.report_path('csv'),

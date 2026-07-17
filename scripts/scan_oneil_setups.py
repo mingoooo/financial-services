@@ -3,10 +3,10 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
-from oneil_scanner.config import ScanConfig
-from oneil_scanner.models import ScanSummary
+from oneil_scanner.config import ScannerConfig
+from oneil_scanner.models import ScanRunSummary
 from oneil_scanner.report import write_report_bundle
 
 
@@ -29,8 +29,8 @@ def parse_symbols(raw_symbols: str | None) -> list[str]:
     return [symbol.strip().upper() for symbol in raw_symbols.split(',') if symbol.strip()]
 
 
-def build_config(args: argparse.Namespace) -> ScanConfig:
-    return ScanConfig(
+def build_config(args: argparse.Namespace) -> ScannerConfig:
+    return ScannerConfig(
         universe=args.universe,
         symbols=parse_symbols(args.symbols),
         limit=args.limit,
@@ -46,7 +46,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     config = build_config(args)
-    summary = ScanSummary.empty(
+    summary = ScanRunSummary.empty(
         run_timestamp=datetime.now(UTC).isoformat(timespec='seconds'),
         universe=config.universe,
         symbols=config.symbols,
