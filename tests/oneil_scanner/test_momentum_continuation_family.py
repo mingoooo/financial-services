@@ -45,6 +45,8 @@ def _detect(frame: pd.DataFrame, *, symbol: str = 'TEST'):
 
 def _high_tight_flag_frame() -> pd.DataFrame:
     frame = _piecewise_frame(
+        (28.0, 0),
+        (50.0, 70),
         (50.0, 0),
         (100.0, 35),
         (92.0, 6),
@@ -52,12 +54,14 @@ def _high_tight_flag_frame() -> pd.DataFrame:
         (95.5, 4),
         (101.5, 3),
     )
-    frame['Volume'] = [2_400_000.0] * 35 + [1_300_000.0] * 16 + [3_600_000.0] * 3
+    frame['Volume'] = [1_900_000.0] * 70 + [2_400_000.0] * 35 + [1_300_000.0] * 16 + [3_600_000.0] * 3
     return frame
 
 
 def _continuation_breakout_frame() -> pd.DataFrame:
     frame = _piecewise_frame(
+        (24.0, 0),
+        (40.0, 50),
         (40.0, 0),
         (72.0, 55),
         (66.0, 8),
@@ -65,7 +69,7 @@ def _continuation_breakout_frame() -> pd.DataFrame:
         (67.5, 6),
         (73.2, 4),
     )
-    frame['Volume'] = [2_100_000.0] * 55 + [1_500_000.0] * 22 + [3_000_000.0] * 4
+    frame['Volume'] = [1_700_000.0] * 50 + [2_100_000.0] * 55 + [1_500_000.0] * 22 + [3_000_000.0] * 4
     return frame
 
 
@@ -96,7 +100,11 @@ def _failed_continuation_frame() -> pd.DataFrame:
 
 
 def test_detector_returns_valid_high_tight_flag_candidate() -> None:
-    candidates = _detect(_high_tight_flag_frame())
+    frame = _high_tight_flag_frame()
+
+    assert len(frame) >= 120
+
+    candidates = _detect(frame)
 
     assert len(candidates) == 1
     candidate = candidates[0]
@@ -104,6 +112,7 @@ def test_detector_returns_valid_high_tight_flag_candidate() -> None:
     assert candidate.pattern_type == 'high-tight-flag'
     assert candidate.pattern_variant == 'textbook'
     assert candidate.breakout_level is not None
+    assert candidate.trigger_date == pd.to_datetime(frame.iloc[-2]['Date']).strftime('%Y-%m-%d')
     assert candidate.entry_zone_low == candidate.breakout_level
     assert candidate.entry_zone_high is not None
     assert candidate.entry_zone_high > candidate.entry_zone_low
@@ -119,7 +128,11 @@ def test_detector_returns_valid_high_tight_flag_candidate() -> None:
 
 
 def test_detector_returns_valid_continuation_breakout_candidate() -> None:
-    candidates = _detect(_continuation_breakout_frame())
+    frame = _continuation_breakout_frame()
+
+    assert len(frame) >= 120
+
+    candidates = _detect(frame)
 
     assert len(candidates) == 1
     candidate = candidates[0]
@@ -127,6 +140,7 @@ def test_detector_returns_valid_continuation_breakout_candidate() -> None:
     assert candidate.pattern_type == 'continuation-breakout'
     assert candidate.pattern_variant == 'momentum'
     assert candidate.breakout_level is not None
+    assert candidate.trigger_date == pd.to_datetime(frame.iloc[-2]['Date']).strftime('%Y-%m-%d')
     assert candidate.volume_confirmation == 'confirmed'
     assert candidate.stop_reference is not None
     assert any(note.startswith('prior_advance_pct=') for note in candidate.notes)

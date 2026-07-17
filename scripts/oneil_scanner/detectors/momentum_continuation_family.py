@@ -17,6 +17,8 @@ _PATTERN_PRIORITY = {
 class _ContinuationHit:
     pattern_type: str
     pattern_variant: str
+    trigger_date: str | None
+    breakout_span: int
     pivot_price: float
     stop_reference: float
     prior_advance_pct: float
@@ -40,6 +42,22 @@ def _format_date(value: object) -> str | None:
     if value is None or pd.isna(value):
         return None
     return pd.to_datetime(value).strftime('%Y-%m-%d')
+
+
+def _date_ordinal(value: str | None) -> int:
+    if value is None:
+        return 999_999_999
+    return pd.Timestamp(value).toordinal()
+
+
+def _hit_sort_key(hit: _ContinuationHit) -> tuple[int, int, float, float, int]:
+    return (
+        -_PATTERN_PRIORITY.get(hit.pattern_type, 0),
+        _date_ordinal(hit.trigger_date),
+        -hit.setup_score,
+        -hit.quality_score,
+        -hit.breakout_span,
+    )
 
 
 
@@ -81,7 +99,7 @@ def _build_candidate(
         pattern_family=FAMILY_NAME,
         pattern_type=hit.pattern_type,
         pattern_variant=hit.pattern_variant,
-        trigger_date=_format_date(latest.get('Date')),
+        trigger_date=hit.trigger_date,
         breakout_level=round(hit.pivot_price, 4),
         entry_zone_low=round(hit.pivot_price, 4),
         entry_zone_high=round(hit.pivot_price * 1.05, 4),
@@ -157,6 +175,12 @@ def _evaluate_continuation_window(
     if consolidation_depth_pct <= 0.0 or consolidation_depth_pct > max_consolidation_depth_pct:
         return None
 
+    breakout_window = frame.iloc[-breakout_span:]
+    breakout_candidates = breakout_window[breakout_window['Close'] > pivot_price]
+    if breakout_candidates.empty:
+        return None
+    breakout_row = breakout_candidates.iloc[0]
+
     extension_pct = latest_close / pivot_price - 1.0
     if latest_close <= pivot_price or extension_pct <= 0.0 or extension_pct > max_extension_pct:
         return None
@@ -185,6 +209,8 @@ def _evaluate_continuation_window(
     return _ContinuationHit(
         pattern_type=pattern_type,
         pattern_variant=pattern_variant,
+        trigger_date=_format_date(breakout_row.get('Date')),
+        breakout_span=breakout_span,
         pivot_price=pivot_price,
         stop_reference=consolidation_low,
         prior_advance_pct=prior_advance_pct,
@@ -211,7 +237,7 @@ def _detect_high_tight_flag(frame: pd.DataFrame) -> _ContinuationHit | None:
     if len(frame) < 45:
         return None
 
-    best_hit: _ContinuationHit | None = None
+    hits: list[_ContinuationHit] = []
     for breakout_span in range(1, 6):
         for consolidation_len in range(8, 19):
             hit = _evaluate_continuation_window(
@@ -231,9 +257,10 @@ def _detect_high_tight_flag(frame: pd.DataFrame) -> _ContinuationHit | None:
             )
             if hit is None:
                 continue
-            if best_hit is None or hit.setup_score > best_hit.setup_score:
-                best_hit = hit
-    return best_hit
+            hits.append(hit)
+    if not hits:
+        return None
+    return sorted(hits, key=_hit_sort_key)[0]
 
 
 
@@ -241,7 +268,7 @@ def _detect_continuation_breakout(frame: pd.DataFrame) -> _ContinuationHit | Non
     if len(frame) < 40:
         return None
 
-    best_hit: _ContinuationHit | None = None
+    hits: list[_ContinuationHit] = []
     for breakout_span in range(1, 6):
         for consolidation_len in range(10, 27):
             hit = _evaluate_continuation_window(
@@ -261,9 +288,10 @@ def _detect_continuation_breakout(frame: pd.DataFrame) -> _ContinuationHit | Non
             )
             if hit is None:
                 continue
-            if best_hit is None or hit.setup_score > best_hit.setup_score:
-                best_hit = hit
-    return best_hit
+            hits.append(hit)
+    if not hits:
+        return None
+    return sorted(hits, key=_hit_sort_key)[0]
 
 
 
@@ -284,8 +312,7 @@ def detect_momentum_continuation_family(
 
     best_hit = sorted(
         hits,
-        key=lambda item: (_PATTERN_PRIORITY.get(item.pattern_type, 0), item.setup_score, item.quality_score),
-        reverse=True,
+        key=_hit_sort_key,
     )[0]
     return [
         _build_candidate(
