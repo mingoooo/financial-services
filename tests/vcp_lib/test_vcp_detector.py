@@ -4,7 +4,13 @@ import pandas as pd
 import pytest
 
 from scripts.vcp_lib.indicators import add_core_indicators
-from scripts.vcp_lib.vcp_detector import build_swing_legs, detect_vcp, evaluate_prior_uptrend, segment_swings
+from scripts.vcp_lib.vcp_detector import (
+    build_swing_legs,
+    detect_52_week_high_breakout,
+    detect_vcp,
+    evaluate_prior_uptrend,
+    segment_swings,
+)
 
 
 def _piecewise_frame(*segments: tuple[float, int], volumes: list[float] | None = None) -> pd.DataFrame:
@@ -33,7 +39,7 @@ def _piecewise_frame(*segments: tuple[float, int], volumes: list[float] | None =
 def _textbook_vcp_frame(*, breakout: bool) -> pd.DataFrame:
     frame = _piecewise_frame(
         (40.0, 0),
-        (100.0, 150),
+        (100.0, 180),
         (84.0, 14),
         (98.0, 12),
         (89.0, 10),
@@ -43,8 +49,38 @@ def _textbook_vcp_frame(*, breakout: bool) -> pd.DataFrame:
         (96.0, 6),
         ((101.5 if breakout else 99.2), 6),
     )
-    volumes = [2_400_000.0] * 150 + [2_000_000.0] * 14 + [1_700_000.0] * 12 + [1_500_000.0] * 10 + [1_300_000.0] * 10 + [1_100_000.0] * 8 + [950_000.0] * 8 + [825_000.0] * 6 + [2_800_000.0] * 6
+    volumes = [2_400_000.0] * 180 + [2_000_000.0] * 14 + [1_700_000.0] * 12 + [1_500_000.0] * 10 + [1_300_000.0] * 10 + [1_100_000.0] * 8 + [950_000.0] * 8 + [825_000.0] * 6 + [2_800_000.0] * 6
     frame['Volume'] = volumes[: len(frame)]
+    return frame
+
+
+def _defective_vcp_frame() -> pd.DataFrame:
+    frame = _piecewise_frame(
+        (40.0, 0),
+        (100.0, 150),
+        (84.0, 10),
+        (97.0, 8),
+        (88.0, 12),
+        (99.0, 8),
+        (92.5, 15),
+        (111.0, 6),
+    )
+    volumes = [2_200_000.0] * 150 + [1_800_000.0] * 10 + [1_950_000.0] * 8 + [2_050_000.0] * 12 + [2_150_000.0] * 8 + [2_250_000.0] * 15 + [3_000_000.0] * 6
+    frame['Volume'] = volumes[: len(frame)]
+    return frame
+
+
+def _short_context_high_breakout_frame() -> pd.DataFrame:
+    frame = _piecewise_frame(
+        (40.0, 0),
+        (90.0, 150),
+        (96.0, 20),
+        (93.0, 12),
+        (99.0, 15),
+        (97.0, 10),
+        (103.0, 5),
+    )
+    frame['Volume'] = [1_600_000.0] * (len(frame) - 5) + [3_200_000.0] * 5
     return frame
 
 
@@ -117,3 +153,23 @@ def test_detect_vcp_flags_breakout_confirmation_when_price_clears_pivot_on_volum
     assert result.breakout_confirmation is True
     assert result.breakout_volume_ratio is not None
     assert result.breakout_volume_ratio > 1.2
+
+
+def test_detect_vcp_rejects_extended_non_dry_structure() -> None:
+    enriched = add_core_indicators(_defective_vcp_frame())
+
+    result = detect_vcp(enriched)
+
+    assert result.detected is False
+    assert 'volume-not-drying-up' in result.defects
+    assert 'leg-duration-worsening' in result.defects
+    assert 'too-extended-from-pivot' in result.defects
+
+
+def test_detect_52_week_high_breakout_requires_true_252_day_context() -> None:
+    enriched = add_core_indicators(_short_context_high_breakout_frame())
+
+    result = detect_52_week_high_breakout(enriched)
+
+    assert result.detected is False
+    assert 'insufficient-252-day-context' in result.notes

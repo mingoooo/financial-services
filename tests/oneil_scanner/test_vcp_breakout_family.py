@@ -46,7 +46,7 @@ def _detect(frame: pd.DataFrame, *, symbol: str = 'TEST'):
 def _textbook_vcp_frame(*, breakout: bool) -> pd.DataFrame:
     frame = _piecewise_frame(
         (40.0, 0),
-        (100.0, 150),
+        (100.0, 180),
         (84.0, 14),
         (98.0, 12),
         (89.0, 10),
@@ -56,7 +56,7 @@ def _textbook_vcp_frame(*, breakout: bool) -> pd.DataFrame:
         (96.0, 6),
         ((101.5 if breakout else 99.2), 6),
     )
-    volumes = [2_400_000.0] * 150 + [2_000_000.0] * 14 + [1_700_000.0] * 12 + [1_500_000.0] * 10 + [1_300_000.0] * 10 + [1_100_000.0] * 8 + [950_000.0] * 8 + [825_000.0] * 6 + [2_800_000.0] * 6
+    volumes = [2_400_000.0] * 180 + [2_000_000.0] * 14 + [1_700_000.0] * 12 + [1_500_000.0] * 10 + [1_300_000.0] * 10 + [1_100_000.0] * 8 + [950_000.0] * 8 + [825_000.0] * 6 + [2_800_000.0] * 6
     frame['Volume'] = volumes[: len(frame)]
     return frame
 
@@ -64,7 +64,21 @@ def _textbook_vcp_frame(*, breakout: bool) -> pd.DataFrame:
 def _high_breakout_frame() -> pd.DataFrame:
     frame = _piecewise_frame(
         (40.0, 0),
-        (90.0, 180),
+        (90.0, 190),
+        (96.0, 20),
+        (93.0, 12),
+        (99.0, 15),
+        (97.0, 10),
+        (103.0, 5),
+    )
+    frame['Volume'] = [1_600_000.0] * (len(frame) - 5) + [3_200_000.0] * 5
+    return frame
+
+
+def _short_context_high_breakout_frame() -> pd.DataFrame:
+    frame = _piecewise_frame(
+        (40.0, 0),
+        (90.0, 150),
         (96.0, 20),
         (93.0, 12),
         (99.0, 15),
@@ -134,3 +148,9 @@ def test_family_detector_collapses_overlapping_hits_into_single_output() -> None
     assert candidate.pattern_type == 'vcp'
     assert 'platform-breakout' in candidate.secondary_signals
     assert '52-week-high-breakout' in candidate.secondary_signals
+
+
+def test_family_detector_does_not_emit_52_week_label_without_true_context() -> None:
+    candidates = _detect(_short_context_high_breakout_frame())
+
+    assert all(candidate.pattern_type != '52-week-high-breakout' for candidate in candidates)

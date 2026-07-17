@@ -194,8 +194,9 @@ def evaluate_vcp_from_swings(
     contraction_depths = [abs(leg.move_pct) for leg in down_legs[-4:]]
     shrinking_pairs = sum(1 for a, b in zip(contraction_depths, contraction_depths[1:]) if a >= b or abs(a - b) <= 0.02)
     shrinking = shrinking_pairs >= max(1, len(contraction_depths) - 2)
-    duration_non_worsening = sum(1 for a, b in zip(down_legs[-4:], down_legs[-3:]) if a.duration >= b.duration or abs(a.move_pct) >= abs(b.move_pct)) >= max(1, len(down_legs[-4:]) - 2) if len(down_legs) >= 2 else False
-    volume_dry_up = sum(1 for a, b in zip(down_legs[-4:], down_legs[-3:]) if a.avg_volume >= b.avg_volume or abs(a.avg_volume - b.avg_volume) / max(a.avg_volume, 1e-9) <= 0.10) >= max(1, len(down_legs[-4:]) - 2) if len(down_legs) >= 2 else False
+    recent_down_legs = down_legs[-4:]
+    duration_non_worsening = all(a.duration >= b.duration for a, b in zip(recent_down_legs, recent_down_legs[1:])) if len(recent_down_legs) >= 2 else False
+    volume_dry_up = all(a.avg_volume >= b.avg_volume for a, b in zip(recent_down_legs, recent_down_legs[1:])) if len(recent_down_legs) >= 2 else False
     first_down_volume = down_legs[-4:].pop(0).avg_volume if len(down_legs[-4:]) >= 1 else 0.0
     last_down_volume = down_legs[-1].avg_volume if down_legs else 0.0
     volume_dry_up_quality = max(0.0, 1.0 - last_down_volume / max(first_down_volume, 1e-9)) if first_down_volume > 0 else None
@@ -235,7 +236,16 @@ def evaluate_vcp_from_swings(
     if distance_to_pivot > 0.08:
         defects.append('too-extended-from-pivot')
 
-    detected = prior_uptrend and shrinking and final_tightness and base_depth <= max_base_depth and len(down_legs[-4:]) >= 2
+    detected = (
+        prior_uptrend
+        and shrinking
+        and duration_non_worsening
+        and volume_dry_up
+        and final_tightness
+        and base_depth <= max_base_depth
+        and distance_to_pivot <= 0.08
+        and len(down_legs[-4:]) >= 2
+    )
     return VcpDetectionResult(
         detected=detected,
         prior_uptrend=prior_uptrend,
@@ -281,8 +291,13 @@ def _compute_breakout_confirmation(frame: pd.DataFrame, pivot_price: float | Non
 
 
 def detect_52_week_high_breakout(frame: pd.DataFrame) -> BreakoutSignal:
-    if len(frame) < 120:
-        return BreakoutSignal(pattern_type='52-week-high-breakout', pattern_variant='new-high', detected=False, notes=['insufficient-history'])
+    if len(frame) < 252:
+        return BreakoutSignal(
+            pattern_type='52-week-high-breakout',
+            pattern_variant='new-high',
+            detected=False,
+            notes=['insufficient-252-day-context'],
+        )
 
     latest = frame.iloc[-1]
     prior_high = float(frame['High'].shift(1).rolling(252, min_periods=20).max().iloc[-1])
