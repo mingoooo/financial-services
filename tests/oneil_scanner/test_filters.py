@@ -3,8 +3,10 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
+from scripts.oneil_scanner import filters as scanner_filters
 from scripts.oneil_scanner.filters import evaluate_eligibility, evaluate_trend_filters
 from scripts.oneil_scanner.preprocess import add_shared_preprocessing
+from scripts.vcp_lib.models import TrendTemplateResult
 
 
 
@@ -108,6 +110,30 @@ def test_trend_filters_report_fail_reasons() -> None:
     assert 'close_to_52w_high' in result.failed_checks
 
 
+
+def test_trend_filters_use_vcp_trend_template_adapter(monkeypatch: pytest.MonkeyPatch) -> None:
+    frame = add_shared_preprocessing(_price_frame())
+    called: dict[str, object] = {}
+
+    def fake_evaluate_trend_template(candidate_frame: pd.DataFrame) -> TrendTemplateResult:
+        called['frame'] = candidate_frame
+        return TrendTemplateResult(
+            passes=False,
+            checks={'price_above_sma150': False, 'close_to_52w_high': True},
+            reasons=['price_above_sma150'],
+        )
+
+    monkeypatch.setattr(scanner_filters.vcp_trend_template, 'evaluate_trend_template', fake_evaluate_trend_template)
+    result = scanner_filters.evaluate_trend_filters(frame, min_rs_proxy=-1.0)
+
+    assert called['frame'] is frame
+    assert result.trend_template is not None
+    assert result.trend_template.reasons == ['price_above_sma150']
+    assert result.reasons == ['trend_template']
+    assert result.failed_checks == ['price_above_sma150']
+
+
+
 def test_eligibility_filters_report_explicit_fail_reasons() -> None:
     frame = _price_frame(periods=150, close_start=8.0, step=0.01, volume=50_000)
     enriched = add_shared_preprocessing(frame)
@@ -118,3 +144,33 @@ def test_eligibility_filters_report_explicit_fail_reasons() -> None:
     assert 'insufficient_history' in result.reasons
     assert 'price_below_threshold' in result.reasons
     assert 'avg_dollar_volume_below_threshold' in result.reasons
+
+
+
+def test_eligibility_filters_check_detector_family_specific_bars() -> None:
+    frame = add_shared_preprocessing(_price_frame(periods=90, close_start=20.0, step=0.2, volume=1_500_000))
+
+    result = evaluate_eligibility(
+        frame,
+        detector_family='momentum_continuation_family',
+        min_history=50,
+        min_price=10.0,
+        min_avg_dollar_volume=10_000_000.0,
+    )
+
+    assert result.passes is False
+    assert result.metrics['required_bars'] == 120
+    assert 'insufficient_bars_for_momentum_continuation_family' in result.reasons
+    assert 'insufficient_history' not in result.reasons
+
+
+
+def test_eligibility_filters_exclude_identifiable_non_target_instruments() -> None:
+    frame = add_shared_preprocessing(_price_frame(close_start=25.0, step=0.05, volume=2_000_000))
+    frame['QuoteType'] = 'ETF'
+    frame['CompanyName'] = 'Sample ETF Trust'
+
+    result = evaluate_eligibility(frame, min_history=200, min_price=10.0, min_avg_dollar_volume=10_000_000.0)
+
+    assert result.passes is False
+    assert 'non_target_instrument:etf' in result.reasons
