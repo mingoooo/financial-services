@@ -196,3 +196,66 @@ def test_event_fetch_warnings_propagate_to_run_metadata(tmp_path: Path) -> None:
     assert any('timeout' in warning.lower() for warning in timeout_meta['run_metadata']['warnings'])
     assert rate_limit_payload is None
     assert any('rate-limit' in warning.lower() for warning in rate_limit_meta['run_metadata']['warnings'])
+
+
+def test_event_fetch_preserves_cached_warnings_on_cache_hit_and_fallback(tmp_path: Path) -> None:
+    from scripts.oneil_scanner.data import fetch_event_payload
+
+    warnings: list[str] = []
+    initial_payload, initial_meta = fetch_event_payload(
+        'news:NVDA',
+        fetcher=lambda: [],
+        cache_dir=tmp_path,
+        window_key='2026-07-16_1y_1d',
+        warnings=warnings,
+    )
+    cached_payload, cached_meta = fetch_event_payload(
+        'news:NVDA',
+        fetcher=lambda: ['should not be used'],
+        cache_dir=tmp_path,
+        window_key='2026-07-16_1y_1d',
+        warnings=warnings,
+    )
+    fallback_payload, fallback_meta = fetch_event_payload(
+        'news:NVDA',
+        fetcher=lambda: (_ for _ in ()).throw(RuntimeError('429 too many requests')),
+        cache_dir=tmp_path,
+        window_key='2026-07-16_1y_1d',
+        retries=0,
+        refresh=True,
+        warnings=warnings,
+    )
+
+    assert initial_payload == []
+    assert any('sparse event data' in warning.lower() for warning in initial_meta['run_metadata']['warnings'])
+    assert cached_payload == []
+    assert any('sparse event data' in warning.lower() for warning in cached_meta['run_metadata']['warnings'])
+    assert fallback_payload == []
+    assert any('sparse event data' in warning.lower() for warning in fallback_meta['run_metadata']['warnings'])
+    assert any('rate-limit' in warning.lower() for warning in fallback_meta['run_metadata']['warnings'])
+    assert any('sparse event data' in warning.lower() for warning in warnings)
+    assert any('rate-limit' in warning.lower() for warning in warnings)
+
+
+def test_event_fetch_rehydrates_cached_warnings_into_fresh_accumulator(tmp_path: Path) -> None:
+    from scripts.oneil_scanner.data import fetch_event_payload
+
+    fetch_event_payload(
+        'news:SHOP',
+        fetcher=lambda: [],
+        cache_dir=tmp_path,
+        window_key='2026-07-16_1y_1d',
+    )
+
+    fresh_warnings: list[str] = []
+    cached_payload, cached_meta = fetch_event_payload(
+        'news:SHOP',
+        fetcher=lambda: ['unused'],
+        cache_dir=tmp_path,
+        window_key='2026-07-16_1y_1d',
+        warnings=fresh_warnings,
+    )
+
+    assert cached_payload == []
+    assert any('sparse event data' in warning.lower() for warning in cached_meta['run_metadata']['warnings'])
+    assert any('sparse event data' in warning.lower() for warning in fresh_warnings)

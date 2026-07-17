@@ -93,6 +93,15 @@ def _event_result_metadata(scope: str, source: str, warnings: list[str]) -> dict
     }
 
 
+def _cached_event_warnings(payload: Any) -> list[str]:
+    if not isinstance(payload, dict):
+        return []
+    raw = payload.get('warnings')
+    if not isinstance(raw, list):
+        return []
+    return [str(item) for item in raw if str(item).strip()]
+
+
 def _serialize_frame(frame: pd.DataFrame) -> dict:
     payload = frame.copy()
     payload['Date'] = pd.to_datetime(payload['Date'])
@@ -153,12 +162,19 @@ def fetch_event_payload(
     window_key: str,
     retries: int = DEFAULT_RETRIES,
     warnings: list[str] | None = None,
+    refresh: bool = False,
 ) -> tuple[Any, dict[str, Any]]:
     event_warnings = warnings if warnings is not None else []
     target = cache_path(Path(cache_dir), _events_namespace(window_key), _event_cache_key(scope))
     cached = load_json_cache(target)
-    if isinstance(cached, dict) and 'payload' in cached:
-        return cached['payload'], _event_result_metadata(scope, 'cache', event_warnings)
+    cached_warnings = _cached_event_warnings(cached)
+    for warning in cached_warnings:
+        _append_warning(event_warnings, warning)
+    merged_cached_warnings = list(cached_warnings)
+    for warning in event_warnings:
+        _append_warning(merged_cached_warnings, warning)
+    if not refresh and isinstance(cached, dict) and 'payload' in cached:
+        return cached['payload'], _event_result_metadata(scope, 'cache', merged_cached_warnings)
 
     last_error: Exception | None = None
     for attempt in range(1, retries + 2):
@@ -171,6 +187,7 @@ def fetch_event_payload(
                 {
                     'fetched_at': datetime.now(UTC).isoformat(timespec='seconds'),
                     'payload': payload,
+                    'warnings': list(event_warnings),
                 },
             )
             return payload, _event_result_metadata(scope, 'live', event_warnings)
@@ -184,7 +201,12 @@ def fetch_event_payload(
                 break
 
     if isinstance(cached, dict) and 'payload' in cached:
-        return cached['payload'], _event_result_metadata(scope, 'cache-fallback', event_warnings)
+        fallback_warnings = list(cached_warnings)
+        for warning in event_warnings:
+            _append_warning(fallback_warnings, warning)
+        for warning in fallback_warnings:
+            _append_warning(event_warnings, warning)
+        return cached['payload'], _event_result_metadata(scope, 'cache-fallback', fallback_warnings)
 
     if last_error is not None and not (_is_timeout_error(last_error) or _is_rate_limit_error(last_error)):
         _append_warning(event_warnings, f'Event fetch failed for {scope}: {last_error}')
