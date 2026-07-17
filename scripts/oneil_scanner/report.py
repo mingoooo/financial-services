@@ -4,7 +4,12 @@ import csv
 import json
 from pathlib import Path
 
-from jinja2 import Template
+try:
+    from jinja2 import Template
+except ModuleNotFoundError as exc:
+    if exc.name != 'jinja2':
+        raise
+    Template = None
 
 from .config import ScannerConfig
 from .models import ScanRunSummary
@@ -32,7 +37,7 @@ CSV_COLUMNS = [
     'notes',
 ]
 
-_HTML_TEMPLATE = Template(
+_HTML_TEMPLATE_SOURCE = (
     """
 <!doctype html>
 <html>
@@ -77,6 +82,10 @@ _HTML_TEMPLATE = Template(
 )
 
 
+def _missing_html_dependency() -> ModuleNotFoundError:
+    return ModuleNotFoundError('jinja2 is required for HTML report generation')
+
+
 def _ensure_parent(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -101,10 +110,12 @@ def write_csv(path: str | Path, summary: ScanRunSummary) -> None:
 
 
 def write_html(path: str | Path, summary: ScanRunSummary) -> None:
+    if Template is None:
+        raise _missing_html_dependency()
     output = Path(path)
     _ensure_parent(output)
     rows = [candidate.to_dict() for candidate in summary.candidates]
-    output.write_text(_HTML_TEMPLATE.render(summary=summary, columns=CSV_COLUMNS, candidates=rows), encoding='utf-8')
+    output.write_text(Template(_HTML_TEMPLATE_SOURCE).render(summary=summary, columns=CSV_COLUMNS, candidates=rows), encoding='utf-8')
 
 
 def write_report_bundle(config: ScannerConfig, summary: ScanRunSummary) -> dict[str, Path]:

@@ -9,7 +9,7 @@ import pandas as pd
 from scripts.oneil_scanner.preprocess import add_shared_preprocessing
 
 
-FIXTURE_PATH = Path('tests/fixtures/oneil_scanner/ibd_base_family_cases.json')
+FIXTURE_PATH = Path(__file__).resolve().parents[1] / 'fixtures' / 'oneil_scanner' / 'ibd_base_family_cases.json'
 
 
 def _load_detector():
