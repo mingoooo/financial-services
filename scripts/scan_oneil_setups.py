@@ -4,10 +4,18 @@ from __future__ import annotations
 import argparse
 import json
 from datetime import UTC, datetime
+from pathlib import Path
+import sys
 
-from oneil_scanner.config import ScannerConfig
-from oneil_scanner.models import ScanRunSummary
-from oneil_scanner.report import write_report_bundle
+if __package__ in (None, ''):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from scripts.oneil_scanner.config import ScannerConfig
+    from scripts.oneil_scanner.models import ScanRunSummary
+    from scripts.oneil_scanner.report import write_report_bundle
+else:
+    from .oneil_scanner.config import ScannerConfig
+    from .oneil_scanner.models import ScanRunSummary
+    from .oneil_scanner.report import write_report_bundle
 
 
 def build_parser() -> argparse.ArgumentParser:

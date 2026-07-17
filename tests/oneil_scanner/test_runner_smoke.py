@@ -2,17 +2,25 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from pathlib import Path
 
+from scripts.scan_oneil_setups import build_parser
 
-PYTHON = '/Users/huangsm43/Documents/mingo/code/financial-services/.venv/bin/python'
+
+def test_scan_oneil_module_import_smoke() -> None:
+    parser = build_parser()
+    args = parser.parse_args([])
+
+    assert args.universe == 'all-us'
+    assert args.report_name == 'oneil-setups'
 
 
 def test_scan_oneil_cli_smoke(tmp_path: Path) -> None:
     out_dir = tmp_path / 'reports'
     result = subprocess.run(
         [
-            PYTHON,
+            sys.executable,
             'scripts/scan_oneil_setups.py',
             '--universe',
             'all-us',

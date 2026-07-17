@@ -130,8 +130,3 @@ class ScanRunSummary:
         payload['include_earnings'] = self.run_metadata.include_earnings
         payload['candidate_count'] = len(self.candidates)
         return payload
-
-
-ScanConfig = ScannerConfig
-SetupCandidate = PatternCandidate
-ScanSummary = ScanRunSummary

@@ -1,3 +1,3 @@
-from .models import ScanConfig, ScannerConfig
+from .models import ScannerConfig
 
-__all__ = ['ScannerConfig', 'ScanConfig']
+__all__ = ['ScannerConfig']
