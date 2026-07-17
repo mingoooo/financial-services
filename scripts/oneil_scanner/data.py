@@ -81,6 +81,18 @@ def _event_cache_key(scope: str) -> str:
     return scope.replace(':', '_')
 
 
+def _event_result_metadata(scope: str, source: str, warnings: list[str]) -> dict[str, Any]:
+    return {
+        'scope': scope,
+        'source': source,
+        'warning_count': len(warnings),
+        'warnings': list(warnings),
+        'run_metadata': {
+            'warnings': list(warnings),
+        },
+    }
+
+
 def _serialize_frame(frame: pd.DataFrame) -> dict:
     payload = frame.copy()
     payload['Date'] = pd.to_datetime(payload['Date'])
@@ -146,7 +158,7 @@ def fetch_event_payload(
     target = cache_path(Path(cache_dir), _events_namespace(window_key), _event_cache_key(scope))
     cached = load_json_cache(target)
     if isinstance(cached, dict) and 'payload' in cached:
-        return cached['payload'], {'scope': scope, 'source': 'cache', 'warning_count': len(event_warnings)}
+        return cached['payload'], _event_result_metadata(scope, 'cache', event_warnings)
 
     last_error: Exception | None = None
     for attempt in range(1, retries + 2):
@@ -161,7 +173,7 @@ def fetch_event_payload(
                     'payload': payload,
                 },
             )
-            return payload, {'scope': scope, 'source': 'live', 'warning_count': len(event_warnings)}
+            return payload, _event_result_metadata(scope, 'live', event_warnings)
         except Exception as exc:
             last_error = exc
             if _is_timeout_error(exc):
@@ -172,11 +184,11 @@ def fetch_event_payload(
                 break
 
     if isinstance(cached, dict) and 'payload' in cached:
-        return cached['payload'], {'scope': scope, 'source': 'cache-fallback', 'warning_count': len(event_warnings)}
+        return cached['payload'], _event_result_metadata(scope, 'cache-fallback', event_warnings)
 
     if last_error is not None and not (_is_timeout_error(last_error) or _is_rate_limit_error(last_error)):
         _append_warning(event_warnings, f'Event fetch failed for {scope}: {last_error}')
-    return None, {'scope': scope, 'source': 'unavailable', 'warning_count': len(event_warnings)}
+    return None, _event_result_metadata(scope, 'unavailable', event_warnings)
 
 
 def load_daily_ohlcv(

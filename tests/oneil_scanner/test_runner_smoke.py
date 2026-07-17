@@ -164,3 +164,35 @@ def test_daily_loader_keeps_partial_symbol_failures_local(tmp_path: Path) -> Non
     assert result.statuses['AAPL'].status == 'ok'
     assert result.statuses['MSFT'].status == 'error'
     assert any('partial' in warning.lower() for warning in result.warnings)
+
+
+def test_event_fetch_warnings_propagate_to_run_metadata(tmp_path: Path) -> None:
+    from scripts.oneil_scanner.data import fetch_event_payload
+
+    sparse_payload, sparse_meta = fetch_event_payload(
+        'news:AAPL',
+        fetcher=lambda: [],
+        cache_dir=tmp_path,
+        window_key='2026-07-16_1y_1d',
+    )
+    timeout_payload, timeout_meta = fetch_event_payload(
+        'earnings:AAPL',
+        fetcher=lambda: (_ for _ in ()).throw(TimeoutError('request timed out')),
+        cache_dir=tmp_path,
+        window_key='2026-07-16_1y_1d',
+        retries=0,
+    )
+    rate_limit_payload, rate_limit_meta = fetch_event_payload(
+        'news:MSFT',
+        fetcher=lambda: (_ for _ in ()).throw(RuntimeError('429 too many requests')),
+        cache_dir=tmp_path,
+        window_key='2026-07-16_1y_1d',
+        retries=0,
+    )
+
+    assert sparse_payload == []
+    assert any('sparse event data' in warning.lower() for warning in sparse_meta['run_metadata']['warnings'])
+    assert timeout_payload is None
+    assert any('timeout' in warning.lower() for warning in timeout_meta['run_metadata']['warnings'])
+    assert rate_limit_payload is None
+    assert any('rate-limit' in warning.lower() for warning in rate_limit_meta['run_metadata']['warnings'])
