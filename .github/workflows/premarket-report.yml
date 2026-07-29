@@ -122,7 +122,7 @@ jobs:
               run_label = 'push run'
 
           run_label = normalize_run_label(run_label)
-          should_notify = notify_input and run_family in {'premarket', 'oneil'}
+          should_notify = notify_input and run_family in {'premarket', 'oneil', 'full'}
 
           with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
               fh.write(f"should_run={'true' if should_run else 'false'}\n")
@@ -247,11 +247,34 @@ jobs:
           path: market-report-bundle
 
       - name: Prepare Pages payload
+        shell: bash
         run: |
+          copy_if_exists() {
+            src="$1"
+            dest="$2"
+            if [ -e "$src" ]; then
+              mkdir -p "$(dirname "$dest")"
+              cp "$src" "$dest"
+            fi
+          }
+
           rm -rf pages_payload
           mkdir -p pages_payload pages_payload/reports
           cp -R market-report-bundle/reports/site/. pages_payload/
           cp -R market-report-bundle/reports/. pages_payload/reports/
+
+          # Keep a second copy of source reports at the paths expected by the
+          # generated wrapper pages. The wrappers are rendered under
+          # reports/site/* locally, then promoted to Pages root during deploy.
+          # Without these root-level copies, links like ../../premarket_zh.html
+          # resolve to 404 after deployment.
+          copy_if_exists market-report-bundle/reports/premarket_.html pages_payload/premarket_.html
+          copy_if_exists market-report-bundle/reports/premarket_zh.html pages_payload/premarket_zh.html
+          copy_if_exists market-report-bundle/reports/oneil-live/live-full-latest.html pages_payload/oneil-live/live-full-latest.html
+          copy_if_exists market-report-bundle/reports/oneil-live/live-full-latest.json pages_payload/oneil-live/live-full-latest.json
+          copy_if_exists market-report-bundle/reports/oneil_backtest_overview.html pages_payload/oneil_backtest_overview.html
+
+          touch pages_payload/.nojekyll
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
@@ -261,6 +284,21 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Write Pages summary
+        if: steps.deployment.outputs.page_url != ''
+        shell: bash
+        run: |
+          BASE_URL="${{ steps.deployment.outputs.page_url }}"
+          {
+            echo "## GitHub Pages"
+            echo
+            echo "- Hub: ${BASE_URL%/}/"
+            echo "- Premarket 中文: ${BASE_URL%/}/premarket/index.html"
+            echo "- Premarket English: ${BASE_URL%/}/premarket/index_en.html"
+            echo "- O'Neil: ${BASE_URL%/}/oneil/index.html"
+            echo "- O'Neil Backtest: ${BASE_URL%/}/oneil-backtest/index.html"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   notify-telegram:
     needs:
@@ -288,11 +326,20 @@ jobs:
           RUN_LABEL="${{ needs.market-report.outputs.run_label }}"
           FAMILY="${{ needs.market-report.outputs.run_family }}"
           REPORT_URL=""
+          HUB_URL=""
+          PREMARKET_URL=""
+          PREMARKET_EN_URL=""
+          ONEIL_URL=""
 
           if [ -n "$BASE_URL" ]; then
+            HUB_URL="${BASE_URL%/}/"
+            PREMARKET_URL="${BASE_URL%/}/premarket/index.html"
+            PREMARKET_EN_URL="${BASE_URL%/}/premarket/index_en.html"
+            ONEIL_URL="${BASE_URL%/}/oneil/index.html"
             case "$FAMILY" in
-              premarket) REPORT_URL="${BASE_URL%/}/premarket/index.html" ;;
-              oneil) REPORT_URL="${BASE_URL%/}/oneil/index.html" ;;
+              premarket) REPORT_URL="$PREMARKET_URL" ;;
+              oneil) REPORT_URL="$ONEIL_URL" ;;
+              full) REPORT_URL="$HUB_URL" ;;
             esac
           fi
 
@@ -301,14 +348,28 @@ jobs:
               python scripts/notify_telegram_market_report.py \
                 --family premarket \
                 --report-path market-report-bundle/REPORT.md \
+                --hub-url "$HUB_URL" \
                 --pages-url "$REPORT_URL" \
+                --alt-pages-url "$PREMARKET_EN_URL" \
                 --run-label "$RUN_LABEL"
               ;;
             oneil)
               python scripts/notify_telegram_market_report.py \
                 --family oneil \
                 --report-path market-report-bundle/reports/oneil-live/live-full-latest.json \
+                --hub-url "$HUB_URL" \
                 --pages-url "$REPORT_URL" \
+                --run-label "$RUN_LABEL"
+              ;;
+            full)
+              python scripts/notify_telegram_market_report.py \
+                --family full \
+                --premarket-report-path market-report-bundle/REPORT.md \
+                --oneil-report-path market-report-bundle/reports/oneil-live/live-full-latest.json \
+                --hub-url "$HUB_URL" \
+                --premarket-pages-url "$PREMARKET_URL" \
+                --premarket-alt-pages-url "$PREMARKET_EN_URL" \
+                --oneil-pages-url "$ONEIL_URL" \
                 --run-label "$RUN_LABEL"
               ;;
             *)
