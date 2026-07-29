@@ -173,6 +173,35 @@ jobs:
           PY
           )
 
+      - name: Hydrate missing published pages
+        if: steps.gate.outputs.should_run == 'true'
+        shell: bash
+        env:
+          PUBLISHED_SITE_BASE: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+        run: |
+          mkdir -p reports/oneil-live
+
+          fetch_if_missing() {
+            local dest="$1"
+            local url="$2"
+            if [ -f "$dest" ]; then
+              return 0
+            fi
+            mkdir -p "$(dirname "$dest")"
+            if curl --fail --silent --show-error --location "$url" --output "$dest"; then
+              echo "Hydrated $dest from $url"
+            else
+              rm -f "$dest"
+              echo "Skip hydrate for $dest (source unavailable: $url)"
+            fi
+          }
+
+          fetch_if_missing reports/premarket_.html "${PUBLISHED_SITE_BASE%/}/premarket_.html"
+          fetch_if_missing reports/premarket_zh.html "${PUBLISHED_SITE_BASE%/}/premarket_zh.html"
+          fetch_if_missing reports/oneil-live/live-full-latest.html "${PUBLISHED_SITE_BASE%/}/oneil-live/live-full-latest.html"
+          fetch_if_missing reports/oneil-live/live-full-latest.json "${PUBLISHED_SITE_BASE%/}/oneil-live/live-full-latest.json"
+          fetch_if_missing reports/oneil_backtest_overview.html "${PUBLISHED_SITE_BASE%/}/oneil_backtest_overview.html"
+
       - name: Run O'Neil chain
         if: steps.gate.outputs.should_run == 'true' && (steps.gate.outputs.run_family == 'oneil' || steps.gate.outputs.run_family == 'full')
         run: |
