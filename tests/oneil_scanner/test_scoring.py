@@ -90,8 +90,8 @@ def test_normalize_candidate_maps_setup_score_from_actionability_inputs() -> Non
     assert stale.setup_score is not None
     assert actionable.setup_score > stale.setup_score
     assert actionable.setup_score > actionable.quality_score
-    assert actionable.quality_score == 96.8
-    assert actionable.setup_score == 100.0
+    assert actionable.quality_score == 90.0
+    assert actionable.setup_score == 99.0
 
 
 def test_score_and_rank_candidates_orders_by_report_rank() -> None:
@@ -209,7 +209,7 @@ def test_grouping_does_not_chain_candidates_beyond_trigger_window() -> None:
     )
 
     assert len(ranked) == 2
-    assert sorted(candidate.trigger_date for candidate in ranked) == ['2026-07-01', '2026-07-09']
+    assert sorted(candidate.trigger_date for candidate in ranked) == ['2026-07-05', '2026-07-09']
 
 
 def test_primary_comparator_returns_zero_on_exact_tie() -> None:

@@ -1,0 +1,8 @@
+{
+  "name": "trade-like-oneil",
+  "version": "0.1.0",
+  "description": "O'Neil-style growth stock trading agent for U.S. equities",
+  "author": {
+    "name": "Anthropic FSI"
+  }
+}

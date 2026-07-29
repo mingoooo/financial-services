@@ -28,8 +28,11 @@ def evaluate_signal(
     allowed_patterns = spec.indicator_config.get('allowed_patterns')
     require_trend_alignment = spec.indicator_config.get('require_trend_alignment', False)
     require_location_alignment = spec.indicator_config.get('require_location_alignment', False)
+    min_candlestick_quality = spec.indicator_config.get('min_candlestick_quality')
 
     if allowed_patterns is not None and signal.hit.pattern not in set(allowed_patterns):
+        return False, signal
+    if min_candlestick_quality is not None and (signal.candlestick_quality or 0.0) < float(min_candlestick_quality):
         return False, signal
 
     trend_ok = (

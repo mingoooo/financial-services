@@ -1,0 +1,17 @@
+name: trade-planner
+model: claude-opus-4-7
+system:
+  text: |
+    You convert a vetted O'Neil-style setup into a concrete trade plan with
+    entry, add zone, stop, and action summary. You do not write files and you
+    do not use external connectors.
+tools:
+  - type: agent_toolset_20260401
+    default_config: { enabled: false }
+    configs:
+      - { name: read, enabled: true }
+      - { name: grep, enabled: true }
+mcp_servers: []
+skills:
+  - { path: ../../../plugins/agent-plugins/trade-like-oneil/skills/oneil-growth-trading }
+callable_agents: []

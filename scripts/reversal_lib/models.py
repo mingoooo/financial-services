@@ -76,6 +76,8 @@ class Signal:
     rsi_value: float | None = None
     above_sma200: bool | None = None
     macd_context: str | None = None
+    candlestick_quality: float | None = None
+    candlestick_notes: str | None = None
 
 
 @dataclass

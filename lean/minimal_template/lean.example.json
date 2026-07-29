@@ -1,0 +1,19 @@
+{
+  "algorithm-language": "Python",
+  "algorithm-location": "lean/minimal_template/main.py",
+  "parameters": {
+    "ticker": "SPY",
+    "start_date": "2023-01-01",
+    "end_date": "2024-01-01",
+    "initial_cash": "100000",
+    "resolution": "Daily",
+    "fast_period": "20",
+    "slow_period": "50",
+    "position_size": "1.0"
+  },
+  "notes": {
+    "purpose": "Example parameter block for the repository's minimal LEAN template.",
+    "usage": "Copy the parameters into your local LEAN project or config flow and adjust paths to match your machine.",
+    "warning": "This file is intentionally illustrative and may need to be merged into your local LEAN configuration format."
+  }
+}

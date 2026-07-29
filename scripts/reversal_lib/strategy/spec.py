@@ -9,6 +9,8 @@ _ALLOWED_INDICATOR_CONFIG_KEYS = {
     'allowed_patterns',
     'require_trend_alignment',
     'require_location_alignment',
+    'min_candlestick_quality',
+    'require_confirmation_close_strength',
 }
 
 
@@ -48,6 +50,8 @@ class StrategySpec:
             'require_trend_alignment': indicator_config.get('require_trend_alignment', False),
             'require_location_alignment': indicator_config.get('require_location_alignment', False),
             'location_tolerance_ratio': indicator_config.get('location_tolerance_ratio', 0.02),
+            'min_candlestick_quality': indicator_config.get('min_candlestick_quality'),
+            'require_confirmation_close_strength': indicator_config.get('require_confirmation_close_strength', False),
             'allowed_patterns': indicator_config.get('allowed_patterns'),
         }
 

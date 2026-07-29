@@ -37,6 +37,14 @@ presets:
     min_r_multiple: 1.5
   high_quality_current:
     preset: high_quality
+  high_quality_candles_relaxed_r:
+    preset: high_quality
+    min_r_multiple: 1.2
+  main_candles_only:
+    preset: main
+    indicator_config:
+      min_candlestick_quality: 0.7
+      require_confirmation_close_strength: true
 
 experiments:
   - name: main_current
@@ -51,6 +59,10 @@ experiments:
     use: main_relaxed_combo
   - name: high_quality_current
     use: high_quality_current
+  - name: high_quality_candles_relaxed_r
+    use: high_quality_candles_relaxed_r
+  - name: main_candles_only
+    use: main_candles_only
 
   - name: grid_demo
     use: main_current

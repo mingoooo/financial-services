@@ -1,10 +1,17 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
+
+os.environ.setdefault('MPLCONFIGDIR', '/tmp/mplconfig')
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import yfinance as yf
 
 
 def fmt_num(x, digits=2):
@@ -33,6 +40,64 @@ def fmt_market_cap(x):
     if abs_x >= 1_000_000:
         return f"${x / 1_000_000:.2f}M"
     return f"${x:,.0f}"
+
+
+def chart_rel_path(ticker: str) -> str:
+    return f"charts/{ticker.lower()}_1y.png"
+
+
+def build_daily_chart(ticker: str, out_path: Path) -> bool:
+    try:
+        ticker_obj = yf.Ticker(ticker)
+        hist = ticker_obj.history(period='1y', interval='1d', auto_adjust=False, prepost=False)
+        if hist is None or hist.empty:
+            return False
+        work = hist[['Open', 'High', 'Low', 'Close']].dropna().copy()
+        if work.empty:
+            return False
+        up = work['Close'] >= work['Open']
+        down = ~up
+        body = (work['Close'] - work['Open']).abs()
+        price_span = float((work['High'].max() - work['Low'].min()) or 0)
+        min_body = max(price_span * 0.0025, 0.01)
+        fig, ax = plt.subplots(figsize=(8.2, 3.6), dpi=160)
+        x = range(len(work))
+        ax.vlines(x, work['Low'], work['High'], color='#94a3b8', linewidth=0.8, zorder=1)
+        up_idx = [i for i, ok in enumerate(up) if ok]
+        down_idx = [i for i, ok in enumerate(down) if ok]
+        up_height = body[up].clip(lower=min_body)
+        down_height = body[down].clip(lower=min_body)
+        up_bottom = pd.Series(work['Open'][up]).where(body[up] >= min_body, pd.Series(work['Open'][up]) - up_height / 2)
+        down_bottom = pd.Series(work['Close'][down]).where(body[down] >= min_body, pd.Series(work['Close'][down]) - down_height / 2)
+        ax.bar(up_idx, up_height, bottom=up_bottom, width=0.55, color='#16a34a', edgecolor='#16a34a', zorder=2)
+        ax.bar(down_idx, down_height, bottom=down_bottom, width=0.55, color='#dc2626', edgecolor='#dc2626', zorder=2)
+        ax.set_title(f'{ticker} · 1Y Daily Candles', fontsize=11)
+        ax.grid(True, axis='y', alpha=0.18)
+        ax.set_xlim(-1, len(work) - 0.2)
+        try:
+            ext = ticker_obj.history(period='2d', interval='1m', auto_adjust=False, prepost=True)
+            ext_close = ext['Close'].dropna() if ext is not None and not ext.empty else pd.Series(dtype=float)
+            if not ext_close.empty:
+                latest_ext = float(ext_close.iloc[-1])
+                ax.axhline(latest_ext, color='#2563eb', linewidth=1.0, linestyle='--', alpha=0.9)
+                ax.text(len(work) - 0.35, latest_ext, f' Last {latest_ext:.2f}', color='#2563eb', fontsize=8, va='bottom', ha='left', bbox=dict(boxstyle='round,pad=0.18', fc='white', ec='none', alpha=0.85))
+        except Exception:
+            pass
+        xticks = [0, max(len(work)//4,1), max(len(work)//2,1), max(len(work)*3//4,1), len(work)-1]
+        xticks = sorted(set(min(max(t,0), len(work)-1) for t in xticks))
+        labels = [pd.Timestamp(work.index[t]).strftime('%Y-%m') for t in xticks]
+        ax.set_xticks(xticks)
+        ax.set_xticklabels(labels, fontsize=8)
+        ax.tick_params(axis='y', labelsize=8)
+        for spine in ['top', 'right']:
+            ax.spines[spine].set_visible(False)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        fig.tight_layout()
+        fig.savefig(out_path, bbox_inches='tight')
+        plt.close(fig)
+        return True
+    except Exception:
+        return False
 
 
 def catalyst_line(g):
@@ -141,13 +206,20 @@ def build_report(packet: dict) -> str:
 
     pre_gappers = []
     for g in gappers:
+        ticker = g.get('ticker', '')
+        chart_md = ''
+        if ticker:
+            rel = chart_rel_path(ticker)
+            if build_daily_chart(ticker, Path('reports/site') / rel):
+                chart_md = f"- 1Y chart:\n\n  ![{ticker} 1Y daily chart](site/{rel})\n"
         pre_gappers.append(
-            f"### {g.get('ticker','')} | {g.get('company_name') or 'Company unknown'}\n"
+            f"### {ticker} | {g.get('company_name') or 'Company unknown'}\n"
             f"- Full catalyst headline: {catalyst_line(g)}\n"
             f"- Price: {fmt_num(g.get('price'))} | Gap: {fmt_pct(g.get('gap_pct'))} | Market cap: {fmt_market_cap(g.get('market_cap'))}\n"
             f"- Live levels: {levels_line(g)}\n"
             f"- Extended-hours volume: {extended_volume_line(g)}\n"
             f"- Flags: day_eligible={g.get('day_eligible')} | swing_eligible={g.get('swing_eligible')} | catalyst_found={g.get('catalyst_found')}\n"
+            f"{chart_md}"
         )
 
     market_trends = [
@@ -207,7 +279,7 @@ def build_report(packet: dict) -> str:
 
     return f'''# 🧠 AI PREMARKET REPORT — Humbled Trader
 
-### {date_line} · Claude + Codex (GPT-5.5), independent passes
+### {date_line} · Packet-based report generated by Codex
 
 ### Watchlists built by the rules: Day = Trend Join Long · Swing = gap-up + real catalyst
 
@@ -217,7 +289,7 @@ def build_report(packet: dict) -> str:
 
 - Tape backdrop: {summary_tape_line}.
 - The catch we are watching: big gap names are there, but clean catalyst matching is still thin on some names.
-- Two-brain verdict: packet-based editor draft only. No separate Claude or Codex view files were provided.
+- Report mode: packet-based editor draft only. No separate Claude or Codex analyst views were provided.
 
 {'## ⚠️ Data Warnings\n\n' + chr(10).join(warning_lines) if warning_lines else ''}
 
@@ -258,13 +330,12 @@ def build_report(packet: dict) -> str:
 
 ---
 
-## 🤖 Where the two brains landed
+## 🤖 Report Method
 
-- Agreement: unavailable because no separate Claude or Codex view files were provided.
-- Rules vs discretion: no separate discretion layer was provided, so this report sticks to deterministic packet facts only.
-- Claude's sharp catch the other missed: unavailable.
-- Codex's sharp catch the other missed: unavailable.
-- trade where they agree; where they disagree, stand down or size down; never average.
+- This report is generated from the packet and rule-based transforms only.
+- No separate Claude analyst memo or Codex analyst memo was provided for comparison.
+- Where live data is incomplete, the report may degrade to fallback names or empty watchlists.
+- Use the packet facts first; treat the commentary layer as formatting, not independent research.
 '''
 
 

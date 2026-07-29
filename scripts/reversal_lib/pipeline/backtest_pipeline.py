@@ -45,6 +45,8 @@ def _to_legacy_signal(signal: SignalCandidate, candles: list[Candle], spec: Stra
         rsi_value=context.rsi_value if context else None,
         above_sma200=context.above_sma200 if context else None,
         macd_context=context.macd_context if context else None,
+        candlestick_quality=signal.candlestick_quality,
+        candlestick_notes=signal.candlestick_notes,
     )
 
 

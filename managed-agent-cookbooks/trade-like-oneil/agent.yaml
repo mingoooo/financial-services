@@ -1,0 +1,24 @@
+# Trade Like O'Neil — managed-agent cookbook
+
+name: trade-like-oneil
+model: claude-opus-4-7
+
+system:
+  file: ../../plugins/agent-plugins/trade-like-oneil/agents/trade-like-oneil.md
+  append: "You are running headless. Produce files in ./out/ when asked for artifacts; otherwise return concise markdown."
+
+tools:
+  - type: agent_toolset_20260401
+    default_config: { enabled: false }
+    configs:
+      - { name: read,  enabled: true }
+      - { name: grep,  enabled: true }
+      - { name: glob,  enabled: true }
+
+mcp_servers: []
+
+skills:
+  - { from_plugin: ../../plugins/agent-plugins/trade-like-oneil }
+
+callable_agents:
+  - { manifest: ./subagents/trade-planner.yaml }

@@ -1,0 +1,3 @@
+display_name: Minervini SEPA Trading
+short_description: Grade Minervini-style growth setups with trend-template, VCP, entry, and sell-rule discipline.
+default_prompt: Evaluate a stock or watchlist using Mark Minervini's SEPA framework, including trend-template status, setup quality, exact entry and stop logic, add rules, and sell discipline.

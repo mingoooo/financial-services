@@ -46,3 +46,20 @@ Run `python3 scripts/check.py` before committing — it lints every manifest, ve
 1. Edit markdown files directly - changes take effect immediately
 2. Test commands with `/plugin:command-name` syntax
 3. Skills are invoked automatically when their trigger conditions match
+
+## Local Backtest Research Notes
+
+- The repository currently includes a local research workflow for O'Neil-style equity backtests under `scripts/`.
+- Use `scripts/backtest_oneil_unified.py` as the single backtest entrypoint for this workflow.
+- Supported universe modes are:
+  - `static`
+  - `dynamic-growth`
+  - `dynamic-balanced`
+- Do not introduce additional permanent backtest entrypoints when a mode or option can be added to `scripts/backtest_oneil_unified.py`.
+- Prefer extending `backtest_oneil_unified.py` instead of creating parallel one-off backtest scripts.
+- HTML report generation should go through `scripts/render_backtest_overview_html.py`.
+- Prefer deleting superseded exploratory scripts once their functionality has been consolidated into the unified entrypoint.
+- Temporary benchmark or ablation studies should be folded back into the unified workflow or removed after conclusions are incorporated.
+- Keep canonical strategy modes documented in `docs/backtest-workflow.md`.
+- Treat `scripts/backtest_reversals.py` as a separate legacy research workflow; do not mix its logic into the O'Neil unified runner unless explicitly requested.
+- Keep generated reports under `reports/` and keep raw market/fundamental data outside the repository workspace when possible.

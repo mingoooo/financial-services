@@ -15,6 +15,17 @@ class ScannerConfig:
     include_earnings: bool = False
     report_name: str = 'oneil-setups'
     out_dir: str = 'reports/oneil'
+    cache_dir: str = '.cache/oneil-scanner'
+    period: str = '1y'
+    interval: str = '1d'
+    batch_size: int = 25
+    timeout: int = 20
+    retries: int = 2
+    refresh_cache: bool = False
+    min_price: float = 10.0
+    min_avg_dollar_volume: float = 10_000_000.0
+    min_rs_proxy: float = 0.05
+    trigger_window_days: int = 5
 
     def out_dir_path(self) -> Path:
         return Path(self.out_dir)
@@ -31,6 +42,7 @@ class RunMetadata:
     out_dir: str = 'reports/oneil'
     include_news: bool = False
     include_earnings: bool = False
+    warnings: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -125,6 +137,7 @@ class ScanRunSummary:
         as_of: str | None = None,
         include_news: bool = False,
         include_earnings: bool = False,
+        warnings: list[str] | None = None,
     ) -> 'ScanRunSummary':
         return cls(
             run_metadata=RunMetadata(
@@ -134,6 +147,7 @@ class ScanRunSummary:
                 out_dir=out_dir,
                 include_news=include_news,
                 include_earnings=include_earnings,
+                warnings=list(warnings or []),
             ),
             universe=universe,
             symbols=symbols or [],
@@ -149,5 +163,6 @@ class ScanRunSummary:
         payload['out_dir'] = self.run_metadata.out_dir
         payload['include_news'] = self.run_metadata.include_news
         payload['include_earnings'] = self.run_metadata.include_earnings
+        payload['warnings'] = list(self.run_metadata.warnings)
         payload['candidate_count'] = len(self.candidates)
         return payload

@@ -47,6 +47,8 @@ class SignalCandidate:
     entry_mode: str = "close"
     market_cap: float | None = None
     structural_r_multiple: float | None = None
+    candlestick_quality: float | None = None
+    candlestick_notes: str | None = None
 
 
 @dataclass

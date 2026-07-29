@@ -11,10 +11,12 @@ from reversal_lib.models import Candle
 from reversal_lib.patterns import (
     bearish_confirmation_reason,
     bullish_confirmation_reason,
+    confirmation_close_strength_ok,
     compute_signal_score,
     detect_bearish_pattern,
     detect_bullish_pattern,
     detect_support_resistance_levels_from_window,
+    evaluate_candlestick_quality,
     pattern_strength_label,
 )
 from reversal_lib.strategy.rules import evaluate_signal
@@ -31,6 +33,7 @@ def scan_candles(candles: list[Candle], *, symbol: str, market_cap: float | None
     location_tolerance_ratio = spec.indicator_config.get('location_tolerance_ratio', 0.02)
     allowed_patterns = spec.indicator_config.get('allowed_patterns')
     allowed_patterns_set = set(allowed_patterns) if allowed_patterns is not None else None
+    require_confirmation_close_strength = spec.indicator_config.get('require_confirmation_close_strength', False)
 
     for idx in range(20, len(candles) - 2):
         confirm = candles[idx + 1]
@@ -66,11 +69,14 @@ def scan_candles(candles: list[Candle], *, symbol: str, market_cap: float | None
                 second_target = supports[-2] if len(supports) > 1 else (confirm.close - fallback_risk * 2)
             if allowed_patterns_set is not None and pattern_name not in allowed_patterns_set:
                 return
+            if require_confirmation_close_strength and not confirmation_close_strength_ok(side, confirm):
+                return
             pattern_strength = pattern_strength_label(pattern_name, side)
             confirmation_reason = confirmation_reason_builder(pattern_name)
             avg_volume_20 = sum(c.volume for c in candles[idx - 19:idx + 1]) / 20.0
             avg_dollar_volume_20 = sum(c.close * c.volume for c in candles[idx - 19:idx + 1]) / 20.0
             score, score_detail = compute_signal_score(pattern_strength, confirm.volume, avg_volume_20, market_cap, avg_dollar_volume_20)
+            candlestick_quality, candlestick_notes = evaluate_candlestick_quality(pattern_name, side, candles, idx, confirm)
             candidate = SignalCandidate(
                 hit=PatternHit(
                     symbol=symbol,
@@ -95,6 +101,8 @@ def scan_candles(candles: list[Candle], *, symbol: str, market_cap: float | None
                 avg_dollar_volume_20=avg_dollar_volume_20,
                 entry_mode=spec.entry_mode,
                 market_cap=market_cap,
+                candlestick_quality=candlestick_quality,
+                candlestick_notes=candlestick_notes,
             )
             accepted, evaluated = evaluate_signal(candidate, context, spec)
             if accepted:

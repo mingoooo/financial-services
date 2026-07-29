@@ -9,6 +9,7 @@ Run `../scripts/deploy-managed-agent.sh <slug>` to upload skills, create leaf wo
 | [`pitch-agent`](./pitch-agent/) | investment-banking | Comps, precedents, LBO → branded pitch deck | `Build pitch book: <target> / <acquirer>, thesis: <text>` | researcher · modeler · **deck-writer** |
 | [`market-researcher`](./market-researcher/) | equity-research | Sector or theme → overview, landscape, peer comps, ideas shortlist | `Primer: <sector or theme>, angle: <text>` | sector-reader · comps-spreader · **note-writer** |
 | [`earnings-reviewer`](./earnings-reviewer/) | equity-research | Earnings call + filings → model update → note draft | `Process earnings: <ticker> <period>` | transcript-reader · model-updater · **note-writer** |
+| [`trade-like-oneil`](./trade-like-oneil/) | equity-research | O'Neil-style leadership analysis → setup classification → trade plan | `Review setup: <ticker>, style: <text>, risk budget: <text>` | trade-planner |
 | [`meeting-prep-agent`](./meeting-prep-agent/) | wealth-management | Briefing pack before every client meeting | `Briefing pack for <client-id>, meeting <event-id>` | profiler · news-reader · **pack-writer** |
 | [`model-builder`](./model-builder/) | financial-analysis | DCF, LBO, 3-statement, comps — as a file | `Build <dcf\|lbo\|3-stmt> for <ticker>, assumptions: {...}` | data-puller · **builder** · auditor |
 | [`gl-reconciler`](./gl-reconciler/) | financial-analysis | Finds breaks, traces root cause, routes for sign-off | `Reconcile GL vs subledger, trade date <D>, classes: <list>` | reader · critic · **resolver** |

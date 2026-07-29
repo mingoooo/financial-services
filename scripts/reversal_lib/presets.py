@@ -34,7 +34,10 @@ _PRESET_SPECS: dict[str, dict] = {
         'entry_mode': 'confirm_close',
         'stop_mode': 'confirm_low',
         'target_mode': 'nearest_resistance',
-        'indicator_config': {},
+        'indicator_config': {
+            'min_candlestick_quality': 0.7,
+            'require_confirmation_close_strength': True,
+        },
     },
 }
 
@@ -44,7 +47,7 @@ def describe_strategy_preset(preset: str | None) -> str:
     if normalized == 'main':
         return '主策略：sp500 + core ETF，仅做 bullish，要求确认量能至少为 20 日均量的 1.5 倍、至少 1.5R 到最近阻力位、股价高于 5 美元、且满足 close > SMA20 > SMA50 的标准上升趋势；默认按确认日收盘价入场、止损设在确认日最低点、止盈默认看最近阻力位。'
     if normalized == 'high_quality':
-        return '高质量版：在主策略基础上，额外要求 MACD 处于 bullish / cross_up 状态，以减少交易数换取更高信号质量；默认按确认日收盘价入场。'
+        return '高质量版：在主策略基础上，额外要求 MACD 处于 bullish / cross_up 状态，并加入蜡烛图质量过滤（最低 candlestick_quality 0.7，且确认K线收盘强势），以减少交易数换取更高信号质量；默认按确认日收盘价入场。'
     return '自定义参数：当前运行使用了非预设或部分覆盖后的参数组合，请结合页面中的实际参数摘要理解结果。'
 
 
@@ -55,7 +58,14 @@ def load_strategy_spec(preset: str | None, overrides: dict) -> StrategySpec:
 
     merged = dict(base)
     indicator_overrides = dict(merged.get('indicator_config', {}))
+    falsey_override_keys = {
+        'require_trend_alignment',
+        'require_location_alignment',
+        'require_confirmation_close_strength',
+    }
     for key, value in dict(overrides).items():
+        if value is None:
+            continue
         if key == 'indicator_config':
             indicator_overrides.update(normalize_indicator_config(value))
         elif key in {
@@ -63,9 +73,15 @@ def load_strategy_spec(preset: str | None, overrides: dict) -> StrategySpec:
             'require_location_alignment',
             'location_tolerance_ratio',
             'allowed_patterns',
+            'min_candlestick_quality',
+            'require_confirmation_close_strength',
         }:
+            if key in falsey_override_keys and value is False and key in indicator_overrides:
+                continue
             indicator_overrides[key] = value
         elif key in StrategySpec.__dataclass_fields__:
+            if value is False and key in merged and isinstance(merged.get(key), bool):
+                continue
             merged[key] = value
 
     merged['indicator_config'] = normalize_indicator_config(indicator_overrides)

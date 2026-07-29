@@ -52,6 +52,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--require-trend-alignment", action="store_true")
     parser.add_argument("--require-location-alignment", action="store_true")
     parser.add_argument("--location-tolerance-ratio", type=float, default=0.02)
+    parser.add_argument("--min-candlestick-quality", type=float)
+    parser.add_argument("--require-confirmation-close-strength", action="store_true")
     parser.add_argument("--allowed-patterns")
     parser.add_argument("--require-fresh-sma-cross-up", action="store_true")
     parser.add_argument("--sma-cross-mode", choices=["either", "20", "50"], default="either")
@@ -80,6 +82,8 @@ def _build_strategy_spec(args: argparse.Namespace, allowed_patterns: set[str] | 
             "require_trend_alignment": args.require_trend_alignment,
             "require_location_alignment": args.require_location_alignment,
             "location_tolerance_ratio": args.location_tolerance_ratio,
+            "min_candlestick_quality": args.min_candlestick_quality,
+            "require_confirmation_close_strength": args.require_confirmation_close_strength,
             "allowed_patterns": sorted(allowed_patterns) if allowed_patterns is not None else None,
         },
     )

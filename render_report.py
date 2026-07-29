@@ -139,6 +139,15 @@ footer {
   text-align: center;
   margin-top: 18px;
 }
+.chart-img {
+  width: 100%;
+  max-width: 760px;
+  display: block;
+  margin: 12px 0 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
 .glossary {
   margin: 0 0 18px;
   padding: 12px 14px;
@@ -373,6 +382,7 @@ def build_html(md_text: str, report_date: str, footer_text: str, zh: bool) -> st
     else:
         meta = first_date_line(md_text) or report_date
     body_html = markdown.markdown(md_text, extensions=["tables", "fenced_code", "sane_lists"])
+    body_html = re.sub(r'<img([^>]+)>', r'<img\1 class="chart-img">', body_html)
     glossary = (
         '<div class="glossary"><strong>术语说明</strong><br>'
         '<strong>PMH</strong>盘前高点（Pre-Market High）<br>'
