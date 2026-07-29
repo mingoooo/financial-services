@@ -294,10 +294,18 @@ jobs:
             echo "## GitHub Pages"
             echo
             echo "- Hub: ${BASE_URL%/}/"
-            echo "- Premarket 中文: ${BASE_URL%/}/premarket/index.html"
-            echo "- Premarket English: ${BASE_URL%/}/premarket/index_en.html"
-            echo "- O'Neil: ${BASE_URL%/}/oneil/index.html"
-            echo "- O'Neil Backtest: ${BASE_URL%/}/oneil-backtest/index.html"
+            if [ -f pages_payload/premarket/index.html ]; then
+              echo "- Premarket 中文: ${BASE_URL%/}/premarket/index.html"
+            fi
+            if [ -f pages_payload/premarket/index_en.html ]; then
+              echo "- Premarket English: ${BASE_URL%/}/premarket/index_en.html"
+            fi
+            if [ -f pages_payload/oneil/index.html ]; then
+              echo "- O'Neil: ${BASE_URL%/}/oneil/index.html"
+            fi
+            if [ -f pages_payload/oneil-backtest/index.html ]; then
+              echo "- O'Neil Backtest: ${BASE_URL%/}/oneil-backtest/index.html"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
   notify-telegram:
