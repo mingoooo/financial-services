@@ -247,6 +247,53 @@ These are reference templates — they get better when you tune them to how your
 
 </details>
 
+## Local Research Workflows
+
+This repo's local market-research tooling is consolidated around two current strategy / report families: O'Neil / breakout and premarket event-driven. Reversal research remains in-tree only for reproducibility and historical reference.
+
+### Active
+
+- `scripts/scan_oneil_setups.py` — canonical daily O'Neil-style setup scanner for local research.
+- `scripts/backtest_oneil_unified.py` — unified O'Neil backtest entrypoint for the supported strategy modes documented in `docs/backtest-workflow.md`.
+- `scan.py` + `scripts/build_premarket_report.py` + `render_report.py` — premarket event-driven scan and report chain.
+- `scripts/render_market_report_hub.py` + `.github/workflows/premarket-report.yml` + `scripts/notify_telegram_market_report.py` — unified site publishing and Telegram notification path for the active report families.
+
+Example O'Neil scan with an explicit symbol list:
+
+```bash
+python3 scripts/scan_oneil_setups.py \
+  --symbols NVDA,SHOP,MSFT \
+  --as-of 2026-07-16 \
+  --include-news \
+  --include-earnings \
+  --report-name oneil_scan_latest \
+  --out-dir reports/oneil \
+  --cache-dir .cache/oneil-scanner
+```
+
+Outputs land in the selected `--out-dir` as:
+
+- `reports/oneil/<report-name>.json`
+- `reports/oneil/<report-name>.csv`
+- `reports/oneil/<report-name>.html`
+
+Use `--limit 0` when you want the scanner to evaluate the full resolved universe instead of truncating the symbol list.
+
+For `--universe all-us`, the scanner refreshes the listed-stock universe from the upstream Nasdaq Trader files once per market day, so routine live runs do not stay pinned to a stale fixed list.
+
+For live O'Neil scans, cached daily OHLCV and event payloads are reused when still current, and stale symbols are refreshed incrementally so the scanner only pulls missing recent history instead of re-downloading every full price window.
+
+The O'Neil scanner routes shared data loading, preprocessing, trend-template / RS filters, detector families, de-duplication, ranking, and report generation through this entrypoint. Use `scripts/backtest_oneil_unified.py` for backtests in the active O'Neil research stack.
+
+### Legacy
+
+- `scripts/scan_vcp_stocks.py` — retained as an older local scanner that is still available for comparison work, but is no longer the primary path.
+
+### Archived
+
+- Reversal workflow files, including `scripts/scan_reversals.py`, `scripts/backtest_reversals.py`, and `scripts/run_reversal_experiments.py`, are archived research artifacts. They are no longer advertised as current entrypoints and should only be used when reproducing historical reversal research.
+- Deprecated notification wrappers such as `scripts/notify_telegram_premarket.py` and `scripts/notify_telegram_scan.py` are retained only as compatibility shims and should be replaced by `scripts/notify_telegram_market_report.py` for any active workflow or manual run.
+
 ## Contributing
 
 Everything here is markdown and YAML. Fork, edit, PR. For new content:

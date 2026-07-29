@@ -12,23 +12,41 @@ on:
       - 'REPORT_TEMPLATE.md'
       - 'WATCHLIST_CRITERIA.md'
       - 'prompt_merge.md'
-      - 'scripts/notify_telegram_premarket.py'
+      - 'scripts/build_premarket_report.py'
+      - 'scripts/render_market_report_hub.py'
+      - 'scripts/scan_oneil_setups.py'
+      - 'scripts/notify_telegram_market_report.py'
       - '.github/workflows/premarket-report.yml'
   workflow_dispatch:
     inputs:
+      report_family:
+        description: 要生成的报告家族
+        required: true
+        default: premarket
+        type: choice
+        options:
+          - premarket
+          - oneil
+          - full
       run_label:
         description: Telegram 文案里的运行标签
         required: false
         default: manual run
         type: string
       deploy_pages:
-        description: 若启用 Pages，则部署 HTML 报告
+        description: 若启用 Pages，则部署合并后的报告站点
+        required: false
+        default: true
+        type: boolean
+      notify_telegram:
+        description: 若启用 Telegram，则按报告家族发送通知
         required: false
         default: true
         type: boolean
   schedule:
     - cron: '00 10 * * 1-5'
     - cron: '30 12 * * 1-5'
+    - cron: '45 14 * * 1-5'
 
 permissions:
   contents: read
@@ -40,12 +58,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  premarket:
+  market-report:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
     outputs:
       should_run: ${{ steps.gate.outputs.should_run }}
+      run_family: ${{ steps.gate.outputs.run_family }}
       run_label: ${{ steps.gate.outputs.run_label }}
+      should_notify: ${{ steps.gate.outputs.should_notify }}
 
     steps:
       - name: Checkout
@@ -56,7 +76,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Decide whether to run now
+      - name: Decide run family and schedule gate
         id: gate
         shell: bash
         run: |
@@ -65,26 +85,58 @@ jobs:
           from zoneinfo import ZoneInfo
           import os
 
-          now_ny = datetime.now(ZoneInfo("America/New_York"))
-          weekday = now_ny.weekday()
-          should_run = weekday < 5
-          run_label = "manual run"
-          event_name = os.environ.get("GITHUB_EVENT_NAME", "")
-          if event_name == "schedule":
-              hhmm = now_ny.strftime("%H:%M")
-              if hhmm == "06:00":
-                  run_label = "开盘前 3 小时"
-              elif hhmm == "08:30":
-                  run_label = "开盘前 1 小时"
+
+          def normalize_run_label(label: str) -> str:
+              normalized = ' '.join(label.replace('\r', ' ').replace('\n', ' ').split())
+              return normalized or 'scheduled run'
+
+          event_name = os.environ.get('GITHUB_EVENT_NAME', '')
+          schedule_expr = os.environ.get('GITHUB_EVENT_SCHEDULE', '')
+          manual_family = os.environ.get('INPUT_REPORT_FAMILY', '').strip() or 'premarket'
+          manual_label = os.environ.get('INPUT_RUN_LABEL', '').strip()
+          notify_input = (os.environ.get('INPUT_NOTIFY_TELEGRAM', 'true').strip().lower() == 'true')
+          now_ny = datetime.now(ZoneInfo('America/New_York'))
+          should_run = True
+          run_family = 'premarket'
+          run_label = 'scheduled run'
+
+          if event_name == 'schedule':
+              should_run = now_ny.weekday() < 5
+              scheduled_runs = {
+                  '00 10 * * 1-5': ('premarket', '定时运行 10:00 ET'),
+                  '30 12 * * 1-5': ('premarket', '定时运行 12:30 ET'),
+                  '45 14 * * 1-5': ('oneil', "O'Neil 定时扫描 14:45 ET"),
+              }
+              scheduled_run = scheduled_runs.get(schedule_expr)
+              if scheduled_run is None:
+                  should_run = False
+                  run_family = 'unknown'
+                  run_label = f'unsupported scheduled cron: {schedule_expr or "<empty>"}'
               else:
-                  run_label = f"scheduled {hhmm} ET"
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+                  run_family, run_label = scheduled_run
+          elif event_name == 'workflow_dispatch':
+              run_family = manual_family
+              run_label = manual_label or f'manual {run_family}'
+          else:
+              run_family = 'premarket'
+              run_label = 'push run'
+
+          run_label = normalize_run_label(run_label)
+          should_notify = notify_input and run_family in {'premarket', 'oneil'}
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
               fh.write(f"should_run={'true' if should_run else 'false'}\n")
-              fh.write(f"ny_time={now_ny.isoformat()}\n")
-              fh.write(f"run_label={run_label}\n")
+              fh.write(f'run_family={run_family}\n')
+              fh.write(f'run_label={run_label}\n')
+              fh.write(f"should_notify={'true' if should_notify else 'false'}\n")
+              fh.write(f'ny_time={now_ny.isoformat()}\n')
           PY
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_EVENT_SCHEDULE: ${{ github.event.schedule }}
+          INPUT_REPORT_FAMILY: ${{ github.event.inputs.report_family || '' }}
+          INPUT_RUN_LABEL: ${{ github.event.inputs.run_label || '' }}
+          INPUT_NOTIFY_TELEGRAM: ${{ github.event.inputs.notify_telegram || 'true' }}
 
       - name: Skip outside weekday window
         if: github.event_name == 'schedule' && steps.gate.outputs.should_run != 'true'
@@ -93,55 +145,82 @@ jobs:
           echo "NY time was: ${{ steps.gate.outputs.ny_time }}"
 
       - name: Install dependencies
-        if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
+        if: steps.gate.outputs.should_run == 'true'
         run: |
           python -m pip install --upgrade pip
-          pip install markdown yfinance feedparser requests
+          pip install markdown yfinance feedparser requests pandas jinja2 beautifulsoup4
 
-      - name: Prepare report directory
-        if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
-        run: mkdir -p reports/site
+      - name: Prepare report directories
+        if: steps.gate.outputs.should_run == 'true'
+        run: mkdir -p reports/site reports/oneil-live
 
-      - name: Run premarket scan
-        if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
-        run: python scan.py
-
-      - name: Build markdown report
-        if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
+      - name: Run premarket chain
+        if: steps.gate.outputs.should_run == 'true' && (steps.gate.outputs.run_family == 'premarket' || steps.gate.outputs.run_family == 'full')
         shell: bash
         run: |
+          python scan.py
           python scripts/build_premarket_report.py packet.json REPORT.md
-
-      - name: Render HTML report
-        if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
-        run: |
           python render_report.py REPORT.md $(python - <<'PY'
           from datetime import datetime
           from zoneinfo import ZoneInfo
           print(datetime.now(ZoneInfo('America/New_York')).strftime('%Y-%m-%d'))
           PY
           )
-          cp reports/premarket_zh.html reports/site/index.html
-          cp reports/premarket_.html reports/site/index_en.html
-          cp reports/premarket_zh.html reports/site/index_zh.html
 
-      - name: Upload reports artifact
-        if: github.event_name != 'schedule' || steps.gate.outputs.should_run == 'true'
+      - name: Run O'Neil chain
+        if: steps.gate.outputs.should_run == 'true' && (steps.gate.outputs.run_family == 'oneil' || steps.gate.outputs.run_family == 'full')
+        run: |
+          python scripts/scan_oneil_setups.py \
+            --universe all-us \
+            --limit 0 \
+            --include-news \
+            --include-earnings \
+            --report-name live-full-latest \
+            --out-dir reports/oneil-live
+
+      - name: Render merged market report hub
+        if: steps.gate.outputs.should_run == 'true'
+        run: python scripts/render_market_report_hub.py --output-dir reports/site
+
+      - name: Prepare artifact bundle
+        if: steps.gate.outputs.should_run == 'true'
+        shell: bash
+        run: |
+          copy_if_exists() {
+            src="$1"
+            dest="$2"
+            if [ -e "$src" ]; then
+              mkdir -p "$(dirname "$dest")"
+              cp "$src" "$dest"
+            fi
+          }
+
+          rm -rf market-report-bundle
+          mkdir -p market-report-bundle/reports/oneil-live
+          copy_if_exists reports/premarket_.html market-report-bundle/reports/premarket_.html
+          copy_if_exists reports/premarket_zh.html market-report-bundle/reports/premarket_zh.html
+          copy_if_exists reports/oneil-live/live-full-latest.html market-report-bundle/reports/oneil-live/live-full-latest.html
+          copy_if_exists reports/oneil-live/live-full-latest.json market-report-bundle/reports/oneil-live/live-full-latest.json
+          copy_if_exists reports/oneil_backtest_overview.html market-report-bundle/reports/oneil_backtest_overview.html
+          copy_if_exists REPORT.md market-report-bundle/REPORT.md
+          copy_if_exists packet.json market-report-bundle/packet.json
+
+          if [ -d reports/site ]; then
+            mkdir -p market-report-bundle/reports/site
+            cp -R reports/site/. market-report-bundle/reports/site/
+          fi
+
+      - name: Upload report artifact
+        if: steps.gate.outputs.should_run == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: premarket-report
-          path: |
-            packet.json
-            REPORT.md
-            reports/premarket_.html
-            reports/premarket_zh.html
-            reports/site/index.html
-            reports/site/index_zh.html
+          name: market-report-site
+          path: market-report-bundle
           if-no-files-found: error
 
   deploy-pages:
-    if: ${{ needs.premarket.outputs.should_run == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.deploy_pages == 'true') }}
-    needs: premarket
+    if: ${{ needs.market-report.outputs.should_run == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.deploy_pages == 'true') }}
+    needs: market-report
     runs-on: ubuntu-latest
     outputs:
       page_url: ${{ steps.deployment.outputs.page_url }}
@@ -158,15 +237,15 @@ jobs:
       - name: Download report artifact
         uses: actions/download-artifact@v4
         with:
-          name: premarket-report
-          path: premarket-report
+          name: market-report-site
+          path: market-report-bundle
 
       - name: Prepare Pages payload
         run: |
           rm -rf pages_payload
-          mkdir -p pages_payload
-          cp premarket-report/reports/site/index.html pages_payload/index.html
-          cp premarket-report/reports/site/index_zh.html pages_payload/index_zh.html
+          mkdir -p pages_payload pages_payload/reports
+          cp -R market-report-bundle/reports/site/. pages_payload/
+          cp -R market-report-bundle/reports/. pages_payload/reports/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
@@ -179,10 +258,10 @@ jobs:
 
   notify-telegram:
     needs:
-      - premarket
+      - market-report
       - deploy-pages
     runs-on: ubuntu-latest
-    if: ${{ always() && needs.premarket.outputs.should_run == 'true' && (needs.deploy-pages.result == 'success' || needs.deploy-pages.result == 'skipped') }}
+    if: ${{ always() && needs.market-report.outputs.should_run == 'true' && needs.market-report.outputs.should_notify == 'true' && (needs.deploy-pages.result == 'success' || needs.deploy-pages.result == 'skipped') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -190,15 +269,43 @@ jobs:
       - name: Download report artifact
         uses: actions/download-artifact@v4
         with:
-          name: premarket-report
-          path: premarket-report
+          name: market-report-site
+          path: market-report-bundle
 
       - name: Send Telegram notification
-        continue-on-error: true
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        shell: bash
         run: |
-          PAGES_URL="${{ needs.deploy-pages.outputs.page_url || '' }}"
-          RUN_LABEL="${{ github.event.inputs.run_label || needs.premarket.outputs.run_label }}"
-          python scripts/notify_telegram_premarket.py premarket-report/REPORT.md "$PAGES_URL" "$RUN_LABEL"
+          BASE_URL="${{ needs.deploy-pages.outputs.page_url || '' }}"
+          RUN_LABEL="${{ needs.market-report.outputs.run_label }}"
+          FAMILY="${{ needs.market-report.outputs.run_family }}"
+          REPORT_URL=""
+
+          if [ -n "$BASE_URL" ]; then
+            case "$FAMILY" in
+              premarket) REPORT_URL="${BASE_URL%/}/premarket/index.html" ;;
+              oneil) REPORT_URL="${BASE_URL%/}/oneil/index.html" ;;
+            esac
+          fi
+
+          case "$FAMILY" in
+            premarket)
+              python scripts/notify_telegram_market_report.py \
+                --family premarket \
+                --report-path market-report-bundle/REPORT.md \
+                --pages-url "$REPORT_URL" \
+                --run-label "$RUN_LABEL"
+              ;;
+            oneil)
+              python scripts/notify_telegram_market_report.py \
+                --family oneil \
+                --report-path market-report-bundle/reports/oneil-live/live-full-latest.json \
+                --pages-url "$REPORT_URL" \
+                --run-label "$RUN_LABEL"
+              ;;
+            *)
+              echo "Skipping Telegram notification for family: $FAMILY"
+              ;;
+          esac

@@ -3,21 +3,16 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import UTC, datetime
 from pathlib import Path
 import sys
 
 if __package__ in (None, ''):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from scripts.oneil_scanner.config import ScannerConfig
-    from scripts.oneil_scanner.models import ScanRunSummary
-    from scripts.oneil_scanner.report import write_report_bundle
-    from scripts.oneil_scanner.scoring import score_and_rank_candidates
+    from scripts.oneil_scanner.runner import run_scan
 else:
     from .oneil_scanner.config import ScannerConfig
-    from .oneil_scanner.models import ScanRunSummary
-    from .oneil_scanner.report import write_report_bundle
-    from .oneil_scanner.scoring import score_and_rank_candidates
+    from .oneil_scanner.runner import run_scan
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -30,6 +25,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument('--include-earnings', action='store_true')
     parser.add_argument('--report-name', default='oneil-setups')
     parser.add_argument('--out-dir', default='reports/oneil')
+    parser.add_argument('--cache-dir', default='.cache/oneil-scanner')
+    parser.add_argument('--period', default='1y')
+    parser.add_argument('--interval', default='1d')
+    parser.add_argument('--refresh-cache', action='store_true')
     return parser
 
 
@@ -49,6 +48,10 @@ def build_config(args: argparse.Namespace) -> ScannerConfig:
         include_earnings=args.include_earnings,
         report_name=args.report_name,
         out_dir=args.out_dir,
+        cache_dir=args.cache_dir,
+        period=args.period,
+        interval=args.interval,
+        refresh_cache=args.refresh_cache,
     )
 
 
@@ -56,19 +59,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     config = build_config(args)
-    summary = ScanRunSummary.empty(
-        run_timestamp=datetime.now(UTC).isoformat(timespec='seconds'),
-        universe=config.universe,
-        symbols=config.symbols,
-        limit=config.limit,
-        as_of=config.as_of,
-        include_news=config.include_news,
-        include_earnings=config.include_earnings,
-        report_name=config.report_name,
-        out_dir=config.out_dir,
-    )
-    summary.candidates = score_and_rank_candidates(summary.candidates, as_of=config.as_of)
-    write_report_bundle(config, summary)
+    summary = run_scan(config)
     print(json.dumps(summary.to_dict(), ensure_ascii=False))
     return 0
 

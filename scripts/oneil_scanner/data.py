@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Callable
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import yfinance as yf
@@ -21,6 +22,8 @@ from scripts.vcp_lib.data_sources import (
 DEFAULT_BATCH_SIZE = 25
 DEFAULT_TIMEOUT = 20
 DEFAULT_RETRIES = 2
+_MARKET_TZ = ZoneInfo('America/New_York')
+_INCREMENTAL_OVERLAP_DAYS = 5
 
 
 @dataclass
@@ -105,13 +108,108 @@ def _cached_event_warnings(payload: Any) -> list[str]:
 def _serialize_frame(frame: pd.DataFrame) -> dict:
     payload = frame.copy()
     payload['Date'] = pd.to_datetime(payload['Date'])
-    return frame_to_serializable_records(payload.set_index('Date'))
+    return {
+        'frame': frame_to_serializable_records(payload.set_index('Date')),
+        'fetched_at': _today_market_date(),
+        'last_date': payload['Date'].max().date().isoformat() if not payload.empty else None,
+    }
+
+
+def _today_market_date() -> str:
+    return datetime.now(_MARKET_TZ).date().isoformat()
+
+
+def _frame_last_date(frame: pd.DataFrame | None) -> str | None:
+    if frame is None or frame.empty or 'Date' not in frame.columns:
+        return None
+    return pd.to_datetime(frame['Date']).max().date().isoformat()
+
+
+def _cache_frame_payload(payload: dict | list | None) -> dict | None:
+    if not isinstance(payload, dict):
+        return None
+    frame_payload = payload.get('frame')
+    if isinstance(frame_payload, dict):
+        return frame_payload
+    if payload.get('kind') in {'single', 'multi'}:
+        return payload
+    return None
+
+
+def _cache_fetched_at(payload: dict | list | None) -> str | None:
+    if not isinstance(payload, dict):
+        return None
+    fetched_at = payload.get('fetched_at')
+    if fetched_at is None:
+        return None
+    return str(fetched_at)
+
+
+def _cache_last_date(payload: dict | list | None, frame: pd.DataFrame | None) -> str | None:
+    if isinstance(payload, dict) and payload.get('last_date'):
+        return str(payload['last_date'])
+    return _frame_last_date(frame)
+
+
+def _cache_is_current_for_target(*, payload: dict | list | None, frame: pd.DataFrame | None, as_of: str | None) -> bool:
+    if as_of:
+        return frame is not None and not frame.empty
+    cached_last_date = _cache_last_date(payload, frame)
+    if cached_last_date is None:
+        return False
+    return _cache_fetched_at(payload) == _today_market_date()
+
+
+def _window_key_is_latest(window_key: str) -> bool:
+    return str(window_key).startswith('latest_')
+
+
+def _event_cache_is_current(payload: Any, *, window_key: str) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    if not _window_key_is_latest(window_key):
+        return True
+    fetched_at = _cache_fetched_at(payload)
+    if fetched_at is None:
+        return False
+    return fetched_at[:10] == _today_market_date()
+
+
+def _refresh_start_date(cached_last_date: str | None, *, period: str, as_of: str | None) -> str | None:
+    if cached_last_date:
+        last_date = datetime.fromisoformat(cached_last_date).date()
+        return (last_date - timedelta(days=_INCREMENTAL_OVERLAP_DAYS)).isoformat()
+    if period.endswith('y'):
+        years = max(1, int(period[:-1] or '1'))
+        anchor = datetime.fromisoformat(as_of).date() if as_of else datetime.now(_MARKET_TZ).date()
+        return (anchor - timedelta(days=366 * years)).isoformat()
+    if period.endswith('mo'):
+        months = max(1, int(period[:-2] or '1'))
+        anchor = datetime.fromisoformat(as_of).date() if as_of else datetime.now(_MARKET_TZ).date()
+        return (anchor - timedelta(days=31 * months)).isoformat()
+    return None
+
+
+def _refresh_end_date(as_of: str | None) -> str | None:
+    if not as_of:
+        return None
+    return (datetime.fromisoformat(as_of).date() + timedelta(days=1)).isoformat()
+
+
+def _merge_frames(cached: pd.DataFrame, live_update: pd.DataFrame | None) -> pd.DataFrame:
+    if live_update is None or live_update.empty:
+        return normalize_daily_ohlcv_frame(cached)
+    merged = pd.concat([cached, live_update], ignore_index=True)
+    merged['Date'] = pd.to_datetime(merged['Date'])
+    merged = merged.sort_values('Date').drop_duplicates(subset=['Date'], keep='last')
+    return normalize_daily_ohlcv_frame(merged)
 
 
 def _restore_frame(payload: dict | list | None) -> pd.DataFrame | None:
-    if not isinstance(payload, dict):
+    frame_payload = _cache_frame_payload(payload)
+    if frame_payload is None:
         return None
-    restored = serializable_records_to_frame(payload)
+    restored = serializable_records_to_frame(frame_payload)
     if restored is None or restored.empty:
         return None
     return normalize_daily_ohlcv_frame(restored)
@@ -173,7 +271,7 @@ def fetch_event_payload(
     merged_cached_warnings = list(cached_warnings)
     for warning in event_warnings:
         _append_warning(merged_cached_warnings, warning)
-    if not refresh and isinstance(cached, dict) and 'payload' in cached:
+    if not refresh and isinstance(cached, dict) and 'payload' in cached and _event_cache_is_current(cached, window_key=window_key):
         return cached['payload'], _event_result_metadata(scope, 'cache', merged_cached_warnings)
 
     last_error: Exception | None = None
@@ -223,6 +321,7 @@ def load_daily_ohlcv(
     batch_size: int = DEFAULT_BATCH_SIZE,
     timeout: int = DEFAULT_TIMEOUT,
     retries: int = DEFAULT_RETRIES,
+    refresh: bool = False,
     download_fn: BatchDownloadFn | None = None,
     history_loader: HistoryLoaderFn | None = None,
 ) -> DailyDataLoadResult:
@@ -232,15 +331,23 @@ def load_daily_ohlcv(
     target_cache_dir = Path(cache_dir)
     download = download_fn or _default_download
     load_history = history_loader or _default_history_loader
+    stale_cached_frames: dict[str, pd.DataFrame] = {}
+    stale_cached_payloads: dict[str, dict | list | None] = {}
 
     for symbol in ordered_symbols:
-        cached = _restore_frame(load_json_cache(cache_path(target_cache_dir, _ohlcv_namespace(window_key), _cache_key_for_symbol(symbol))))
+        cache_file = cache_path(target_cache_dir, _ohlcv_namespace(window_key), _cache_key_for_symbol(symbol))
+        cached_payload = load_json_cache(cache_file)
+        cached = _restore_frame(cached_payload)
         if cached is None or cached.empty:
             continue
-        result.frames[symbol] = cached
-        result.statuses[symbol] = SymbolLoadStatus(symbol=symbol, status='ok', source='cache', rows=len(cached), attempts=0)
+        if not refresh and _cache_is_current_for_target(payload=cached_payload, frame=cached, as_of=as_of):
+            result.frames[symbol] = cached
+            result.statuses[symbol] = SymbolLoadStatus(symbol=symbol, status='ok', source='cache', rows=len(cached), attempts=0)
+            continue
+        stale_cached_frames[symbol] = cached
+        stale_cached_payloads[symbol] = cached_payload
 
-    misses = [symbol for symbol in ordered_symbols if symbol not in result.frames]
+    misses = [symbol for symbol in ordered_symbols if symbol not in result.frames and symbol not in stale_cached_frames]
     for start in range(0, len(misses), max(1, batch_size)):
         batch = misses[start:start + max(1, batch_size)]
         batch_frames: dict[str, pd.DataFrame] = {}
@@ -320,6 +427,93 @@ def load_daily_ohlcv(
                 message=str(last_error),
             )
 
+    stale_symbols = [symbol for symbol in ordered_symbols if symbol in stale_cached_frames and symbol not in result.frames]
+    for start in range(0, len(stale_symbols), max(1, batch_size)):
+        batch = stale_symbols[start:start + max(1, batch_size)]
+        batch_frames: dict[str, pd.DataFrame] = {}
+        batch_error: Exception | None = None
+        refresh_starts = [_refresh_start_date(_cache_last_date(stale_cached_payloads[symbol], stale_cached_frames[symbol]), period=period, as_of=as_of) for symbol in batch]
+        effective_start = min([value for value in refresh_starts if value is not None], default=None)
+        effective_end = _refresh_end_date(as_of)
+
+        for attempt in range(1, retries + 2):
+            try:
+                batch_frames = _extract_frames_by_symbol(
+                    download(batch, start=effective_start, end=effective_end, interval=interval, timeout=timeout),
+                    batch,
+                )
+                batch_error = None
+                break
+            except Exception as exc:
+                batch_error = exc
+                if attempt > retries:
+                    break
+
+        if batch_error is not None:
+            if _is_timeout_error(batch_error):
+                _append_warning(result.warnings, f'OHLCV incremental batch timeout for {", ".join(batch)}; falling back to symbol refresh.')
+            elif _is_rate_limit_error(batch_error):
+                _append_warning(result.warnings, f'OHLCV incremental rate-limit degradation for {", ".join(batch)}; falling back to symbol refresh.')
+            else:
+                _append_warning(result.warnings, f'OHLCV incremental batch fetch failed for {", ".join(batch)}; falling back to symbol refresh.')
+
+        for symbol, update_frame in batch_frames.items():
+            merged = _merge_frames(stale_cached_frames[symbol], update_frame)
+            result.frames[symbol] = merged
+            result.statuses[symbol] = SymbolLoadStatus(symbol=symbol, status='ok', source='cache+live', rows=len(merged), attempts=1)
+            write_json_cache(
+                cache_path(target_cache_dir, _ohlcv_namespace(window_key), _cache_key_for_symbol(symbol)),
+                _serialize_frame(merged),
+            )
+
+        missing_symbols = [symbol for symbol in batch if symbol not in batch_frames]
+        for symbol in missing_symbols if batch_frames else batch:
+            if symbol in result.frames:
+                continue
+            last_error: Exception | None = None
+            refresh_start = _refresh_start_date(
+                _cache_last_date(stale_cached_payloads[symbol], stale_cached_frames[symbol]),
+                period=period,
+                as_of=as_of,
+            )
+            refresh_end = _refresh_end_date(as_of)
+            for attempt in range(1, retries + 2):
+                try:
+                    update_frame = normalize_daily_ohlcv_frame(
+                        load_history(symbol, start=refresh_start, end=refresh_end, interval=interval, timeout=timeout),
+                    )
+                    merged = _merge_frames(stale_cached_frames[symbol], update_frame)
+                    result.frames[symbol] = merged
+                    result.statuses[symbol] = SymbolLoadStatus(symbol=symbol, status='ok', source='cache+live', rows=len(merged), attempts=attempt)
+                    write_json_cache(
+                        cache_path(target_cache_dir, _ohlcv_namespace(window_key), _cache_key_for_symbol(symbol)),
+                        _serialize_frame(merged),
+                    )
+                    last_error = None
+                    break
+                except Exception as exc:
+                    last_error = exc
+                    if attempt > retries:
+                        break
+            if last_error is None:
+                continue
+            cached = stale_cached_frames[symbol]
+            result.frames[symbol] = cached
+            result.statuses[symbol] = SymbolLoadStatus(
+                symbol=symbol,
+                status='ok',
+                source='cache-fallback',
+                rows=len(cached),
+                attempts=retries + 1,
+                message=str(last_error),
+            )
+            if _is_timeout_error(last_error):
+                _append_warning(result.warnings, f'OHLCV incremental timeout for {symbol}; using cached history.')
+            elif _is_rate_limit_error(last_error):
+                _append_warning(result.warnings, f'OHLCV incremental rate-limit degradation for {symbol}; using cached history.')
+            else:
+                _append_warning(result.warnings, f'OHLCV incremental refresh failed for {symbol}; using cached history.')
+
     result.metadata = {
         'run_metadata': {
             'window_key': window_key,
@@ -327,6 +521,7 @@ def load_daily_ohlcv(
             'batch_size': max(1, batch_size),
             'timeout': timeout,
             'retries': retries,
+            'refresh': refresh,
             'warnings': list(result.warnings),
         }
     }
