@@ -154,12 +154,18 @@ jobs:
         if: steps.gate.outputs.should_run == 'true'
         run: mkdir -p reports/site reports/oneil-live
 
-      - name: Run premarket chain
+      - name: Run premarket scan
+        if: steps.gate.outputs.should_run == 'true' && (steps.gate.outputs.run_family == 'premarket' || steps.gate.outputs.run_family == 'full')
+        run: python scan.py
+
+      - name: Build premarket markdown report
+        if: steps.gate.outputs.should_run == 'true' && (steps.gate.outputs.run_family == 'premarket' || steps.gate.outputs.run_family == 'full')
+        run: python scripts/build_premarket_report.py packet.json REPORT.md
+
+      - name: Render premarket HTML report
         if: steps.gate.outputs.should_run == 'true' && (steps.gate.outputs.run_family == 'premarket' || steps.gate.outputs.run_family == 'full')
         shell: bash
         run: |
-          python scan.py
-          python scripts/build_premarket_report.py packet.json REPORT.md
           python render_report.py REPORT.md $(python - <<'PY'
           from datetime import datetime
           from zoneinfo import ZoneInfo

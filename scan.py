@@ -5,6 +5,7 @@ import time
 from datetime import datetime, timedelta
 from html import unescape
 from pathlib import Path
+import traceback
 from zoneinfo import ZoneInfo
 
 import feedparser
@@ -685,7 +686,6 @@ def build_gaps_to_fill():
 
 
 def main():
-    log("starting premarket scan")
     packet = {
         "generated_at": iso_now(),
         "candidate_source": None,
@@ -699,20 +699,27 @@ def main():
         "gaps_to_fill": build_gaps_to_fill(),
         "warnings": [],
     }
-    packet["market_snapshot"], snapshot_network_failures = build_market_snapshot()
-    if snapshot_network_failures:
-        append_warning(packet, "Some market snapshot requests failed, likely due to Yahoo/network resolution issues.")
-    packet["market_news"] = build_market_news()
-    packet["econ_calendar"] = fetch_econ_calendar()
-    candidate_source, gappers = build_live_top_movers()
-    packet["candidate_source"] = candidate_source
-    enriched = []
-    for gapper in gappers:
-        enriched.append(enrich_gapper(gapper, packet["market_news"]))
-        time.sleep(0.2)
-    packet["gappers"] = enriched
-    if packet["candidate_source"] == "fallback_universe" and not packet["gappers"]:
-        append_warning(packet, "Live Yahoo data appears unavailable; the scan fell back and still produced zero qualified names.")
+    try:
+        log("starting premarket scan")
+        packet["market_snapshot"], snapshot_network_failures = build_market_snapshot()
+        if snapshot_network_failures:
+            append_warning(packet, "Some market snapshot requests failed, likely due to Yahoo/network resolution issues.")
+        packet["market_news"] = build_market_news()
+        packet["econ_calendar"] = fetch_econ_calendar()
+        candidate_source, gappers = build_live_top_movers()
+        packet["candidate_source"] = candidate_source
+        enriched = []
+        for gapper in gappers:
+            enriched.append(enrich_gapper(gapper, packet["market_news"]))
+            time.sleep(0.2)
+        packet["gappers"] = enriched
+        if packet["candidate_source"] == "fallback_universe" and not packet["gappers"]:
+            append_warning(packet, "Live Yahoo data appears unavailable; the scan fell back and still produced zero qualified names.")
+    except Exception as exc:
+        append_warning(packet, f"Premarket scan degraded after an unexpected error: {exc}")
+        append_warning(packet, traceback.format_exc(limit=3))
+        log(f"premarket scan degraded: {exc}")
+
     PACKET_PATH.write_text(json.dumps(packet, indent=2, ensure_ascii=False))
     log(f"wrote {PACKET_PATH}")
 
