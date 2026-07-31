@@ -14,8 +14,10 @@ on:
       - 'prompt_merge.md'
       - 'scripts/build_premarket_report.py'
       - 'scripts/render_market_report_hub.py'
+      - 'scripts/render_backtest_overview_html.py'
       - 'scripts/scan_oneil_setups.py'
       - 'scripts/notify_telegram_market_report.py'
+      - 'reports/oneil_backtest_overview.html'
       - '.github/workflows/premarket-report.yml'
   workflow_dispatch:
     inputs:

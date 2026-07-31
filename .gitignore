@@ -65,4 +65,5 @@ MEMORY.md
 .claude/worktrees/
 
 docs/superpowers/
-reports/
+reports/*
+!reports/oneil_backtest_overview.html
