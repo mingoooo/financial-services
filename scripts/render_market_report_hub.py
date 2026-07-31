@@ -137,6 +137,12 @@ def stable_page_href(slug: str, lang: str) -> str:
     return f'{slug}/index.html'
 
 
+def stable_source_href(source_path: Path) -> str:
+    if source_path.parent.name == 'oneil-live':
+        return f'oneil-live/{source_path.name}'
+    return source_path.name
+
+
 def page_record(
     *,
     slug: str,
@@ -169,7 +175,7 @@ def page_record(
         page['source_href'] = source_href_value
     elif resolved_source is not None:
         target_output = output_dir / href
-        page['source_href'] = relative_href(target_output, resolved_source)
+        page['source_href'] = relative_href(target_output, output_dir / stable_source_href(resolved_source))
 
     if published_at:
         page['published_at'] = published_at
@@ -517,6 +523,18 @@ def cleanup_unavailable_wrapper(output_dir: Path, page: dict[str, Any]) -> None:
         target.unlink()
 
 
+def sync_local_source_preview(output_dir: Path, page: dict[str, Any]) -> None:
+    source_path_raw = page.get('source_path')
+    if not source_path_raw or not page.get('available'):
+        return
+    source_path = Path(source_path_raw)
+    if not source_path.exists():
+        return
+    preview_target = output_dir / stable_source_href(source_path)
+    ensure_parent(preview_target)
+    preview_target.write_bytes(source_path.read_bytes())
+
+
 def render_site(manifest: dict[str, Any], *, output_dir: Path) -> dict[str, Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     written: dict[str, Path] = {}
@@ -535,6 +553,7 @@ def render_site(manifest: dict[str, Any], *, output_dir: Path) -> dict[str, Path
             language = page['lang'] if page.get('lang') in {'zh', 'en'} else 'en'
             target = output_dir / page['href']
             if page.get('available'):
+                sync_local_source_preview(output_dir, page)
                 render_wrapper_page(page=page, family=family, output_path=target, language=language)
                 written[f"{family['slug']}:{page['lang']}"] = target
             else:

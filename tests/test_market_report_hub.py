@@ -79,9 +79,11 @@ def test_manifest_driven_render_creates_hub_and_preserves_expected_metadata(tmp_
     assert '返回首页' in zh_wrapper
     assert '../index.html' in zh_wrapper
     assert '打开原报告' in zh_wrapper
+    assert '../premarket_zh.html' in zh_wrapper
     assert 'Back to hub' in en_wrapper
     assert '../index_en.html' in en_wrapper
     assert 'Open source report' in en_wrapper
+    assert '../premarket_en.html' in en_wrapper or '../premarket_.html' in en_wrapper
     assert '<html lang="en">' in en_wrapper
     assert '返回首页' not in en_wrapper
     assert '打开原报告' not in en_wrapper
@@ -144,15 +146,18 @@ def test_explicit_sources_render_with_fallback_shape_and_optional_backtest(tmp_p
     assert '返回首页' in zh_wrapper
     assert '../index.html' in zh_wrapper
     assert '打开原报告' in zh_wrapper
-    assert '../../reports/premarket_zh.html' in zh_wrapper
+    assert '../premarket_zh.html' in zh_wrapper
     assert 'Back to hub' in en_wrapper
     assert '../index_en.html' in en_wrapper
     assert 'Open source report' in en_wrapper
-    assert '../../reports/premarket_.html' in en_wrapper
+    assert '../premarket_.html' in en_wrapper
     assert '<html lang="en">' in en_wrapper
     assert '返回首页' not in en_wrapper
     assert '打开原报告' not in en_wrapper
-    assert '../../reports/oneil-live/live-full-latest.html' in oneil_wrapper
+    assert '../oneil-live/live-full-latest.html' in oneil_wrapper
+    assert (output_dir / 'premarket_zh.html').exists()
+    assert (output_dir / 'premarket_.html').exists()
+    assert (output_dir / 'oneil-live' / 'live-full-latest.html').exists()
 
     manifest = json.loads((output_dir / 'site_manifest.json').read_text(encoding='utf-8'))
     premarket_family = next(family for family in manifest['families'] if family['slug'] == 'premarket')
