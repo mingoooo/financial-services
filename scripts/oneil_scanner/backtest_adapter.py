@@ -7,6 +7,10 @@ from .models import PatternCandidate
 
 
 SUPPORTED_V1_FAMILIES = frozenset({'ibd_base_family', 'vcp_breakout_family'})
+SUPPORTED_V1_PATTERN_TYPES = {
+    'ibd_base_family': frozenset({'cup-with-handle', 'double-bottom', 'flat-base'}),
+    'vcp_breakout_family': frozenset({'vcp', '52-week-high-breakout', 'platform-breakout'}),
+}
 
 _RANKING_WEIGHTS = {
     'setup_score': 0.50,
@@ -26,7 +30,7 @@ class ScannerBacktestSignal:
     primary_pattern_family: str
     primary_pattern_type: str
     primary_pattern_variant: str
-    secondary_patterns: list[str]
+    secondary_patterns: tuple[str, ...]
     ranking_score: float | None
     quality_score: float | None
     setup_score: float | None
@@ -54,7 +58,7 @@ def candidate_to_signal(candidate: PatternCandidate) -> ScannerBacktestSignal:
         primary_pattern_family=candidate.pattern_family,
         primary_pattern_type=candidate.pattern_type,
         primary_pattern_variant=candidate.pattern_variant,
-        secondary_patterns=[],
+        secondary_patterns=(),
         ranking_score=ranking_score,
         quality_score=_clamp_score(candidate.quality_score),
         setup_score=_clamp_score(candidate.setup_score),
@@ -94,7 +98,7 @@ def collapse_candidates_for_day(candidates: list[PatternCandidate]) -> ScannerBa
         primary_pattern_family=primary.primary_pattern_family,
         primary_pattern_type=primary.primary_pattern_type,
         primary_pattern_variant=primary.primary_pattern_variant,
-        secondary_patterns=secondary_patterns,
+        secondary_patterns=tuple(secondary_patterns),
         ranking_score=primary.ranking_score,
         quality_score=primary.quality_score,
         setup_score=primary.setup_score,
@@ -106,6 +110,13 @@ def collapse_candidates_for_day(candidates: list[PatternCandidate]) -> ScannerBa
 def _validate_supported_candidate(candidate: PatternCandidate) -> None:
     if candidate.pattern_family not in SUPPORTED_V1_FAMILIES:
         raise ValueError(f'unsupported scanner family for V1 adapter: {candidate.pattern_family}')
+
+    supported_types = SUPPORTED_V1_PATTERN_TYPES[candidate.pattern_family]
+    if candidate.pattern_type not in supported_types:
+        raise ValueError(
+            'unsupported scanner pattern_type for V1 adapter: '
+            f'{candidate.pattern_family}:{candidate.pattern_type}'
+        )
 
 
 def _secondary_pattern_label(signal: ScannerBacktestSignal) -> str:
@@ -151,7 +162,11 @@ def _next_trading_day_placeholder(trigger_date: str | None) -> str | None:
         parsed = date.fromisoformat(trigger_date)
     except ValueError:
         return None
-    return (parsed + timedelta(days=1)).isoformat()
+
+    next_business_day = parsed + timedelta(days=1)
+    while next_business_day.weekday() >= 5:
+        next_business_day += timedelta(days=1)
+    return next_business_day.isoformat()
 
 
 def _signal_order_key(signal: ScannerBacktestSignal) -> tuple[float, float, float, float, str, str, str]:
@@ -172,4 +187,10 @@ def _sort_score(value: float | None) -> float:
     return value
 
 
-__all__ = ['SUPPORTED_V1_FAMILIES', 'ScannerBacktestSignal', 'candidate_to_signal', 'collapse_candidates_for_day']
+__all__ = [
+    'SUPPORTED_V1_FAMILIES',
+    'SUPPORTED_V1_PATTERN_TYPES',
+    'ScannerBacktestSignal',
+    'candidate_to_signal',
+    'collapse_candidates_for_day',
+]

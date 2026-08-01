@@ -51,12 +51,12 @@ def test_candidate_to_signal_converts_one_supported_candidate() -> None:
     assert isinstance(signal, ScannerBacktestSignal)
     assert signal.symbol == 'AAPL'
     assert signal.trigger_date == '2026-07-17'
-    assert signal.entry_date == '2026-07-18'
+    assert signal.entry_date == '2026-07-20'
     assert signal.entry_price_ref == 215.5
     assert signal.breakout_level == 215.5
     assert signal.stop_reference == 205.0
     assert signal.primary_pattern_type == 'cup-with-handle'
-    assert signal.secondary_patterns == []
+    assert signal.secondary_patterns == ()
     assert signal.ranking_score == pytest.approx(95.2)
 
 
@@ -68,7 +68,7 @@ def test_collapse_candidates_for_day_merges_secondary_patterns() -> None:
 
     assert signal.symbol == 'AAPL'
     assert signal.primary_pattern_type == 'cup-with-handle'
-    assert signal.secondary_patterns == ['ibd_base_family:flat-base:tight']
+    assert signal.secondary_patterns == ('ibd_base_family:flat-base:tight',)
 
 
 def test_collapse_candidates_for_day_uses_ranking_score_to_choose_primary() -> None:
@@ -90,7 +90,7 @@ def test_collapse_candidates_for_day_uses_ranking_score_to_choose_primary() -> N
     signal = collapse_candidates_for_day([higher_quality_weaker_setup, lower_quality_better_setup])
 
     assert signal.primary_pattern_type == 'cup-with-handle'
-    assert signal.secondary_patterns == ['ibd_base_family:flat-base:tight']
+    assert signal.secondary_patterns == ('ibd_base_family:flat-base:tight',)
     assert signal.ranking_score == pytest.approx(95.1)
 
 
@@ -100,6 +100,31 @@ def test_candidate_to_signal_rejects_unsupported_v1_families(unsupported_family:
 
     with pytest.raises(ValueError, match='unsupported'):
         candidate_to_signal(candidate)
+
+
+@pytest.mark.parametrize(
+    ('pattern_family', 'pattern_type'),
+    [
+        ('ibd_base_family', 'cup-with-handel'),
+        ('vcp_breakout_family', 'pivot-breakout'),
+    ],
+)
+def test_candidate_to_signal_rejects_unknown_v1_pattern_types(pattern_family: str, pattern_type: str) -> None:
+    candidate = _candidate(pattern_family=pattern_family, pattern_type=pattern_type)
+
+    with pytest.raises(ValueError, match='pattern_type'):
+        candidate_to_signal(candidate)
+
+
+def test_candidate_to_signal_uses_next_business_day_placeholder() -> None:
+    friday_candidate = _candidate(trigger_date='2026-07-17')
+    monday_candidate = _candidate(trigger_date='2026-07-20')
+
+    friday_signal = candidate_to_signal(friday_candidate)
+    monday_signal = candidate_to_signal(monday_candidate)
+
+    assert friday_signal.entry_date == '2026-07-20'
+    assert monday_signal.entry_date == '2026-07-21'
 
 
 def test_candidate_to_signal_renormalizes_ranking_when_rs_missing() -> None:
