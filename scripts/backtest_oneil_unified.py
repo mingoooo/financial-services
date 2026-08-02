@@ -6,14 +6,24 @@ import csv
 import io
 import json
 import math
+import sys
 import zipfile
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
+
+import pandas as pd
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.oneil_scanner.backtest_adapter import ScannerBacktestSignal, load_or_build_day_signals
 
 PRICE_DIR = Path('/Users/huangsm43/Documents/mingo/code/backtest/data/equity/usa/daily')
 STATIC_CANDIDATE_FILE = Path('/Users/huangsm43/Documents/mingo/code/backtest/data/custom/fundamentals/oneil_candidates_latest.csv')
 FUNDAMENTALS_DATASET = Path('/Users/huangsm43/Documents/mingo/code/backtest/data/custom/fundamentals/us_growth_quarterly.csv')
+SCANNER_CACHE_DIR = Path('.cache/oneil-backtest-scanner-signals')
 INITIAL_CAPITAL = 100000.0
 MAX_POSITIONS = 8
 MAX_NEW_POSITIONS_PER_DAY = 2
@@ -56,6 +66,7 @@ class FundamentalPoint:
 @dataclass
 class PortfolioTrade:
     symbol: str
+    trigger_date: str | None
     entry_date: str
     entry_price: float
     stop_price: float
@@ -69,6 +80,12 @@ class PortfolioTrade:
     volume_ratio: float
     exit_reason: str
     universe_score: float
+    primary_pattern_family: str | None = None
+    primary_pattern_type: str | None = None
+    primary_pattern_variant: str | None = None
+    secondary_patterns: list[str] = field(default_factory=list)
+    breakout_level: float | None = None
+    stop_reference: float | None = None
 
 
 def symbol_group(symbol: str) -> str:
@@ -348,6 +365,120 @@ def build_bars_by_symbol(symbols: list[str], start: datetime, end: datetime) -> 
     return {symbol: load_bars(symbol, start, end) for symbol in symbols}
 
 
+def discover_price_zip_symbols(price_dir: Path = PRICE_DIR) -> list[str]:
+    symbols: list[str] = []
+    for path in sorted(price_dir.glob('*.zip')):
+        symbol = path.stem.upper()
+        if symbol == 'SPY':
+            continue
+        symbols.append(symbol)
+    return symbols
+
+
+def discover_scanner_symbols(price_dir: Path = PRICE_DIR) -> list[str]:
+    return discover_price_zip_symbols(price_dir)
+
+
+def bars_to_frame(bars: list[dict]) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            'Date': [bar['date'] for bar in bars],
+            'Open': [bar['open'] for bar in bars],
+            'High': [bar['high'] for bar in bars],
+            'Low': [bar['low'] for bar in bars],
+            'Close': [bar['close'] for bar in bars],
+            'Volume': [bar['volume'] for bar in bars],
+        }
+    )
+
+
+def build_raw_frames_by_symbol(bars_by_symbol: dict[str, list[dict]]) -> dict[str, pd.DataFrame]:
+    return {symbol: bars_to_frame(bars) for symbol, bars in bars_by_symbol.items() if bars}
+
+
+def _find_bar_index(bars: list[dict], day: str) -> int | None:
+    return next((i for i, bar in enumerate(bars) if bar['date'].strftime('%Y-%m-%d') == day), None)
+
+
+def _legacy_stop_fallback(bars: list[dict], trigger_idx: int) -> float | None:
+    if trigger_idx is None or trigger_idx < 20:
+        return None
+    atr14 = atr(bars, 14, trigger_idx)
+    if atr14 is None:
+        return None
+    recent = bars[trigger_idx - 20:trigger_idx]
+    if len(recent) < 20:
+        return None
+    recent_low = min(item['low'] for item in recent)
+    trigger_close = bars[trigger_idx]['close']
+    return max(recent_low, trigger_close - atr14 * 1.8)
+
+
+def build_scanner_entry_signal(
+    scanner_signal: ScannerBacktestSignal,
+    *,
+    bars_by_symbol: dict[str, list[dict]],
+    entry_day: str,
+    warnings: list[str],
+) -> dict | None:
+    bars = bars_by_symbol.get(scanner_signal.symbol, [])
+    trigger_idx = _find_bar_index(bars, scanner_signal.trigger_date or '') if scanner_signal.trigger_date else None
+    entry_idx = _find_bar_index(bars, entry_day)
+    if trigger_idx is None:
+        warnings.append(f'Missing trigger bar for {scanner_signal.symbol} on {scanner_signal.trigger_date}; skipping signal.')
+        return None
+    if entry_idx is None:
+        warnings.append(f'Missing next-day entry bar for {scanner_signal.symbol} on {entry_day}; skipping signal.')
+        return None
+
+    trigger_bar = bars[trigger_idx]
+    entry_bar = bars[entry_idx]
+    initial_stop_price = scanner_signal.stop_reference
+    if initial_stop_price is None:
+        initial_stop_price = _legacy_stop_fallback(bars, trigger_idx)
+    if initial_stop_price is None or initial_stop_price <= 0:
+        warnings.append(f'Unable to derive safe stop for {scanner_signal.symbol} on {scanner_signal.trigger_date}; skipping signal.')
+        return None
+
+    lookback = bars[max(0, trigger_idx - 20):trigger_idx]
+    avg_vol20 = sum(bar['volume'] for bar in lookback) / len(lookback) if lookback else 0.0
+    volume_ratio = trigger_bar['volume'] / avg_vol20 if avg_vol20 > 0 else 0.0
+    breakout_level = scanner_signal.breakout_level or scanner_signal.entry_price_ref or 0.0
+    breakout_strength = (trigger_bar['close'] / breakout_level - 1.0) * 100.0 if breakout_level > 0 else 0.0
+    return {
+        'symbol': scanner_signal.symbol,
+        'trigger_date': scanner_signal.trigger_date,
+        'entry_price': apply_slippage(entry_bar['open'], 'buy'),
+        'initial_stop_price': initial_stop_price,
+        'breakout_strength_pct': breakout_strength,
+        'volume_ratio': volume_ratio,
+        'universe_score': scanner_signal.ranking_score or 0.0,
+        'ranking_score': scanner_signal.ranking_score or 0.0,
+        'setup_score': scanner_signal.setup_score or 0.0,
+        'quality_score': scanner_signal.quality_score or 0.0,
+        'rs_score': scanner_signal.normalized_rs_score or 0.0,
+        'primary_pattern_family': scanner_signal.primary_pattern_family,
+        'primary_pattern_type': scanner_signal.primary_pattern_type,
+        'primary_pattern_variant': scanner_signal.primary_pattern_variant,
+        'secondary_patterns': list(scanner_signal.secondary_patterns),
+        'breakout_level': scanner_signal.breakout_level,
+        'stop_reference': scanner_signal.stop_reference,
+    }
+
+
+def rank_scanner_signals(signals: list[dict]) -> list[dict]:
+    return sorted(
+        signals,
+        key=lambda item: (
+            item.get('ranking_score', 0.0),
+            item.get('setup_score', 0.0),
+            item.get('quality_score', 0.0),
+            item.get('rs_score', 0.0),
+        ),
+        reverse=True,
+    )
+
+
 
 def build_group_counts(positions: dict[str, dict]) -> dict[str, int]:
     group_counts: dict[str, int] = {}
@@ -409,9 +540,34 @@ def build_entry_signal(symbol: str, universe_score: float, bars_by_symbol: dict[
         'universe_score': universe_score,
     }
 
-def run_backtest(start: datetime, end: datetime, universe_mode: str, static_candidate_file: Path, fundamentals_dataset: Path) -> dict:
+def run_backtest(
+    start: datetime,
+    end: datetime,
+    universe_mode: str,
+    static_candidate_file: Path,
+    fundamentals_dataset: Path,
+    *,
+    signal_source: str = 'legacy',
+    scanner_cache_dir: Path = SCANNER_CACHE_DIR,
+    refresh_scanner_cache: bool = False,
+    pattern_families: list[str] | None = None,
+    pattern_types: list[str] | None = None,
+    min_dollar_volume: float = MIN_AVG_DOLLAR_VOLUME,
+) -> dict:
     warmup_start = start - timedelta(days=260)
-    if universe_mode == 'static':
+    scanner_warnings: list[str] = []
+    scanner_signal_symbols_seen: set[str] = set()
+    raw_frames_by_symbol: dict[str, pd.DataFrame] = {}
+    benchmark_frame: pd.DataFrame | None = None
+
+    if signal_source == 'scanner':
+        tradable_symbols = [symbol for symbol in discover_scanner_symbols() if symbol != 'SPY']
+        all_symbols = sorted(set(tradable_symbols) | {'SPY'})
+        bars_by_symbol = build_bars_by_symbol(all_symbols, warmup_start, end)
+        raw_frames_by_symbol = build_raw_frames_by_symbol({symbol: bars_by_symbol[symbol] for symbol in tradable_symbols if symbol in bars_by_symbol})
+        benchmark_frame = bars_to_frame(bars_by_symbol['SPY']) if bars_by_symbol.get('SPY') else None
+        daily_candidates: dict[str, dict[str, float]] = {}
+    elif universe_mode == 'static':
         bars_by_symbol = {}
         daily_candidates = load_daily_candidates(universe_mode, static_candidate_file, fundamentals_dataset, bars_by_symbol, start, end)
         all_symbols = sorted({symbol for day_map in daily_candidates.values() for symbol in day_map} | {'SPY'})
@@ -421,7 +577,8 @@ def run_backtest(start: datetime, end: datetime, universe_mode: str, static_cand
         bars_by_symbol = build_bars_by_symbol(all_symbols, warmup_start, end)
         daily_candidates = load_daily_candidates(universe_mode, static_candidate_file, fundamentals_dataset, bars_by_symbol, start, end)
         all_symbols = sorted({symbol for day_map in daily_candidates.values() for symbol in day_map} | {'SPY'})
-    bars_by_symbol = build_bars_by_symbol(all_symbols, warmup_start, end)
+    if signal_source != 'scanner':
+        bars_by_symbol = build_bars_by_symbol(all_symbols, warmup_start, end)
     spy_filter = build_spy_entry_filter(start, end) if SPY_ENTRY_FILTER else {}
 
     trading_days = sorted({bar['date'].strftime('%Y-%m-%d') for symbol in all_symbols if symbol != 'SPY' for bar in bars_by_symbol[symbol] if start <= bar['date'] <= end})
@@ -432,7 +589,7 @@ def run_backtest(start: datetime, end: datetime, universe_mode: str, static_cand
     monthly_pnl: dict[str, float] = {}
     signal_trade_count = 0
 
-    for day in trading_days:
+    for day_index, day in enumerate(trading_days):
         group_counts = build_group_counts(positions)
 
         exits = []
@@ -470,7 +627,31 @@ def run_backtest(start: datetime, end: datetime, universe_mode: str, static_cand
                 proceeds = position['shares'] * exit_price - COMMISSION_PER_TRADE
                 cash += proceeds
                 pnl = proceeds - position['cost_basis']
-                trades.append(PortfolioTrade(symbol=symbol, entry_date=position['entry_date'], entry_price=position['entry_price'], stop_price=position['initial_stop_price'], exit_date=day, exit_price=exit_price, shares=position['shares'], allocated_capital=position['cost_basis'], pnl=pnl, return_pct=(proceeds / position['cost_basis'] - 1) * 100, breakout_strength_pct=position['breakout_strength_pct'], volume_ratio=position['volume_ratio'], exit_reason=exit_reason, universe_score=position['universe_score']))
+                trades.append(
+                    PortfolioTrade(
+                        symbol=symbol,
+                        trigger_date=position.get('trigger_date'),
+                        entry_date=position['entry_date'],
+                        entry_price=position['entry_price'],
+                        stop_price=position['initial_stop_price'],
+                        exit_date=day,
+                        exit_price=exit_price,
+                        shares=position['shares'],
+                        allocated_capital=position['cost_basis'],
+                        pnl=pnl,
+                        return_pct=(proceeds / position['cost_basis'] - 1) * 100,
+                        breakout_strength_pct=position['breakout_strength_pct'],
+                        volume_ratio=position['volume_ratio'],
+                        exit_reason=exit_reason,
+                        universe_score=position['universe_score'],
+                        primary_pattern_family=position.get('primary_pattern_family'),
+                        primary_pattern_type=position.get('primary_pattern_type'),
+                        primary_pattern_variant=position.get('primary_pattern_variant'),
+                        secondary_patterns=list(position.get('secondary_patterns', [])),
+                        breakout_level=position.get('breakout_level'),
+                        stop_reference=position.get('stop_reference'),
+                    )
+                )
                 monthly_pnl[day[:7]] = monthly_pnl.get(day[:7], 0.0) + pnl
                 exits.append(symbol)
         for symbol in exits:
@@ -484,19 +665,51 @@ def run_backtest(start: datetime, end: datetime, universe_mode: str, static_cand
         if len(positions) >= MAX_POSITIONS:
             continue
 
-        todays_candidates = daily_candidates.get(day, {})
         signals = []
-        for symbol, universe_score in todays_candidates.items():
-            if symbol in positions or symbol == 'SPY':
-                continue
-            group = symbol_group(symbol)
-            if group_counts.get(group, 0) >= MAX_GROUP_POSITIONS:
-                continue
-            signal = build_entry_signal(symbol, universe_score, bars_by_symbol, day)
-            if signal is not None:
-                signal_trade_count += 1
-                signals.append(signal)
-        signals = rank_signals(signals, universe_mode, bars_by_symbol, day)
+        if signal_source == 'scanner':
+            if day_index > 0:
+                trigger_day = trading_days[day_index - 1]
+                day_cache = load_or_build_day_signals(
+                    cache_dir=scanner_cache_dir,
+                    day=trigger_day,
+                    frames_by_symbol=raw_frames_by_symbol,
+                    refresh=refresh_scanner_cache,
+                    detector_families=pattern_families,
+                    pattern_types=pattern_types,
+                    min_avg_dollar_volume=min_dollar_volume,
+                    benchmark_frame=benchmark_frame,
+                )
+                scanner_warnings.extend(day_cache.warnings)
+                for scanner_signal in day_cache.signals:
+                    scanner_signal_symbols_seen.add(scanner_signal.symbol)
+                    if scanner_signal.symbol in positions or scanner_signal.symbol == 'SPY':
+                        continue
+                    group = symbol_group(scanner_signal.symbol)
+                    if group_counts.get(group, 0) >= MAX_GROUP_POSITIONS:
+                        continue
+                    signal = build_scanner_entry_signal(
+                        scanner_signal,
+                        bars_by_symbol=bars_by_symbol,
+                        entry_day=day,
+                        warnings=scanner_warnings,
+                    )
+                    if signal is not None:
+                        signal_trade_count += 1
+                        signals.append(signal)
+                signals = rank_scanner_signals(signals)
+        else:
+            todays_candidates = daily_candidates.get(day, {})
+            for symbol, universe_score in todays_candidates.items():
+                if symbol in positions or symbol == 'SPY':
+                    continue
+                group = symbol_group(symbol)
+                if group_counts.get(group, 0) >= MAX_GROUP_POSITIONS:
+                    continue
+                signal = build_entry_signal(symbol, universe_score, bars_by_symbol, day)
+                if signal is not None:
+                    signal_trade_count += 1
+                    signals.append(signal)
+            signals = rank_signals(signals, universe_mode, bars_by_symbol, day)
 
         opened_today = 0
         for signal in signals:
@@ -521,7 +734,27 @@ def run_backtest(start: datetime, end: datetime, universe_mode: str, static_cand
             if shares <= 0 or total_cost > cash:
                 continue
             cash -= total_cost
-            positions[signal['symbol']] = {'symbol': signal['symbol'], 'entry_date': day, 'entry_price': signal['entry_price'], 'initial_stop_price': signal['initial_stop_price'], 'stop_price': signal['initial_stop_price'], 'shares': shares, 'cost_basis': total_cost, 'highest_close': signal['entry_price'], 'below_sma20': 0, 'breakout_strength_pct': signal['breakout_strength_pct'], 'volume_ratio': signal['volume_ratio'], 'universe_score': signal['universe_score']}
+            positions[signal['symbol']] = {
+                'symbol': signal['symbol'],
+                'trigger_date': signal.get('trigger_date'),
+                'entry_date': day,
+                'entry_price': signal['entry_price'],
+                'initial_stop_price': signal['initial_stop_price'],
+                'stop_price': signal['initial_stop_price'],
+                'shares': shares,
+                'cost_basis': total_cost,
+                'highest_close': signal['entry_price'],
+                'below_sma20': 0,
+                'breakout_strength_pct': signal['breakout_strength_pct'],
+                'volume_ratio': signal['volume_ratio'],
+                'universe_score': signal['universe_score'],
+                'primary_pattern_family': signal.get('primary_pattern_family'),
+                'primary_pattern_type': signal.get('primary_pattern_type'),
+                'primary_pattern_variant': signal.get('primary_pattern_variant'),
+                'secondary_patterns': list(signal.get('secondary_patterns', [])),
+                'breakout_level': signal.get('breakout_level'),
+                'stop_reference': signal.get('stop_reference'),
+            }
             group_counts[group] = group_counts.get(group, 0) + 1
             opened_today += 1
 
@@ -532,7 +765,31 @@ def run_backtest(start: datetime, end: datetime, universe_mode: str, static_cand
         proceeds = position['shares'] * exit_price - COMMISSION_PER_TRADE
         cash += proceeds
         pnl = proceeds - position['cost_basis']
-        trades.append(PortfolioTrade(symbol=symbol, entry_date=position['entry_date'], entry_price=position['entry_price'], stop_price=position['initial_stop_price'], exit_date=last['date'].strftime('%Y-%m-%d'), exit_price=exit_price, shares=position['shares'], allocated_capital=position['cost_basis'], pnl=pnl, return_pct=(proceeds / position['cost_basis'] - 1) * 100, breakout_strength_pct=position['breakout_strength_pct'], volume_ratio=position['volume_ratio'], exit_reason='eod', universe_score=position['universe_score']))
+        trades.append(
+            PortfolioTrade(
+                symbol=symbol,
+                trigger_date=position.get('trigger_date'),
+                entry_date=position['entry_date'],
+                entry_price=position['entry_price'],
+                stop_price=position['initial_stop_price'],
+                exit_date=last['date'].strftime('%Y-%m-%d'),
+                exit_price=exit_price,
+                shares=position['shares'],
+                allocated_capital=position['cost_basis'],
+                pnl=pnl,
+                return_pct=(proceeds / position['cost_basis'] - 1) * 100,
+                breakout_strength_pct=position['breakout_strength_pct'],
+                volume_ratio=position['volume_ratio'],
+                exit_reason='eod',
+                universe_score=position['universe_score'],
+                primary_pattern_family=position.get('primary_pattern_family'),
+                primary_pattern_type=position.get('primary_pattern_type'),
+                primary_pattern_variant=position.get('primary_pattern_variant'),
+                secondary_patterns=list(position.get('secondary_patterns', [])),
+                breakout_level=position.get('breakout_level'),
+                stop_reference=position.get('stop_reference'),
+            )
+        )
         monthly_pnl[last['date'].strftime('%Y-%m')] = monthly_pnl.get(last['date'].strftime('%Y-%m'), 0.0) + pnl
 
     final_equity = cash
@@ -548,19 +805,67 @@ def run_backtest(start: datetime, end: datetime, universe_mode: str, static_cand
     profit_factor = gross_profit / gross_loss if gross_loss > 0 else (math.inf if gross_profit > 0 else 0.0)
     years = max((end - start).days / 365.25, 1e-9)
     annualized = ((final_equity / INITIAL_CAPITAL) ** (1 / years) - 1) * 100 if final_equity > 0 else 0.0
-    return {'universe_mode': universe_mode, 'start': start.strftime('%Y-%m-%d'), 'end': end.strftime('%Y-%m-%d'), 'candidate_count': len({symbol for day_map in daily_candidates.values() for symbol in day_map}), 'signal_trade_count': signal_trade_count, 'executed_trade_count': len(trades), 'win_rate_pct': round(len(wins) / len(trades) * 100, 2) if trades else 0.0, 'average_trade_return_pct': round(avg_return, 4), 'initial_capital': INITIAL_CAPITAL, 'final_equity': round(final_equity, 2), 'total_return_pct': round((final_equity / INITIAL_CAPITAL - 1) * 100, 2), 'annualized_return_pct': round(annualized, 2), 'max_drawdown_pct': round(max_dd * 100, 2), 'profit_factor': round(profit_factor, 3) if trades else 0.0, 'monthly_pnl': monthly_pnl, 'equity_curve': equity_curve, 'trades': [asdict(trade) for trade in trades]}
+    candidate_count = len(scanner_signal_symbols_seen) if signal_source == 'scanner' else len({symbol for day_map in daily_candidates.values() for symbol in day_map})
+    warnings = list(dict.fromkeys(scanner_warnings))
+    return {
+        'signal_source': signal_source,
+        'universe_mode': universe_mode,
+        'start': start.strftime('%Y-%m-%d'),
+        'end': end.strftime('%Y-%m-%d'),
+        'candidate_count': candidate_count,
+        'scanned_universe_count': len(raw_frames_by_symbol) if signal_source == 'scanner' else None,
+        'signal_trade_count': signal_trade_count,
+        'executed_trade_count': len(trades),
+        'win_rate_pct': round(len(wins) / len(trades) * 100, 2) if trades else 0.0,
+        'average_trade_return_pct': round(avg_return, 4),
+        'initial_capital': INITIAL_CAPITAL,
+        'final_equity': round(final_equity, 2),
+        'total_return_pct': round((final_equity / INITIAL_CAPITAL - 1) * 100, 2),
+        'annualized_return_pct': round(annualized, 2),
+        'max_drawdown_pct': round(max_dd * 100, 2),
+        'profit_factor': round(profit_factor, 3) if trades else 0.0,
+        'monthly_pnl': monthly_pnl,
+        'equity_curve': equity_curve,
+        'warnings': warnings,
+        'trades': [asdict(trade) for trade in trades],
+    }
 
 
-def main() -> int:
+def _parse_csv_list(value: str | None) -> list[str] | None:
+    if value is None:
+        return None
+    items = [item.strip() for item in value.split(',') if item.strip()]
+    return items or None
+
+
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description='Unified event-driven backtest for ONeil-style strategy with static, dynamic-growth, or dynamic-balanced universe modes.')
     parser.add_argument('--start', default='2025-06-30')
     parser.add_argument('--end', default='2026-06-29')
     parser.add_argument('--universe-mode', choices=['static', 'dynamic-growth', 'dynamic-balanced'], default='static')
+    parser.add_argument('--signal-source', choices=['legacy', 'scanner'], default='legacy')
     parser.add_argument('--candidate-file', default=str(STATIC_CANDIDATE_FILE))
     parser.add_argument('--fundamentals-dataset', default=str(FUNDAMENTALS_DATASET))
+    parser.add_argument('--scanner-cache-dir', default=str(SCANNER_CACHE_DIR))
+    parser.add_argument('--refresh-scanner-cache', action='store_true')
+    parser.add_argument('--pattern-families')
+    parser.add_argument('--pattern-types')
+    parser.add_argument('--min-dollar-volume', type=float, default=MIN_AVG_DOLLAR_VOLUME)
     parser.add_argument('--json-out')
-    args = parser.parse_args()
-    result = run_backtest(start=datetime.strptime(args.start, '%Y-%m-%d'), end=datetime.strptime(args.end, '%Y-%m-%d'), universe_mode=args.universe_mode, static_candidate_file=Path(args.candidate_file), fundamentals_dataset=Path(args.fundamentals_dataset))
+    args = parser.parse_args(argv)
+    result = run_backtest(
+        start=datetime.strptime(args.start, '%Y-%m-%d'),
+        end=datetime.strptime(args.end, '%Y-%m-%d'),
+        universe_mode=args.universe_mode,
+        static_candidate_file=Path(args.candidate_file),
+        fundamentals_dataset=Path(args.fundamentals_dataset),
+        signal_source=args.signal_source,
+        scanner_cache_dir=Path(args.scanner_cache_dir),
+        refresh_scanner_cache=args.refresh_scanner_cache,
+        pattern_families=_parse_csv_list(args.pattern_families),
+        pattern_types=_parse_csv_list(args.pattern_types),
+        min_dollar_volume=args.min_dollar_volume,
+    )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     if args.json_out:
         Path(args.json_out).write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')

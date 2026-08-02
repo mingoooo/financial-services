@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+import sys
 from types import SimpleNamespace
 
 import pandas as pd
 import pytest
 
+import scripts.backtest_oneil_unified as unified_backtest
 from scripts.oneil_scanner import ScannerBacktestSignal, candidate_to_signal, collapse_candidates_for_day
 from scripts.oneil_scanner import backtest_adapter as adapter
 from scripts.oneil_scanner.models import PatternCandidate
@@ -162,6 +164,21 @@ def _bars(symbol: str, days: int = 220, *, start: str = '2025-01-01') -> pd.Data
     )
 
 
+def _engine_bars(symbol: str, *, days: int = 260, start: str = '2025-01-01') -> list[dict[str, object]]:
+    frame = _bars(symbol, days=days, start=start)
+    return [
+        {
+            'date': row.Date.to_pydatetime(),
+            'open': float(row.Open),
+            'high': float(row.High),
+            'low': float(row.Low),
+            'close': float(row.Close),
+            'volume': float(row.Volume),
+        }
+        for row in frame.itertuples(index=False)
+    ]
+
+
 def test_day_cache_round_trip(tmp_path: Path) -> None:
     day = '2026-07-17'
     signal = candidate_to_signal(_candidate(trigger_date=day))
@@ -312,3 +329,155 @@ def test_family_level_failure_does_not_abort_other_families_for_symbol(tmp_path:
     assert len(result.signals) == 1
     assert result.signals[0].primary_pattern_family == 'vcp_breakout_family'
     assert any('ibd_base_family detector failed' in warning for warning in result.warnings)
+
+
+def test_signal_source_legacy_preserves_old_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_run_backtest(**kwargs: object) -> dict[str, object]:
+        captured.update(kwargs)
+        return {'ok': True}
+
+    monkeypatch.setattr(unified_backtest, 'run_backtest', fake_run_backtest)
+    monkeypatch.setattr(sys, 'argv', ['backtest_oneil_unified.py', '--start', '2025-08-01', '--end', '2025-08-01'])
+
+    exit_code = unified_backtest.main()
+
+    assert exit_code == 0
+    assert captured['signal_source'] == 'legacy'
+
+
+def test_signal_source_scanner_accepts_cli_flags(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_run_backtest(**kwargs: object) -> dict[str, object]:
+        captured.update(kwargs)
+        return {'ok': True}
+
+    monkeypatch.setattr(unified_backtest, 'run_backtest', fake_run_backtest)
+    monkeypatch.setattr(
+        sys,
+        'argv',
+        [
+            'backtest_oneil_unified.py',
+            '--start',
+            '2025-08-01',
+            '--end',
+            '2025-08-01',
+            '--signal-source',
+            'scanner',
+            '--scanner-cache-dir',
+            str(tmp_path),
+            '--refresh-scanner-cache',
+            '--pattern-families',
+            'ibd_base_family,vcp_breakout_family',
+            '--pattern-types',
+            'cup-with-handle,vcp',
+            '--min-dollar-volume',
+            '33000000',
+        ],
+    )
+
+    exit_code = unified_backtest.main()
+
+    assert exit_code == 0
+    assert captured['signal_source'] == 'scanner'
+    assert captured['scanner_cache_dir'] == tmp_path
+    assert captured['refresh_scanner_cache'] is True
+    assert captured['pattern_families'] == ['ibd_base_family', 'vcp_breakout_family']
+    assert captured['pattern_types'] == ['cup-with-handle', 'vcp']
+    assert captured['min_dollar_volume'] == pytest.approx(33_000_000.0)
+
+
+def test_signal_source_scanner_uses_adapter_signals_without_legacy_candidates(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    start = pd.Timestamp('2025-08-01').to_pydatetime()
+    end = pd.Timestamp('2025-08-04').to_pydatetime()
+    scanner_calls: list[dict[str, object]] = []
+
+    monkeypatch.setattr(unified_backtest, 'discover_price_zip_symbols', lambda price_dir=None: ['AAPL', 'MSFT', 'SPY'])
+    monkeypatch.setattr(
+        unified_backtest,
+        'build_bars_by_symbol',
+        lambda symbols, warmup_start, warmup_end: {symbol: _engine_bars(symbol) for symbol in symbols},
+    )
+    monkeypatch.setattr(
+        unified_backtest,
+        'load_daily_candidates',
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError('legacy candidates should not load')),
+    )
+    monkeypatch.setattr(unified_backtest, 'MAX_NEW_POSITIONS_PER_DAY', 1)
+
+    def fake_day_signals(**kwargs: object) -> adapter.DaySignalCache:
+        scanner_calls.append(kwargs)
+        assert set(kwargs['frames_by_symbol']) == {'AAPL', 'MSFT'}
+        return adapter.DaySignalCache(
+            date='2025-08-01',
+            signals=(
+                ScannerBacktestSignal(
+                    symbol='MSFT',
+                    trigger_date='2025-08-01',
+                    entry_date='2025-08-04',
+                    entry_price_ref=120.0,
+                    breakout_level=120.0,
+                    stop_reference=114.0,
+                    primary_pattern_family='vcp_breakout_family',
+                    primary_pattern_type='vcp',
+                    primary_pattern_variant='standard',
+                    secondary_patterns=(),
+                    ranking_score=98.0,
+                    quality_score=95.0,
+                    setup_score=99.0,
+                    rs_score=97.0,
+                    normalized_rs_score=97.0,
+                ),
+                ScannerBacktestSignal(
+                    symbol='AAPL',
+                    trigger_date='2025-08-01',
+                    entry_date='2025-08-04',
+                    entry_price_ref=110.0,
+                    breakout_level=110.0,
+                    stop_reference=104.0,
+                    primary_pattern_family='ibd_base_family',
+                    primary_pattern_type='cup-with-handle',
+                    primary_pattern_variant='standard',
+                    secondary_patterns=(),
+                    ranking_score=91.0,
+                    quality_score=90.0,
+                    setup_score=92.0,
+                    rs_score=89.0,
+                    normalized_rs_score=89.0,
+                ),
+            ),
+            warnings=(),
+        )
+
+    monkeypatch.setattr(unified_backtest, 'load_or_build_day_signals', fake_day_signals)
+
+    result = unified_backtest.run_backtest(
+        start=start,
+        end=end,
+        universe_mode='static',
+        static_candidate_file=Path('unused.csv'),
+        fundamentals_dataset=Path('unused_fundamentals.csv'),
+        signal_source='scanner',
+        scanner_cache_dir=tmp_path,
+        refresh_scanner_cache=True,
+        pattern_families=['ibd_base_family', 'vcp_breakout_family'],
+        pattern_types=['cup-with-handle', 'vcp'],
+        min_dollar_volume=33_000_000.0,
+    )
+
+    assert scanner_calls
+    assert scanner_calls[0]['cache_dir'] == tmp_path
+    assert scanner_calls[0]['refresh'] is True
+    assert scanner_calls[0]['detector_families'] == ['ibd_base_family', 'vcp_breakout_family']
+    assert scanner_calls[0]['pattern_types'] == ['cup-with-handle', 'vcp']
+    assert scanner_calls[0]['min_avg_dollar_volume'] == pytest.approx(33_000_000.0)
+    benchmark_frame = scanner_calls[0]['benchmark_frame']
+    assert benchmark_frame is not None
+    assert benchmark_frame.iloc[-1]['Date'].strftime('%Y-%m-%d') == '2025-12-30'
+    assert result['candidate_count'] == 2
+    assert result['trades'][0]['symbol'] == 'MSFT'

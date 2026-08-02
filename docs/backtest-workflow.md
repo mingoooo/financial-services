@@ -9,6 +9,20 @@ This repository includes a local research workflow for O'Neil-style equity backt
 - Unified overview HTML generator:
   - `/Users/huangsm43/Documents/mingo/code/financial-services/scripts/render_backtest_overview_html.py`
 
+## Signal Sources
+
+The unified runner now supports two entry signal sources:
+
+- `legacy`
+  - Existing handcrafted breakout entry path
+  - Preserves the historical `static` / `dynamic-*` candidate workflows
+- `scanner`
+  - Uses real O'Neil scanner detectors as the entry source
+  - Scans the full locally available US equity price universe from `PRICE_DIR`
+  - Excludes `SPY` from tradable candidates and keeps it only for the market filter
+  - Uses next-trading-day open execution after trigger-day close confirmation
+  - Caches day-level scanner signals under `.cache/oneil-backtest-scanner-signals/`
+
 ## Universe Modes
 
 The unified backtest runner supports three universe modes:
@@ -31,6 +45,7 @@ The unified backtest runner supports three universe modes:
 python3 /Users/huangsm43/Documents/mingo/code/financial-services/scripts/backtest_oneil_unified.py \
   --start 2025-06-30 \
   --end 2026-06-29 \
+  --signal-source legacy \
   --universe-mode static \
   --json-out /tmp/oneil_mode_static.json
 ```
@@ -41,6 +56,7 @@ python3 /Users/huangsm43/Documents/mingo/code/financial-services/scripts/backtes
 python3 /Users/huangsm43/Documents/mingo/code/financial-services/scripts/backtest_oneil_unified.py \
   --start 2025-06-30 \
   --end 2026-06-29 \
+  --signal-source legacy \
   --universe-mode dynamic-growth \
   --json-out /tmp/oneil_mode_dynamic_growth.json
 ```
@@ -51,8 +67,34 @@ python3 /Users/huangsm43/Documents/mingo/code/financial-services/scripts/backtes
 python3 /Users/huangsm43/Documents/mingo/code/financial-services/scripts/backtest_oneil_unified.py \
   --start 2025-06-30 \
   --end 2026-06-29 \
+  --signal-source legacy \
   --universe-mode dynamic-balanced \
   --json-out /tmp/oneil_mode_dynamic_balanced.json
+
+### Scanner mode
+
+```bash
+python3 /Users/huangsm43/Documents/mingo/code/financial-services/scripts/backtest_oneil_unified.py \
+  --start 2025-06-30 \
+  --end 2026-06-29 \
+  --signal-source scanner \
+  --scanner-cache-dir /Users/huangsm43/Documents/mingo/code/financial-services/.cache/oneil-backtest-scanner-signals \
+  --pattern-families ibd_base_family,vcp_breakout_family \
+  --pattern-types cup-with-handle,flat-base,double-bottom,vcp,platform-breakout,52-week-high-breakout \
+  --min-dollar-volume 20000000 \
+  --json-out /tmp/oneil_mode_scanner.json
+```
+
+To force a rebuild of day-level scanner cache files:
+
+```bash
+python3 /Users/huangsm43/Documents/mingo/code/financial-services/scripts/backtest_oneil_unified.py \
+  --start 2025-06-30 \
+  --end 2026-06-29 \
+  --signal-source scanner \
+  --refresh-scanner-cache \
+  --json-out /tmp/oneil_mode_scanner_refresh.json
+```
 ```
 
 ## Generate Overview HTML
@@ -69,6 +111,9 @@ python3 /Users/huangsm43/Documents/mingo/code/financial-services/scripts/backtes
 The overview HTML currently includes:
 
 - Per-mode summary cards
+- Per-pattern trade summary table
+- Secondary-overlap summary table
+- Run warning list
 - Candlestick charts
 - Entry and exit markers
 - Volume bars
@@ -111,6 +156,33 @@ This is substantially more realistic than the earlier precomputed-trade portfoli
 - Use `static` when you want the strongest current strategy result
 - Use `dynamic-growth` when you want the best current rolling fundamentals-based mode
 - Use `dynamic-balanced` when you prefer lower drawdown over higher return
+- Use `scanner` when you want to backtest actual scanner-detected O'Neil pattern entries across the full local market universe
+
+## Comparison Workflow
+
+Use these commands when comparing legacy and scanner entries under the same portfolio engine:
+
+```bash
+python3 /Users/huangsm43/Documents/mingo/code/financial-services/scripts/backtest_oneil_unified.py \
+  --start 2025-06-30 \
+  --end 2026-06-29 \
+  --signal-source legacy \
+  --universe-mode static \
+  --json-out /tmp/oneil_legacy_static.json
+
+python3 /Users/huangsm43/Documents/mingo/code/financial-services/scripts/backtest_oneil_unified.py \
+  --start 2025-06-30 \
+  --end 2026-06-29 \
+  --signal-source scanner \
+  --scanner-cache-dir /Users/huangsm43/Documents/mingo/code/financial-services/.cache/oneil-backtest-scanner-signals \
+  --json-out /tmp/oneil_scanner.json
+
+/Users/huangsm43/Documents/mingo/code/financial-services/.venv/bin/python \
+  /Users/huangsm43/Documents/mingo/code/financial-services/scripts/render_backtest_overview_html.py \
+  --result-json /tmp/oneil_legacy_static.json \
+  --result-json /tmp/oneil_scanner.json \
+  --output-html /Users/huangsm43/Documents/mingo/code/financial-services/reports/oneil_backtest_compare.html
+```
 
 ## Repository Check
 
