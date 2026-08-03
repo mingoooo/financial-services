@@ -1,0 +1,57 @@
+{
+  "date": "2026-04-27",
+  "signals": [
+    {
+      "symbol": "FIX",
+      "trigger_date": "2026-04-27",
+      "entry_date": "2026-04-28",
+      "entry_price_ref": 1773.91,
+      "breakout_level": 1773.91,
+      "stop_reference": 1531.51,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [],
+      "ranking_score": 71.7704,
+      "quality_score": 90.3,
+      "setup_score": 89.16,
+      "rs_score": 0.5021841559944835,
+      "normalized_rs_score": 0.5021841559944835
+    },
+    {
+      "symbol": "PWR",
+      "trigger_date": "2026-04-27",
+      "entry_date": "2026-04-28",
+      "entry_price_ref": 633.44,
+      "breakout_level": 633.44,
+      "stop_reference": 599.0,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [],
+      "ranking_score": 71.001,
+      "quality_score": 89.06,
+      "setup_score": 88.46,
+      "rs_score": 0.26478555192811015,
+      "normalized_rs_score": 0.26478555192811015
+    },
+    {
+      "symbol": "NE",
+      "trigger_date": "2026-04-27",
+      "entry_date": "2026-04-28",
+      "entry_price_ref": 51.61,
+      "breakout_level": 51.61,
+      "stop_reference": 44.689,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "platform-breakout",
+      "primary_pattern_variant": "consolidation",
+      "secondary_patterns": [],
+      "ranking_score": 69.2128,
+      "quality_score": 88.82,
+      "setup_score": 84.96,
+      "rs_score": 0.4338156901735766,
+      "normalized_rs_score": 0.4338156901735766
+    }
+  ],
+  "warnings": []
+}

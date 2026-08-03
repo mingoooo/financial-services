@@ -1,0 +1,57 @@
+{
+  "date": "2026-05-28",
+  "signals": [
+    {
+      "symbol": "MAR",
+      "trigger_date": "2026-05-28",
+      "entry_date": "2026-05-29",
+      "entry_price_ref": 386.3,
+      "breakout_level": 386.3,
+      "stop_reference": 345.38,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "platform-breakout",
+      "primary_pattern_variant": "consolidation",
+      "secondary_patterns": [],
+      "ranking_score": 69.4574,
+      "quality_score": 86.9,
+      "setup_score": 86.76,
+      "rs_score": 0.037092416343815104,
+      "normalized_rs_score": 0.037092416343815104
+    },
+    {
+      "symbol": "DELL",
+      "trigger_date": "2026-05-28",
+      "entry_date": "2026-05-29",
+      "entry_price_ref": 312.14,
+      "breakout_level": 312.14,
+      "stop_reference": 290.2902,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "52-week-high-breakout",
+      "primary_pattern_variant": "new-high",
+      "secondary_patterns": [],
+      "ranking_score": 65.9264,
+      "quality_score": 83.0,
+      "setup_score": 81.43,
+      "rs_score": 1.5571777853205968,
+      "normalized_rs_score": 1.5571777853205968
+    },
+    {
+      "symbol": "FSLR",
+      "trigger_date": "2026-05-28",
+      "entry_date": "2026-05-29",
+      "entry_price_ref": 285.99,
+      "breakout_level": 285.99,
+      "stop_reference": 265.9707,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "52-week-high-breakout",
+      "primary_pattern_variant": "new-high",
+      "secondary_patterns": [],
+      "ranking_score": 63.4526,
+      "quality_score": 83.0,
+      "setup_score": 76.92,
+      "rs_score": 0.4627803977648892,
+      "normalized_rs_score": 0.4627803977648892
+    }
+  ],
+  "warnings": []
+}

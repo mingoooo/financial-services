@@ -1,0 +1,23 @@
+{
+  "date": "2026-02-02",
+  "signals": [
+    {
+      "symbol": "COHR",
+      "trigger_date": "2026-02-02",
+      "entry_date": "2026-02-03",
+      "entry_price_ref": 221.14,
+      "breakout_level": 221.14,
+      "stop_reference": 192.38,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [],
+      "ranking_score": 71.1196,
+      "quality_score": 89.12,
+      "setup_score": 88.53,
+      "rs_score": 0.5932307878138101,
+      "normalized_rs_score": 0.5932307878138101
+    }
+  ],
+  "warnings": []
+}

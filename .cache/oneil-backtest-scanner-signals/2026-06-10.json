@@ -1,0 +1,78 @@
+{
+  "date": "2026-06-10",
+  "signals": [
+    {
+      "symbol": "KIM",
+      "trigger_date": "2026-06-10",
+      "entry_date": "2026-06-11",
+      "entry_price_ref": 25.2152,
+      "breakout_level": 25.2152,
+      "stop_reference": 22.93,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "flat-base",
+      "primary_pattern_variant": "tight",
+      "secondary_patterns": [
+        "vcp_breakout_family:platform-breakout:consolidation"
+      ],
+      "ranking_score": 69.4997,
+      "quality_score": 87.27,
+      "setup_score": 86.62,
+      "rs_score": 0.04338723266549027,
+      "normalized_rs_score": 0.04338723266549027
+    },
+    {
+      "symbol": "PNC",
+      "trigger_date": "2026-06-10",
+      "entry_date": "2026-06-11",
+      "entry_price_ref": 232.93,
+      "breakout_level": 232.93,
+      "stop_reference": 209.7,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "platform-breakout",
+      "primary_pattern_variant": "consolidation",
+      "secondary_patterns": [],
+      "ranking_score": 68.7559,
+      "quality_score": 86.0,
+      "setup_score": 85.88,
+      "rs_score": 0.07930268618987069,
+      "normalized_rs_score": 0.07930268618987069
+    },
+    {
+      "symbol": "KO",
+      "trigger_date": "2026-06-10",
+      "entry_date": "2026-06-11",
+      "entry_price_ref": 82.66,
+      "breakout_level": 82.66,
+      "stop_reference": 76.81,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "platform-breakout",
+      "primary_pattern_variant": "consolidation",
+      "secondary_patterns": [],
+      "ranking_score": 68.24,
+      "quality_score": 86.0,
+      "setup_score": 84.87,
+      "rs_score": 0.02477971610521723,
+      "normalized_rs_score": 0.02477971610521723
+    },
+    {
+      "symbol": "PFG",
+      "trigger_date": "2026-06-10",
+      "entry_date": "2026-06-11",
+      "entry_price_ref": 106.7,
+      "breakout_level": 106.7,
+      "stop_reference": 98.41,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "platform-breakout",
+      "primary_pattern_variant": "consolidation",
+      "secondary_patterns": [
+        "ibd_base_family:flat-base:tight"
+      ],
+      "ranking_score": 67.8862,
+      "quality_score": 86.28,
+      "setup_score": 83.93,
+      "rs_score": 0.18621389001523792,
+      "normalized_rs_score": 0.18621389001523792
+    }
+  ],
+  "warnings": []
+}

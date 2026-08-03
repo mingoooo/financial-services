@@ -1,0 +1,93 @@
+{
+  "date": "2026-06-02",
+  "signals": [
+    {
+      "symbol": "FCX",
+      "trigger_date": "2026-06-02",
+      "entry_date": "2026-06-03",
+      "entry_price_ref": 70.97,
+      "breakout_level": 70.97,
+      "stop_reference": 55.49,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "double-bottom",
+      "primary_pattern_variant": "w-bottom",
+      "secondary_patterns": [],
+      "ranking_score": 72.5753,
+      "quality_score": 91.38,
+      "setup_score": 90.32,
+      "rs_score": 0.006288146856699095,
+      "normalized_rs_score": 0.006288146856699095
+    },
+    {
+      "symbol": "MS",
+      "trigger_date": "2026-06-02",
+      "entry_date": "2026-06-03",
+      "entry_price_ref": 212.11,
+      "breakout_level": 212.11,
+      "stop_reference": 184.9,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "platform-breakout",
+      "primary_pattern_variant": "consolidation",
+      "secondary_patterns": [],
+      "ranking_score": 68.1666,
+      "quality_score": 86.0,
+      "setup_score": 84.65,
+      "rs_score": 0.20794569064392432,
+      "normalized_rs_score": 0.20794569064392432
+    },
+    {
+      "symbol": "AVGO",
+      "trigger_date": "2026-06-02",
+      "entry_date": "2026-06-03",
+      "entry_price_ref": 460.43,
+      "breakout_level": 460.43,
+      "stop_reference": 394.65,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "flat-base",
+      "primary_pattern_variant": "tight",
+      "secondary_patterns": [
+        "vcp_breakout_family:52-week-high-breakout:new-high"
+      ],
+      "ranking_score": 66.8086,
+      "quality_score": 86.25,
+      "setup_score": 81.66,
+      "rs_score": 0.5181929324996994,
+      "normalized_rs_score": 0.5181929324996994
+    },
+    {
+      "symbol": "CIEN",
+      "trigger_date": "2026-06-02",
+      "entry_date": "2026-06-03",
+      "entry_price_ref": 605.61,
+      "breakout_level": 605.61,
+      "stop_reference": 563.2173,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "52-week-high-breakout",
+      "primary_pattern_variant": "new-high",
+      "secondary_patterns": [],
+      "ranking_score": 65.7042,
+      "quality_score": 84.12,
+      "setup_score": 80.59,
+      "rs_score": 0.8662357945304717,
+      "normalized_rs_score": 0.8662357945304717
+    },
+    {
+      "symbol": "COHR",
+      "trigger_date": "2026-06-02",
+      "entry_date": "2026-06-03",
+      "entry_price_ref": 413.0,
+      "breakout_level": 413.0,
+      "stop_reference": 384.09,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "52-week-high-breakout",
+      "primary_pattern_variant": "new-high",
+      "secondary_patterns": [],
+      "ranking_score": 65.6848,
+      "quality_score": 84.08,
+      "setup_score": 80.72,
+      "rs_score": 0.5039580239225734,
+      "normalized_rs_score": 0.5039580239225734
+    }
+  ],
+  "warnings": []
+}

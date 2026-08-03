@@ -1,0 +1,23 @@
+{
+  "date": "2026-01-08",
+  "signals": [
+    {
+      "symbol": "ADI",
+      "trigger_date": "2026-01-08",
+      "entry_date": "2026-01-09",
+      "entry_price_ref": 299.53,
+      "breakout_level": 299.53,
+      "stop_reference": 278.5629,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "52-week-high-breakout",
+      "primary_pattern_variant": "new-high",
+      "secondary_patterns": [],
+      "ranking_score": 66.3926,
+      "quality_score": 83.0,
+      "setup_score": 82.88,
+      "rs_score": 0.2630413135914722,
+      "normalized_rs_score": 0.2630413135914722
+    }
+  ],
+  "warnings": []
+}

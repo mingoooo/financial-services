@@ -1,0 +1,93 @@
+{
+  "date": "2026-05-26",
+  "signals": [
+    {
+      "symbol": "KEYS",
+      "trigger_date": "2026-05-26",
+      "entry_date": "2026-05-27",
+      "entry_price_ref": 349.01,
+      "breakout_level": 349.01,
+      "stop_reference": 326.48,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [],
+      "ranking_score": 72.1421,
+      "quality_score": 91.35,
+      "setup_score": 89.42,
+      "rs_score": 0.13551446403777012,
+      "normalized_rs_score": 0.13551446403777012
+    },
+    {
+      "symbol": "SLB",
+      "trigger_date": "2026-05-26",
+      "entry_date": "2026-05-27",
+      "entry_price_ref": 57.28,
+      "breakout_level": 57.28,
+      "stop_reference": 52.73,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [],
+      "ranking_score": 71.0431,
+      "quality_score": 89.55,
+      "setup_score": 88.33,
+      "rs_score": 0.06561066399892002,
+      "normalized_rs_score": 0.06561066399892002
+    },
+    {
+      "symbol": "KIM",
+      "trigger_date": "2026-05-26",
+      "entry_date": "2026-05-27",
+      "entry_price_ref": 24.31,
+      "breakout_level": 24.31,
+      "stop_reference": 22.93,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "platform-breakout",
+      "primary_pattern_variant": "consolidation",
+      "secondary_patterns": [
+        "ibd_base_family:flat-base:tight"
+      ],
+      "ranking_score": 69.6611,
+      "quality_score": 87.67,
+      "setup_score": 86.72,
+      "rs_score": 0.000603897202987369,
+      "normalized_rs_score": 0.000603897202987369
+    },
+    {
+      "symbol": "STT",
+      "trigger_date": "2026-05-26",
+      "entry_date": "2026-05-27",
+      "entry_price_ref": 154.2241,
+      "breakout_level": 154.2241,
+      "stop_reference": 143.79,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "flat-base",
+      "primary_pattern_variant": "tight",
+      "secondary_patterns": [],
+      "ranking_score": 68.7207,
+      "quality_score": 87.59,
+      "setup_score": 84.81,
+      "rs_score": 0.1933175761575625,
+      "normalized_rs_score": 0.1933175761575625
+    },
+    {
+      "symbol": "DELL",
+      "trigger_date": "2026-05-26",
+      "entry_date": "2026-05-27",
+      "entry_price_ref": 298.32,
+      "breakout_level": 298.32,
+      "stop_reference": 277.4376,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "52-week-high-breakout",
+      "primary_pattern_variant": "new-high",
+      "secondary_patterns": [],
+      "ranking_score": 66.6375,
+      "quality_score": 84.34,
+      "setup_score": 82.07,
+      "rs_score": 1.5025385311806343,
+      "normalized_rs_score": 1.5025385311806343
+    }
+  ],
+  "warnings": []
+}

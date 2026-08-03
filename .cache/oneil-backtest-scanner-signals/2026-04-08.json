@@ -1,0 +1,42 @@
+{
+  "date": "2026-04-08",
+  "signals": [
+    {
+      "symbol": "MPWR",
+      "trigger_date": "2026-04-08",
+      "entry_date": "2026-04-09",
+      "entry_price_ref": 1256.22,
+      "breakout_level": 1256.22,
+      "stop_reference": 988.0,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "double-bottom",
+      "primary_pattern_variant": "w-bottom",
+      "secondary_patterns": [
+        "vcp_breakout_family:52-week-high-breakout:new-high"
+      ],
+      "ranking_score": 74.557,
+      "quality_score": 95.95,
+      "setup_score": 91.43,
+      "rs_score": 0.2850689192119502,
+      "normalized_rs_score": 0.2850689192119502
+    },
+    {
+      "symbol": "CIEN",
+      "trigger_date": "2026-04-08",
+      "entry_date": "2026-04-09",
+      "entry_price_ref": 459.8,
+      "breakout_level": 459.8,
+      "stop_reference": 427.614,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "52-week-high-breakout",
+      "primary_pattern_variant": "new-high",
+      "secondary_patterns": [],
+      "ranking_score": 64.7845,
+      "quality_score": 85.4,
+      "setup_score": 77.96,
+      "rs_score": 0.9226223219265892,
+      "normalized_rs_score": 0.9226223219265892
+    }
+  ],
+  "warnings": []
+}

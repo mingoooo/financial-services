@@ -1,0 +1,93 @@
+{
+  "date": "2026-05-18",
+  "signals": [
+    {
+      "symbol": "VLO",
+      "trigger_date": "2026-05-18",
+      "entry_date": "2026-05-19",
+      "entry_price_ref": 250.74,
+      "breakout_level": 250.74,
+      "stop_reference": 240.33,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [],
+      "ranking_score": 69.8602,
+      "quality_score": 89.2,
+      "setup_score": 86.1,
+      "rs_score": 0.25090287183465954,
+      "normalized_rs_score": 0.25090287183465954
+    },
+    {
+      "symbol": "XOM",
+      "trigger_date": "2026-05-18",
+      "entry_date": "2026-05-19",
+      "entry_price_ref": 158.0779,
+      "breakout_level": 158.0779,
+      "stop_reference": 141.97,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "flat-base",
+      "primary_pattern_variant": "tight",
+      "secondary_patterns": [],
+      "ranking_score": 68.8507,
+      "quality_score": 87.01,
+      "setup_score": 85.48,
+      "rs_score": 0.038697470013005164,
+      "normalized_rs_score": 0.038697470013005164
+    },
+    {
+      "symbol": "COST",
+      "trigger_date": "2026-05-18",
+      "entry_date": "2026-05-19",
+      "entry_price_ref": 1049.9989,
+      "breakout_level": 1049.9989,
+      "stop_reference": 966.0,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "flat-base",
+      "primary_pattern_variant": "tight",
+      "secondary_patterns": [
+        "vcp_breakout_family:platform-breakout:consolidation"
+      ],
+      "ranking_score": 68.6369,
+      "quality_score": 87.37,
+      "setup_score": 84.85,
+      "rs_score": 0.004532543383406473,
+      "normalized_rs_score": 0.004532543383406473
+    },
+    {
+      "symbol": "AMAT",
+      "trigger_date": "2026-05-18",
+      "entry_date": "2026-05-19",
+      "entry_price_ref": 395.95,
+      "breakout_level": 395.95,
+      "stop_reference": 320.69,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "double-bottom",
+      "primary_pattern_variant": "w-bottom",
+      "secondary_patterns": [],
+      "ranking_score": 68.2095,
+      "quality_score": 88.02,
+      "setup_score": 83.57,
+      "rs_score": 0.09246812305658114,
+      "normalized_rs_score": 0.09246812305658114
+    },
+    {
+      "symbol": "CRWD",
+      "trigger_date": "2026-05-18",
+      "entry_date": "2026-05-19",
+      "entry_price_ref": 149.5625,
+      "breakout_level": 149.5625,
+      "stop_reference": 139.0931,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "52-week-high-breakout",
+      "primary_pattern_variant": "new-high",
+      "secondary_patterns": [],
+      "ranking_score": 64.7793,
+      "quality_score": 83.0,
+      "setup_score": 79.56,
+      "rs_score": 0.4962623833906945,
+      "normalized_rs_score": 0.4962623833906945
+    }
+  ],
+  "warnings": []
+}

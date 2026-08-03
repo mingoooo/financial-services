@@ -1,0 +1,57 @@
+{
+  "date": "2026-04-16",
+  "signals": [
+    {
+      "symbol": "IRM",
+      "trigger_date": "2026-04-16",
+      "entry_date": "2026-04-17",
+      "entry_price_ref": 115.24,
+      "breakout_level": 115.24,
+      "stop_reference": 96.91,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "double-bottom",
+      "primary_pattern_variant": "w-bottom",
+      "secondary_patterns": [],
+      "ranking_score": 70.9878,
+      "quality_score": 90.04,
+      "setup_score": 87.88,
+      "rs_score": 0.17905250892141877,
+      "normalized_rs_score": 0.17905250892141877
+    },
+    {
+      "symbol": "DELL",
+      "trigger_date": "2026-04-16",
+      "entry_date": "2026-04-17",
+      "entry_price_ref": 191.37,
+      "breakout_level": 191.37,
+      "stop_reference": 177.9741,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "52-week-high-breakout",
+      "primary_pattern_variant": "new-high",
+      "secondary_patterns": [],
+      "ranking_score": 68.4945,
+      "quality_score": 86.04,
+      "setup_score": 85.14,
+      "rs_score": 0.5623120879654657,
+      "normalized_rs_score": 0.5623120879654657
+    },
+    {
+      "symbol": "AMD",
+      "trigger_date": "2026-04-16",
+      "entry_date": "2026-04-17",
+      "entry_price_ref": 267.08,
+      "breakout_level": 267.08,
+      "stop_reference": 248.3844,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "52-week-high-breakout",
+      "primary_pattern_variant": "new-high",
+      "secondary_patterns": [],
+      "ranking_score": 65.349,
+      "quality_score": 84.26,
+      "setup_score": 80.07,
+      "rs_score": 0.17992343431035085,
+      "normalized_rs_score": 0.17992343431035085
+    }
+  ],
+  "warnings": []
+}

@@ -1,0 +1,23 @@
+{
+  "date": "2026-06-03",
+  "signals": [
+    {
+      "symbol": "HST",
+      "trigger_date": "2026-06-03",
+      "entry_date": "2026-06-04",
+      "entry_price_ref": 23.79,
+      "breakout_level": 23.79,
+      "stop_reference": 20.71,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "platform-breakout",
+      "primary_pattern_variant": "consolidation",
+      "secondary_patterns": [],
+      "ranking_score": 68.6934,
+      "quality_score": 86.0,
+      "setup_score": 85.75,
+      "rs_score": 0.09192116169994136,
+      "normalized_rs_score": 0.09192116169994136
+    }
+  ],
+  "warnings": []
+}

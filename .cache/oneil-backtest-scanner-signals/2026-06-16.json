@@ -1,0 +1,40 @@
+{
+  "date": "2026-06-16",
+  "signals": [
+    {
+      "symbol": "IRM",
+      "trigger_date": "2026-06-16",
+      "entry_date": "2026-06-17",
+      "entry_price_ref": 127.24,
+      "breakout_level": 127.24,
+      "stop_reference": 122.39,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [],
+      "ranking_score": 72.3656,
+      "quality_score": 90.9,
+      "setup_score": 90.14,
+      "rs_score": 0.12798345575441616,
+      "normalized_rs_score": 0.12798345575441616
+    },
+    {
+      "symbol": "JPM",
+      "trigger_date": "2026-06-16",
+      "entry_date": "2026-06-17",
+      "entry_price_ref": 325.92,
+      "breakout_level": 325.92,
+      "stop_reference": 293.67,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "platform-breakout",
+      "primary_pattern_variant": "consolidation",
+      "secondary_patterns": [],
+      "ranking_score": 68.0189,
+      "quality_score": 86.0,
+      "setup_score": 84.4,
+      "rs_score": 0.09465428674100118,
+      "normalized_rs_score": 0.09465428674100118
+    }
+  ],
+  "warnings": []
+}

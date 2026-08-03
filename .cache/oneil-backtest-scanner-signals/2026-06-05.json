@@ -1,0 +1,76 @@
+{
+  "date": "2026-06-05",
+  "signals": [
+    {
+      "symbol": "KLAC",
+      "trigger_date": "2026-06-05",
+      "entry_date": "2026-06-08",
+      "entry_price_ref": 191.111,
+      "breakout_level": 191.111,
+      "stop_reference": 169.028,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "double-bottom",
+      "primary_pattern_variant": "w-bottom",
+      "secondary_patterns": [],
+      "ranking_score": 75.7703,
+      "quality_score": 95.22,
+      "setup_score": 94.27,
+      "rs_score": 0.3466564949626896,
+      "normalized_rs_score": 0.3466564949626896
+    },
+    {
+      "symbol": "FDX",
+      "trigger_date": "2026-06-05",
+      "entry_date": "2026-06-08",
+      "entry_price_ref": 322.0548,
+      "breakout_level": 322.0548,
+      "stop_reference": 285.3666,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "double-bottom",
+      "primary_pattern_variant": "w-bottom",
+      "secondary_patterns": [],
+      "ranking_score": 70.8341,
+      "quality_score": 90.26,
+      "setup_score": 87.49,
+      "rs_score": 0.05571734498370495,
+      "normalized_rs_score": 0.05571734498370495
+    },
+    {
+      "symbol": "PFG",
+      "trigger_date": "2026-06-05",
+      "entry_date": "2026-06-08",
+      "entry_price_ref": 105.0,
+      "breakout_level": 105.0,
+      "stop_reference": 95.8,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "platform-breakout",
+      "primary_pattern_variant": "consolidation",
+      "secondary_patterns": [],
+      "ranking_score": 70.0015,
+      "quality_score": 87.62,
+      "setup_score": 87.41,
+      "rs_score": 0.05229957560337928,
+      "normalized_rs_score": 0.05229957560337928
+    },
+    {
+      "symbol": "MAR",
+      "trigger_date": "2026-06-05",
+      "entry_date": "2026-06-08",
+      "entry_price_ref": 388.37,
+      "breakout_level": 388.37,
+      "stop_reference": 345.38,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "platform-breakout",
+      "primary_pattern_variant": "consolidation",
+      "secondary_patterns": [
+        "ibd_base_family:flat-base:tight"
+      ],
+      "ranking_score": 68.4258,
+      "quality_score": 86.17,
+      "setup_score": 85.1,
+      "rs_score": 0.12402588630759914,
+      "normalized_rs_score": 0.12402588630759914
+    }
+  ],
+  "warnings": []
+}

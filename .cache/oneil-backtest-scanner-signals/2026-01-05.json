@@ -1,0 +1,23 @@
+{
+  "date": "2026-01-05",
+  "signals": [
+    {
+      "symbol": "INCY",
+      "trigger_date": "2026-01-05",
+      "entry_date": "2026-01-06",
+      "entry_price_ref": 101.42,
+      "breakout_level": 101.42,
+      "stop_reference": 97.63,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [],
+      "ranking_score": 73.6949,
+      "quality_score": 92.32,
+      "setup_score": 91.96,
+      "rs_score": 0.09465752126256377,
+      "normalized_rs_score": 0.09465752126256377
+    }
+  ],
+  "warnings": []
+}

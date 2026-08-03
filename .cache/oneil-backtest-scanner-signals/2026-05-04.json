@@ -1,0 +1,42 @@
+{
+  "date": "2026-05-04",
+  "signals": [
+    {
+      "symbol": "WDC",
+      "trigger_date": "2026-05-04",
+      "entry_date": "2026-05-05",
+      "entry_price_ref": 434.52,
+      "breakout_level": 434.52,
+      "stop_reference": 369.5,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [],
+      "ranking_score": 72.4599,
+      "quality_score": 91.56,
+      "setup_score": 89.76,
+      "rs_score": 0.5596127052844646,
+      "normalized_rs_score": 0.5596127052844646
+    },
+    {
+      "symbol": "ADM",
+      "trigger_date": "2026-05-04",
+      "entry_date": "2026-05-05",
+      "entry_price_ref": 74.19,
+      "breakout_level": 74.19,
+      "stop_reference": 66.06,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "double-bottom",
+      "primary_pattern_variant": "w-bottom",
+      "secondary_patterns": [
+        "vcp_breakout_family:platform-breakout:consolidation"
+      ],
+      "ranking_score": 71.9446,
+      "quality_score": 91.67,
+      "setup_score": 88.87,
+      "rs_score": 0.042936443347523,
+      "normalized_rs_score": 0.042936443347523
+    }
+  ],
+  "warnings": []
+}

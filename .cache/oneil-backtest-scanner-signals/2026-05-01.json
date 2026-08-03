@@ -1,0 +1,57 @@
+{
+  "date": "2026-05-01",
+  "signals": [
+    {
+      "symbol": "IRM",
+      "trigger_date": "2026-05-01",
+      "entry_date": "2026-05-04",
+      "entry_price_ref": 125.99,
+      "breakout_level": 125.99,
+      "stop_reference": 110.0,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [],
+      "ranking_score": 73.6334,
+      "quality_score": 92.56,
+      "setup_score": 91.61,
+      "rs_score": 0.3019772171227504,
+      "normalized_rs_score": 0.3019772171227504
+    },
+    {
+      "symbol": "ADM",
+      "trigger_date": "2026-05-01",
+      "entry_date": "2026-05-04",
+      "entry_price_ref": 74.19,
+      "breakout_level": 74.19,
+      "stop_reference": 66.06,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "double-bottom",
+      "primary_pattern_variant": "w-bottom",
+      "secondary_patterns": [],
+      "ranking_score": 70.518,
+      "quality_score": 88.77,
+      "setup_score": 87.76,
+      "rs_score": 0.0347841067047121,
+      "normalized_rs_score": 0.0347841067047121
+    },
+    {
+      "symbol": "AAPL",
+      "trigger_date": "2026-05-01",
+      "entry_date": "2026-05-04",
+      "entry_price_ref": 276.0,
+      "breakout_level": 276.0,
+      "stop_reference": 245.51,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "platform-breakout",
+      "primary_pattern_variant": "consolidation",
+      "secondary_patterns": [],
+      "ranking_score": 68.0502,
+      "quality_score": 86.0,
+      "setup_score": 84.5,
+      "rs_score": 0.0010487732216140078,
+      "normalized_rs_score": 0.0010487732216140078
+    }
+  ],
+  "warnings": []
+}

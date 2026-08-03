@@ -1,0 +1,76 @@
+{
+  "date": "2026-06-17",
+  "signals": [
+    {
+      "symbol": "BEN",
+      "trigger_date": "2026-06-17",
+      "entry_date": "2026-06-18",
+      "entry_price_ref": 33.2132,
+      "breakout_level": 33.2132,
+      "stop_reference": 29.71,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "flat-base",
+      "primary_pattern_variant": "tight",
+      "secondary_patterns": [
+        "vcp_breakout_family:platform-breakout:consolidation"
+      ],
+      "ranking_score": 69.6374,
+      "quality_score": 87.1,
+      "setup_score": 86.87,
+      "rs_score": 0.3619730419212197,
+      "normalized_rs_score": 0.3619730419212197
+    },
+    {
+      "symbol": "CMI",
+      "trigger_date": "2026-06-17",
+      "entry_date": "2026-06-18",
+      "entry_price_ref": 718.08,
+      "breakout_level": 718.08,
+      "stop_reference": 628.09,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "platform-breakout",
+      "primary_pattern_variant": "consolidation",
+      "secondary_patterns": [],
+      "ranking_score": 69.4513,
+      "quality_score": 86.77,
+      "setup_score": 86.73,
+      "rs_score": 0.2767242654417099,
+      "normalized_rs_score": 0.2767242654417099
+    },
+    {
+      "symbol": "JPM",
+      "trigger_date": "2026-06-17",
+      "entry_date": "2026-06-18",
+      "entry_price_ref": 331.75,
+      "breakout_level": 331.75,
+      "stop_reference": 293.67,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "platform-breakout",
+      "primary_pattern_variant": "consolidation",
+      "secondary_patterns": [],
+      "ranking_score": 68.5629,
+      "quality_score": 86.0,
+      "setup_score": 85.48,
+      "rs_score": 0.11444485663659454,
+      "normalized_rs_score": 0.11444485663659454
+    },
+    {
+      "symbol": "GL",
+      "trigger_date": "2026-06-17",
+      "entry_date": "2026-06-18",
+      "entry_price_ref": 169.3392,
+      "breakout_level": 169.3392,
+      "stop_reference": 145.37,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "flat-base",
+      "primary_pattern_variant": "tight",
+      "secondary_patterns": [],
+      "ranking_score": 68.283,
+      "quality_score": 86.01,
+      "setup_score": 84.88,
+      "rs_score": 0.19991996224767972,
+      "normalized_rs_score": 0.19991996224767972
+    }
+  ],
+  "warnings": []
+}

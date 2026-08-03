@@ -1,0 +1,76 @@
+{
+  "date": "2026-05-11",
+  "signals": [
+    {
+      "symbol": "AMAT",
+      "trigger_date": "2026-05-11",
+      "entry_date": "2026-05-12",
+      "entry_price_ref": 435.44,
+      "breakout_level": 435.44,
+      "stop_reference": 385.65,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [],
+      "ranking_score": 72.3373,
+      "quality_score": 91.53,
+      "setup_score": 89.65,
+      "rs_score": 0.2664201972100786,
+      "normalized_rs_score": 0.2664201972100786
+    },
+    {
+      "symbol": "VRT",
+      "trigger_date": "2026-05-11",
+      "entry_date": "2026-05-12",
+      "entry_price_ref": 358.92,
+      "breakout_level": 358.92,
+      "stop_reference": 321.45,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [
+        "vcp_breakout_family:52-week-high-breakout:new-high"
+      ],
+      "ranking_score": 71.2846,
+      "quality_score": 90.47,
+      "setup_score": 87.96,
+      "rs_score": 0.8178614659048986,
+      "normalized_rs_score": 0.8178614659048986
+    },
+    {
+      "symbol": "FOXA",
+      "trigger_date": "2026-05-11",
+      "entry_date": "2026-05-12",
+      "entry_price_ref": 66.0,
+      "breakout_level": 66.0,
+      "stop_reference": 57.19,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "platform-breakout",
+      "primary_pattern_variant": "consolidation",
+      "secondary_patterns": [],
+      "ranking_score": 69.5274,
+      "quality_score": 88.54,
+      "setup_score": 85.93,
+      "rs_score": 0.0019212190582884592,
+      "normalized_rs_score": 0.0019212190582884592
+    },
+    {
+      "symbol": "COHR",
+      "trigger_date": "2026-05-11",
+      "entry_date": "2026-05-12",
+      "entry_price_ref": 364.8,
+      "breakout_level": 364.8,
+      "stop_reference": 339.264,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "52-week-high-breakout",
+      "primary_pattern_variant": "new-high",
+      "secondary_patterns": [],
+      "ranking_score": 64.7125,
+      "quality_score": 83.3,
+      "setup_score": 79.22,
+      "rs_score": 0.5624655937267378,
+      "normalized_rs_score": 0.5624655937267378
+    }
+  ],
+  "warnings": []
+}

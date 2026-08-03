@@ -1,0 +1,76 @@
+{
+  "date": "2026-06-01",
+  "signals": [
+    {
+      "symbol": "AVGO",
+      "trigger_date": "2026-06-01",
+      "entry_date": "2026-06-02",
+      "entry_price_ref": 447.2168,
+      "breakout_level": 447.2168,
+      "stop_reference": 394.65,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "flat-base",
+      "primary_pattern_variant": "tight",
+      "secondary_patterns": [
+        "vcp_breakout_family:52-week-high-breakout:new-high"
+      ],
+      "ranking_score": 68.1054,
+      "quality_score": 86.81,
+      "setup_score": 83.96,
+      "rs_score": 0.4119665048193313,
+      "normalized_rs_score": 0.4119665048193313
+    },
+    {
+      "symbol": "GS",
+      "trigger_date": "2026-06-01",
+      "entry_date": "2026-06-02",
+      "entry_price_ref": 1027.22,
+      "breakout_level": 1027.22,
+      "stop_reference": 899.0,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "platform-breakout",
+      "primary_pattern_variant": "consolidation",
+      "secondary_patterns": [],
+      "ranking_score": 67.7868,
+      "quality_score": 86.0,
+      "setup_score": 83.92,
+      "rs_score": 0.13396847422553249,
+      "normalized_rs_score": 0.13396847422553249
+    },
+    {
+      "symbol": "HPE",
+      "trigger_date": "2026-06-01",
+      "entry_date": "2026-06-02",
+      "entry_price_ref": 44.575,
+      "breakout_level": 44.575,
+      "stop_reference": 41.4548,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "52-week-high-breakout",
+      "primary_pattern_variant": "new-high",
+      "secondary_patterns": [],
+      "ranking_score": 63.8986,
+      "quality_score": 83.0,
+      "setup_score": 77.56,
+      "rs_score": 1.0930540289597641,
+      "normalized_rs_score": 1.0930540289597641
+    },
+    {
+      "symbol": "CRWD",
+      "trigger_date": "2026-06-01",
+      "entry_date": "2026-06-02",
+      "entry_price_ref": 182.8725,
+      "breakout_level": 182.8725,
+      "stop_reference": 170.0714,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "52-week-high-breakout",
+      "primary_pattern_variant": "new-high",
+      "secondary_patterns": [],
+      "ranking_score": 63.1353,
+      "quality_score": 83.0,
+      "setup_score": 76.07,
+      "rs_score": 1.0015896273413352,
+      "normalized_rs_score": 1.0015896273413352
+    }
+  ],
+  "warnings": []
+}

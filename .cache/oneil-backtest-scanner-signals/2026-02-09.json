@@ -1,0 +1,42 @@
+{
+  "date": "2026-02-09",
+  "signals": [
+    {
+      "symbol": "VRT",
+      "trigger_date": "2026-02-09",
+      "entry_date": "2026-02-10",
+      "entry_price_ref": 195.58,
+      "breakout_level": 195.58,
+      "stop_reference": 172.35,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [],
+      "ranking_score": 73.0073,
+      "quality_score": 93.3,
+      "setup_score": 90.02,
+      "rs_score": 0.03660378305638856,
+      "normalized_rs_score": 0.03660378305638856
+    },
+    {
+      "symbol": "KEYS",
+      "trigger_date": "2026-02-09",
+      "entry_date": "2026-02-10",
+      "entry_price_ref": 232.92,
+      "breakout_level": 232.92,
+      "stop_reference": 203.08,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "platform-breakout",
+      "primary_pattern_variant": "consolidation",
+      "secondary_patterns": [
+        "ibd_base_family:flat-base:tight"
+      ],
+      "ranking_score": 68.1966,
+      "quality_score": 86.0,
+      "setup_score": 84.71,
+      "rs_score": 0.2078519853707308,
+      "normalized_rs_score": 0.2078519853707308
+    }
+  ],
+  "warnings": []
+}

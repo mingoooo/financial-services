@@ -1,0 +1,93 @@
+{
+  "date": "2026-05-05",
+  "signals": [
+    {
+      "symbol": "CMI",
+      "trigger_date": "2026-05-05",
+      "entry_date": "2026-05-06",
+      "entry_price_ref": 671.01,
+      "breakout_level": 671.01,
+      "stop_reference": 636.66,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [],
+      "ranking_score": 76.5359,
+      "quality_score": 96.02,
+      "setup_score": 95.44,
+      "rs_score": 0.049609826934994716,
+      "normalized_rs_score": 0.049609826934994716
+    },
+    {
+      "symbol": "IRM",
+      "trigger_date": "2026-05-05",
+      "entry_date": "2026-05-06",
+      "entry_price_ref": 128.22,
+      "breakout_level": 128.22,
+      "stop_reference": 110.0,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [],
+      "ranking_score": 71.4432,
+      "quality_score": 90.9,
+      "setup_score": 88.18,
+      "rs_score": 0.41611840170571157,
+      "normalized_rs_score": 0.41611840170571157
+    },
+    {
+      "symbol": "LRCX",
+      "trigger_date": "2026-05-05",
+      "entry_date": "2026-05-06",
+      "entry_price_ref": 267.78,
+      "breakout_level": 267.78,
+      "stop_reference": 241.6,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [
+        "vcp_breakout_family:52-week-high-breakout:new-high"
+      ],
+      "ranking_score": 70.9994,
+      "quality_score": 90.57,
+      "setup_score": 87.58,
+      "rs_score": 0.19194641606091833,
+      "normalized_rs_score": 0.19194641606091833
+    },
+    {
+      "symbol": "MCHP",
+      "trigger_date": "2026-05-05",
+      "entry_date": "2026-05-06",
+      "entry_price_ref": 95.3,
+      "breakout_level": 95.3,
+      "stop_reference": 83.95,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [],
+      "ranking_score": 69.6369,
+      "quality_score": 89.08,
+      "setup_score": 85.74,
+      "rs_score": 0.21446361877286435,
+      "normalized_rs_score": 0.21446361877286435
+    },
+    {
+      "symbol": "ADM",
+      "trigger_date": "2026-05-05",
+      "entry_date": "2026-05-06",
+      "entry_price_ref": 77.37,
+      "breakout_level": 77.37,
+      "stop_reference": 65.94,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "platform-breakout",
+      "primary_pattern_variant": "consolidation",
+      "secondary_patterns": [],
+      "ranking_score": 67.646,
+      "quality_score": 86.0,
+      "setup_score": 83.65,
+      "rs_score": 0.10493033561518761,
+      "normalized_rs_score": 0.10493033561518761
+    }
+  ],
+  "warnings": []
+}

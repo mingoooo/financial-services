@@ -1,0 +1,93 @@
+{
+  "date": "2026-05-29",
+  "signals": [
+    {
+      "symbol": "AVGO",
+      "trigger_date": "2026-05-29",
+      "entry_date": "2026-06-01",
+      "entry_price_ref": 440.2298,
+      "breakout_level": 440.2298,
+      "stop_reference": 394.65,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "flat-base",
+      "primary_pattern_variant": "tight",
+      "secondary_patterns": [
+        "vcp_breakout_family:52-week-high-breakout:new-high"
+      ],
+      "ranking_score": 69.0333,
+      "quality_score": 87.13,
+      "setup_score": 85.65,
+      "rs_score": 0.34634929916118096,
+      "normalized_rs_score": 0.34634929916118096
+    },
+    {
+      "symbol": "MS",
+      "trigger_date": "2026-05-29",
+      "entry_date": "2026-06-01",
+      "entry_price_ref": 204.38,
+      "breakout_level": 204.38,
+      "stop_reference": 184.9,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "platform-breakout",
+      "primary_pattern_variant": "consolidation",
+      "secondary_patterns": [],
+      "ranking_score": 67.9491,
+      "quality_score": 86.0,
+      "setup_score": 84.23,
+      "rs_score": 0.17049777633150032,
+      "normalized_rs_score": 0.17049777633150032
+    },
+    {
+      "symbol": "FTNT",
+      "trigger_date": "2026-05-29",
+      "entry_date": "2026-06-01",
+      "entry_price_ref": 134.91,
+      "breakout_level": 134.91,
+      "stop_reference": 125.4663,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "52-week-high-breakout",
+      "primary_pattern_variant": "new-high",
+      "secondary_patterns": [],
+      "ranking_score": 65.6278,
+      "quality_score": 83.28,
+      "setup_score": 81.01,
+      "rs_score": 0.6940196765283793,
+      "normalized_rs_score": 0.6940196765283793
+    },
+    {
+      "symbol": "DDOG",
+      "trigger_date": "2026-05-29",
+      "entry_date": "2026-06-01",
+      "entry_price_ref": 235.0,
+      "breakout_level": 235.0,
+      "stop_reference": 218.55,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "52-week-high-breakout",
+      "primary_pattern_variant": "new-high",
+      "secondary_patterns": [],
+      "ranking_score": 64.1295,
+      "quality_score": 83.16,
+      "setup_score": 77.9,
+      "rs_score": 1.1574981078674222,
+      "normalized_rs_score": 1.1574981078674222
+    },
+    {
+      "symbol": "CRWD",
+      "trigger_date": "2026-05-29",
+      "entry_date": "2026-06-01",
+      "entry_price_ref": 169.375,
+      "breakout_level": 169.375,
+      "stop_reference": 157.5188,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "52-week-high-breakout",
+      "primary_pattern_variant": "new-high",
+      "secondary_patterns": [],
+      "ranking_score": 62.6327,
+      "quality_score": 83.0,
+      "setup_score": 75.1,
+      "rs_score": 0.9133863567660045,
+      "normalized_rs_score": 0.9133863567660045
+    }
+  ],
+  "warnings": []
+}

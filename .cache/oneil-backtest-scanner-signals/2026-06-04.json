@@ -1,0 +1,40 @@
+{
+  "date": "2026-06-04",
+  "signals": [
+    {
+      "symbol": "CAT",
+      "trigger_date": "2026-06-04",
+      "entry_date": "2026-06-05",
+      "entry_price_ref": 926.18,
+      "breakout_level": 926.18,
+      "stop_reference": 853.37,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [],
+      "ranking_score": 70.9523,
+      "quality_score": 89.59,
+      "setup_score": 88.05,
+      "rs_score": 0.25134567403751285,
+      "normalized_rs_score": 0.25134567403751285
+    },
+    {
+      "symbol": "BAC",
+      "trigger_date": "2026-06-04",
+      "entry_date": "2026-06-05",
+      "entry_price_ref": 54.2,
+      "breakout_level": 54.2,
+      "stop_reference": 49.3,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "platform-breakout",
+      "primary_pattern_variant": "consolidation",
+      "secondary_patterns": [],
+      "ranking_score": 68.7714,
+      "quality_score": 86.0,
+      "setup_score": 85.94,
+      "rs_score": 0.006904583981863777,
+      "normalized_rs_score": 0.006904583981863777
+    }
+  ],
+  "warnings": []
+}

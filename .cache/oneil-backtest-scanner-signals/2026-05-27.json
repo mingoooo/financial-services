@@ -1,0 +1,61 @@
+{
+  "date": "2026-05-27",
+  "signals": [
+    {
+      "symbol": "UNP",
+      "trigger_date": "2026-05-27",
+      "entry_date": "2026-05-28",
+      "entry_price_ref": 276.4,
+      "breakout_level": 276.4,
+      "stop_reference": 246.88,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "platform-breakout",
+      "primary_pattern_variant": "consolidation",
+      "secondary_patterns": [
+        "ibd_base_family:flat-base:tight"
+      ],
+      "ranking_score": 69.3886,
+      "quality_score": 87.41,
+      "setup_score": 86.33,
+      "rs_score": 0.0028914664321999517,
+      "normalized_rs_score": 0.0028914664321999517
+    },
+    {
+      "symbol": "FDX",
+      "trigger_date": "2026-05-27",
+      "entry_date": "2026-05-28",
+      "entry_price_ref": 322.0548,
+      "breakout_level": 322.0548,
+      "stop_reference": 285.3666,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "double-bottom",
+      "primary_pattern_variant": "w-bottom",
+      "secondary_patterns": [],
+      "ranking_score": 69.2174,
+      "quality_score": 88.41,
+      "setup_score": 85.38,
+      "rs_score": 0.021892836747583022,
+      "normalized_rs_score": 0.021892836747583022
+    },
+    {
+      "symbol": "MAR",
+      "trigger_date": "2026-05-27",
+      "entry_date": "2026-05-28",
+      "entry_price_ref": 380.0,
+      "breakout_level": 380.0,
+      "stop_reference": 345.38,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "platform-breakout",
+      "primary_pattern_variant": "consolidation",
+      "secondary_patterns": [
+        "ibd_base_family:flat-base:tight"
+      ],
+      "ranking_score": 68.8012,
+      "quality_score": 86.95,
+      "setup_score": 85.41,
+      "rs_score": 0.05617748155326052,
+      "normalized_rs_score": 0.05617748155326052
+    }
+  ],
+  "warnings": []
+}

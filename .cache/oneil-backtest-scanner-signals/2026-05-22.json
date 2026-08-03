@@ -1,0 +1,25 @@
+{
+  "date": "2026-05-22",
+  "signals": [
+    {
+      "symbol": "ROST",
+      "trigger_date": "2026-05-22",
+      "entry_date": "2026-05-25",
+      "entry_price_ref": 229.1389,
+      "breakout_level": 229.1389,
+      "stop_reference": 208.2,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "flat-base",
+      "primary_pattern_variant": "tight",
+      "secondary_patterns": [
+        "vcp_breakout_family:platform-breakout:consolidation"
+      ],
+      "ranking_score": 68.0529,
+      "quality_score": 86.59,
+      "setup_score": 84.11,
+      "rs_score": 0.10459265302316667,
+      "normalized_rs_score": 0.10459265302316667
+    }
+  ],
+  "warnings": []
+}

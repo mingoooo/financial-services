@@ -1,0 +1,25 @@
+{
+  "date": "2025-12-22",
+  "signals": [
+    {
+      "symbol": "FSLR",
+      "trigger_date": "2025-12-22",
+      "entry_date": "2025-12-23",
+      "entry_price_ref": 272.83,
+      "breakout_level": 272.83,
+      "stop_reference": 249.0,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [
+        "vcp_breakout_family:platform-breakout:consolidation"
+      ],
+      "ranking_score": 74.4775,
+      "quality_score": 95.74,
+      "setup_score": 91.43,
+      "rs_score": 0.20238166720139228,
+      "normalized_rs_score": 0.20238166720139228
+    }
+  ],
+  "warnings": []
+}

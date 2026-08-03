@@ -1,0 +1,40 @@
+{
+  "date": "2026-04-22",
+  "signals": [
+    {
+      "symbol": "EME",
+      "trigger_date": "2026-04-22",
+      "entry_date": "2026-04-23",
+      "entry_price_ref": 835.0,
+      "breakout_level": 835.0,
+      "stop_reference": 685.5,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "double-bottom",
+      "primary_pattern_variant": "w-bottom",
+      "secondary_patterns": [],
+      "ranking_score": 69.4953,
+      "quality_score": 88.72,
+      "setup_score": 85.72,
+      "rs_score": 0.09665874207548653,
+      "normalized_rs_score": 0.09665874207548653
+    },
+    {
+      "symbol": "AMD",
+      "trigger_date": "2026-04-22",
+      "entry_date": "2026-04-23",
+      "entry_price_ref": 287.61,
+      "breakout_level": 287.61,
+      "stop_reference": 267.4773,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "52-week-high-breakout",
+      "primary_pattern_variant": "new-high",
+      "secondary_patterns": [],
+      "ranking_score": 63.6786,
+      "quality_score": 83.0,
+      "setup_score": 77.49,
+      "rs_score": 0.16785738108529902,
+      "normalized_rs_score": 0.16785738108529902
+    }
+  ],
+  "warnings": []
+}

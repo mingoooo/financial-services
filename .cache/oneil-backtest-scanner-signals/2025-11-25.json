@@ -1,0 +1,23 @@
+{
+  "date": "2025-11-25",
+  "signals": [
+    {
+      "symbol": "ADI",
+      "trigger_date": "2025-11-25",
+      "entry_date": "2025-11-26",
+      "entry_price_ref": 252.48,
+      "breakout_level": 252.48,
+      "stop_reference": 223.47,
+      "primary_pattern_family": "vcp_breakout_family",
+      "primary_pattern_type": "platform-breakout",
+      "primary_pattern_variant": "consolidation",
+      "secondary_patterns": [],
+      "ranking_score": 68.7185,
+      "quality_score": 86.0,
+      "setup_score": 85.82,
+      "rs_score": 0.042717103002638535,
+      "normalized_rs_score": 0.042717103002638535
+    }
+  ],
+  "warnings": []
+}

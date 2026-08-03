@@ -1,0 +1,40 @@
+{
+  "date": "2026-01-06",
+  "signals": [
+    {
+      "symbol": "INCY",
+      "trigger_date": "2026-01-06",
+      "entry_date": "2026-01-07",
+      "entry_price_ref": 102.69,
+      "breakout_level": 102.69,
+      "stop_reference": 97.01,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [],
+      "ranking_score": 74.4875,
+      "quality_score": 95.49,
+      "setup_score": 91.62,
+      "rs_score": 0.15257464103232987,
+      "normalized_rs_score": 0.15257464103232987
+    },
+    {
+      "symbol": "CIEN",
+      "trigger_date": "2026-01-06",
+      "entry_date": "2026-01-07",
+      "entry_price_ref": 246.06,
+      "breakout_level": 246.06,
+      "stop_reference": 223.27,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [],
+      "ranking_score": 70.2917,
+      "quality_score": 89.78,
+      "setup_score": 86.48,
+      "rs_score": 0.5884924888625678,
+      "normalized_rs_score": 0.5884924888625678
+    }
+  ],
+  "warnings": []
+}

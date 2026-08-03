@@ -1,0 +1,59 @@
+{
+  "date": "2026-02-03",
+  "signals": [
+    {
+      "symbol": "COHR",
+      "trigger_date": "2026-02-03",
+      "entry_date": "2026-02-04",
+      "entry_price_ref": 222.44,
+      "breakout_level": 222.44,
+      "stop_reference": 200.6,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [],
+      "ranking_score": 72.6468,
+      "quality_score": 92.54,
+      "setup_score": 89.51,
+      "rs_score": 0.6492336593427941,
+      "normalized_rs_score": 0.6492336593427941
+    },
+    {
+      "symbol": "CIEN",
+      "trigger_date": "2026-02-03",
+      "entry_date": "2026-02-04",
+      "entry_price_ref": 268.49,
+      "breakout_level": 268.49,
+      "stop_reference": 236.18,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [],
+      "ranking_score": 71.2107,
+      "quality_score": 90.79,
+      "setup_score": 87.8,
+      "rs_score": 0.36847671964571704,
+      "normalized_rs_score": 0.36847671964571704
+    },
+    {
+      "symbol": "KEYS",
+      "trigger_date": "2026-02-03",
+      "entry_date": "2026-02-04",
+      "entry_price_ref": 223.4833,
+      "breakout_level": 223.4833,
+      "stop_reference": 203.08,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "flat-base",
+      "primary_pattern_variant": "tight",
+      "secondary_patterns": [
+        "vcp_breakout_family:platform-breakout:consolidation"
+      ],
+      "ranking_score": 68.4138,
+      "quality_score": 86.51,
+      "setup_score": 84.86,
+      "rs_score": 0.1540781134067979,
+      "normalized_rs_score": 0.1540781134067979
+    }
+  ],
+  "warnings": []
+}

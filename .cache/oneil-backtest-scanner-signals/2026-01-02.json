@@ -1,0 +1,23 @@
+{
+  "date": "2026-01-02",
+  "signals": [
+    {
+      "symbol": "LRCX",
+      "trigger_date": "2026-01-02",
+      "entry_date": "2026-01-05",
+      "entry_price_ref": 178.07,
+      "breakout_level": 178.07,
+      "stop_reference": 170.76,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [],
+      "ranking_score": 69.8631,
+      "quality_score": 89.74,
+      "setup_score": 85.81,
+      "rs_score": 0.18042520389463745,
+      "normalized_rs_score": 0.18042520389463745
+    }
+  ],
+  "warnings": []
+}

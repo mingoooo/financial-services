@@ -1,0 +1,23 @@
+{
+  "date": "2026-02-05",
+  "signals": [
+    {
+      "symbol": "COHR",
+      "trigger_date": "2026-02-05",
+      "entry_date": "2026-02-06",
+      "entry_price_ref": 200.19,
+      "breakout_level": 200.19,
+      "stop_reference": 167.5,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "double-bottom",
+      "primary_pattern_variant": "w-bottom",
+      "secondary_patterns": [],
+      "ranking_score": 77.339,
+      "quality_score": 99.0,
+      "setup_score": 95.06,
+      "rs_score": 0.5451683858071996,
+      "normalized_rs_score": 0.5451683858071996
+    }
+  ],
+  "warnings": []
+}

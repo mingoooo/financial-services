@@ -1,0 +1,57 @@
+{
+  "date": "2026-06-12",
+  "signals": [
+    {
+      "symbol": "DVA",
+      "trigger_date": "2026-06-12",
+      "entry_date": "2026-06-15",
+      "entry_price_ref": 203.83,
+      "breakout_level": 203.83,
+      "stop_reference": 190.43,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [],
+      "ranking_score": 70.5678,
+      "quality_score": 89.61,
+      "setup_score": 87.24,
+      "rs_score": 0.32412798966089285,
+      "normalized_rs_score": 0.32412798966089285
+    },
+    {
+      "symbol": "KIM",
+      "trigger_date": "2026-06-12",
+      "entry_date": "2026-06-15",
+      "entry_price_ref": 25.7757,
+      "breakout_level": 25.7757,
+      "stop_reference": 22.93,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "flat-base",
+      "primary_pattern_variant": "tight",
+      "secondary_patterns": [],
+      "ranking_score": 69.0661,
+      "quality_score": 86.64,
+      "setup_score": 86.12,
+      "rs_score": 0.07065373055969282,
+      "normalized_rs_score": 0.07065373055969282
+    },
+    {
+      "symbol": "STT",
+      "trigger_date": "2026-06-12",
+      "entry_date": "2026-06-15",
+      "entry_price_ref": 165.0148,
+      "breakout_level": 165.0148,
+      "stop_reference": 147.4,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "flat-base",
+      "primary_pattern_variant": "tight",
+      "secondary_patterns": [],
+      "ranking_score": 68.1012,
+      "quality_score": 86.04,
+      "setup_score": 84.45,
+      "rs_score": 0.32119657394460077,
+      "normalized_rs_score": 0.32119657394460077
+    }
+  ],
+  "warnings": []
+}

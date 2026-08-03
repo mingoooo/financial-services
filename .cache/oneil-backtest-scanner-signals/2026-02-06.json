@@ -1,0 +1,23 @@
+{
+  "date": "2026-02-06",
+  "signals": [
+    {
+      "symbol": "MPWR",
+      "trigger_date": "2026-02-06",
+      "entry_date": "2026-02-09",
+      "entry_price_ref": 1183.15,
+      "breakout_level": 1183.15,
+      "stop_reference": 1100.0,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "cup-with-handle",
+      "primary_pattern_variant": "textbook",
+      "secondary_patterns": [],
+      "ranking_score": 78.1783,
+      "quality_score": 99.0,
+      "setup_score": 96.9,
+      "rs_score": 0.14146245278680292,
+      "normalized_rs_score": 0.14146245278680292
+    }
+  ],
+  "warnings": []
+}

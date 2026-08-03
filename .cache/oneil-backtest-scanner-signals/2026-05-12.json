@@ -1,0 +1,23 @@
+{
+  "date": "2026-05-12",
+  "signals": [
+    {
+      "symbol": "CSX",
+      "trigger_date": "2026-05-12",
+      "entry_date": "2026-05-13",
+      "entry_price_ref": 43.35,
+      "breakout_level": 43.35,
+      "stop_reference": 37.88,
+      "primary_pattern_family": "ibd_base_family",
+      "primary_pattern_type": "double-bottom",
+      "primary_pattern_variant": "w-bottom",
+      "secondary_patterns": [],
+      "ranking_score": 74.1065,
+      "quality_score": 94.33,
+      "setup_score": 91.61,
+      "rs_score": 0.012520735270028949,
+      "normalized_rs_score": 0.012520735270028949
+    }
+  ],
+  "warnings": []
+}
