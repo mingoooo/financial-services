@@ -46,9 +46,8 @@ on:
         default: true
         type: boolean
   schedule:
-    - cron: '00 10 * * 1-5'
-    - cron: '30 12 * * 1-5'
-    - cron: '45 14 * * 1-5'
+    - cron: '00 10 * * *'
+    - cron: '00 13 * * *'
 
 permissions:
   contents: read
@@ -103,11 +102,9 @@ jobs:
           run_label = 'scheduled run'
 
           if event_name == 'schedule':
-              should_run = now_ny.weekday() < 5
               scheduled_runs = {
-                  '00 10 * * 1-5': ('premarket', '定时运行 10:00 ET'),
-                  '30 12 * * 1-5': ('premarket', '定时运行 12:30 ET'),
-                  '45 14 * * 1-5': ('oneil', "O'Neil 定时扫描 14:45 ET"),
+                  '00 10 * * *': ('full', '定时运行 18:00 北京时间'),
+                  '00 13 * * *': ('full', '定时运行 21:00 北京时间'),
               }
               scheduled_run = scheduled_runs.get(schedule_expr)
               if scheduled_run is None:
