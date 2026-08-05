@@ -117,8 +117,8 @@ jobs:
               run_family = manual_family
               run_label = manual_label or f'manual {run_family}'
           else:
-              run_family = 'premarket'
-              run_label = 'push run'
+              run_family = 'full'
+              run_label = 'push run (full)'
 
           run_label = normalize_run_label(run_label)
           should_notify = notify_input and run_family in {'premarket', 'oneil', 'full'}
