@@ -14,6 +14,7 @@ DEFAULT_OUTPUT_DIR = Path('reports/site')
 DEFAULT_PREMARKET_ZH_SOURCE = Path('reports/premarket_zh.html')
 DEFAULT_PREMARKET_EN_SOURCE = Path('reports/premarket_.html')
 DEFAULT_ONEIL_SOURCE = Path('reports/oneil-live/live-full-latest.html')
+DEFAULT_MINERVINI_SOURCE = Path('reports/minervini-live/live-full-latest.html')
 DEFAULT_ONEIL_BACKTEST_SOURCE = Path('reports/oneil_backtest_overview.html')
 
 MANIFEST_VERSION = 'market-report-hub/v1'
@@ -39,6 +40,17 @@ FAMILY_DEFAULTS: dict[str, dict[str, Any]] = {
         'descriptions': {
             'zh': "O'Neil 风格活跃形态扫描与候选列表。",
             'en': "Active O'Neil-style setup scan and candidate list.",
+        },
+    },
+    'minervini': {
+        'order': 25,
+        'titles': {
+            'zh': 'Minervini 实时扫描',
+            'en': 'Minervini Live Scanner',
+        },
+        'descriptions': {
+            'zh': 'Mark Minervini 风格强势股形态扫描与候选列表。',
+            'en': 'Mark Minervini-style setup scan and candidate list.',
         },
     },
     'oneil-backtest': {
@@ -138,8 +150,8 @@ def stable_page_href(slug: str, lang: str) -> str:
 
 
 def stable_source_href(source_path: Path) -> str:
-    if source_path.parent.name == 'oneil-live':
-        return f'oneil-live/{source_path.name}'
+    if source_path.parent.name in {'oneil-live', 'minervini-live'}:
+        return f'{source_path.parent.name}/{source_path.name}'
     return source_path.name
 
 
@@ -197,6 +209,7 @@ def build_manifest_from_sources(args: argparse.Namespace) -> dict[str, Any]:
     premarket_zh_source = explicit_or_default(args.premarket_zh_source, DEFAULT_PREMARKET_ZH_SOURCE)
     premarket_en_source = explicit_or_default(args.premarket_en_source, DEFAULT_PREMARKET_EN_SOURCE)
     oneil_source = explicit_or_default(args.oneil_source, DEFAULT_ONEIL_SOURCE)
+    minervini_source = explicit_or_default(args.minervini_source, DEFAULT_MINERVINI_SOURCE)
     oneil_backtest_source = explicit_or_default(args.oneil_backtest_source, DEFAULT_ONEIL_BACKTEST_SOURCE)
 
     families = [
@@ -233,6 +246,21 @@ def build_manifest_from_sources(args: argparse.Namespace) -> dict[str, Any]:
                     lang='default',
                     title="O'Neil Live Scanner",
                     source_path=oneil_source,
+                    output_dir=output_dir,
+                ),
+            },
+        },
+        {
+            'slug': 'minervini',
+            'active': True,
+            'archived': False,
+            **copy.deepcopy(FAMILY_DEFAULTS['minervini']),
+            'pages': {
+                'default': page_record(
+                    slug='minervini',
+                    lang='default',
+                    title='Minervini Live Scanner',
+                    source_path=minervini_source,
                     output_dir=output_dir,
                 ),
             },
@@ -571,6 +599,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument('--premarket-zh-source', help='Source HTML for the Chinese premarket report.')
     parser.add_argument('--premarket-en-source', help='Source HTML for the English premarket report.')
     parser.add_argument('--oneil-source', help="Source HTML for the O'Neil live report.")
+    parser.add_argument('--minervini-source', help='Source HTML for the Minervini live report.')
     parser.add_argument('--oneil-backtest-source', help="Source HTML for the O'Neil backtest overview.")
     return parser.parse_args(argv)
 

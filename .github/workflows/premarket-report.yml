@@ -151,7 +151,7 @@ jobs:
 
       - name: Prepare report directories
         if: steps.gate.outputs.should_run == 'true'
-        run: mkdir -p reports/site reports/oneil-live
+        run: mkdir -p reports/site reports/oneil-live reports/minervini-live
 
       - name: Run premarket scan
         if: steps.gate.outputs.should_run == 'true' && (steps.gate.outputs.run_family == 'premarket' || steps.gate.outputs.run_family == 'full')
@@ -178,7 +178,7 @@ jobs:
         env:
           PUBLISHED_SITE_BASE: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
         run: |
-          mkdir -p reports/oneil-live
+          mkdir -p reports/oneil-live reports/minervini-live
 
           fetch_if_missing() {
             local dest="$1"
@@ -199,6 +199,8 @@ jobs:
           fetch_if_missing reports/premarket_zh.html "${PUBLISHED_SITE_BASE%/}/premarket_zh.html"
           fetch_if_missing reports/oneil-live/live-full-latest.html "${PUBLISHED_SITE_BASE%/}/oneil-live/live-full-latest.html"
           fetch_if_missing reports/oneil-live/live-full-latest.json "${PUBLISHED_SITE_BASE%/}/oneil-live/live-full-latest.json"
+          fetch_if_missing reports/minervini-live/live-full-latest.html "${PUBLISHED_SITE_BASE%/}/minervini-live/live-full-latest.html"
+          fetch_if_missing reports/minervini-live/live-full-latest.json "${PUBLISHED_SITE_BASE%/}/minervini-live/live-full-latest.json"
           fetch_if_missing reports/oneil_backtest_overview.html "${PUBLISHED_SITE_BASE%/}/oneil_backtest_overview.html"
 
       - name: Run O'Neil chain
@@ -211,6 +213,16 @@ jobs:
             --include-earnings \
             --report-name live-full-latest \
             --out-dir reports/oneil-live
+
+      - name: Run Minervini chain
+        if: steps.gate.outputs.should_run == 'true' && (steps.gate.outputs.run_family == 'oneil' || steps.gate.outputs.run_family == 'full')
+        run: |
+          python scripts/scan_oneil_setups.py \
+            --universe all-us \
+            --limit 0 \
+            --strategy-profile minervini_strict \
+            --report-name live-full-latest \
+            --out-dir reports/minervini-live
 
       - name: Render merged market report hub
         if: steps.gate.outputs.should_run == 'true'
@@ -230,11 +242,13 @@ jobs:
           }
 
           rm -rf market-report-bundle
-          mkdir -p market-report-bundle/reports/oneil-live
+          mkdir -p market-report-bundle/reports/oneil-live market-report-bundle/reports/minervini-live
           copy_if_exists reports/premarket_.html market-report-bundle/reports/premarket_.html
           copy_if_exists reports/premarket_zh.html market-report-bundle/reports/premarket_zh.html
           copy_if_exists reports/oneil-live/live-full-latest.html market-report-bundle/reports/oneil-live/live-full-latest.html
           copy_if_exists reports/oneil-live/live-full-latest.json market-report-bundle/reports/oneil-live/live-full-latest.json
+          copy_if_exists reports/minervini-live/live-full-latest.html market-report-bundle/reports/minervini-live/live-full-latest.html
+          copy_if_exists reports/minervini-live/live-full-latest.json market-report-bundle/reports/minervini-live/live-full-latest.json
           copy_if_exists reports/oneil_backtest_overview.html market-report-bundle/reports/oneil_backtest_overview.html
           copy_if_exists REPORT.md market-report-bundle/REPORT.md
           copy_if_exists packet.json market-report-bundle/packet.json
@@ -300,6 +314,8 @@ jobs:
           copy_if_exists market-report-bundle/reports/premarket_zh.html pages_payload/premarket_zh.html
           copy_if_exists market-report-bundle/reports/oneil-live/live-full-latest.html pages_payload/oneil-live/live-full-latest.html
           copy_if_exists market-report-bundle/reports/oneil-live/live-full-latest.json pages_payload/oneil-live/live-full-latest.json
+          copy_if_exists market-report-bundle/reports/minervini-live/live-full-latest.html pages_payload/minervini-live/live-full-latest.html
+          copy_if_exists market-report-bundle/reports/minervini-live/live-full-latest.json pages_payload/minervini-live/live-full-latest.json
           copy_if_exists market-report-bundle/reports/oneil_backtest_overview.html pages_payload/oneil_backtest_overview.html
 
           touch pages_payload/.nojekyll
@@ -330,6 +346,9 @@ jobs:
             fi
             if [ -f pages_payload/oneil/index.html ]; then
               echo "- O'Neil: ${BASE_URL%/}/oneil/index.html"
+            fi
+            if [ -f pages_payload/minervini/index.html ]; then
+              echo "- Minervini: ${BASE_URL%/}/minervini/index.html"
             fi
             if [ -f pages_payload/oneil-backtest/index.html ]; then
               echo "- O'Neil Backtest: ${BASE_URL%/}/oneil-backtest/index.html"

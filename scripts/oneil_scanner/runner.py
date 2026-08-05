@@ -13,6 +13,7 @@ from .config import ScannerConfig
 from .data import fetch_event_payload, load_daily_ohlcv
 from .detectors import DETECTOR_REGISTRY
 from .filters import evaluate_eligibility, evaluate_trend_filters
+from .minervini import allowed_detector_families, evaluate_minervini_trend_filters, is_minervini_profile
 from .models import GroupedCandidateSummary, PatternCandidate, ScanRunSummary, SymbolContext
 from .preprocess import add_shared_preprocessing
 from .report import build_grouped_candidate_summaries, write_report_bundle
@@ -164,7 +165,10 @@ def _run_family_detectors(
     config: ScannerConfig,
 ) -> list[PatternCandidate]:
     candidates: list[PatternCandidate] = []
+    allowed_families = allowed_detector_families(config.strategy_profile)
     for family_name, detector in DETECTOR_REGISTRY.items():
+        if allowed_families is not None and family_name not in allowed_families:
+            continue
         eligibility = evaluate_eligibility(
             frame,
             detector_family=family_name,
@@ -201,6 +205,7 @@ def _build_summary(
         as_of=config.as_of,
         include_news=config.include_news,
         include_earnings=config.include_earnings,
+        strategy_profile=config.strategy_profile,
         report_name=config.report_name,
         out_dir=config.out_dir,
         warnings=warnings,
@@ -242,7 +247,10 @@ def run_scan(
             continue
 
         enriched = add_shared_preprocessing(raw_frame)
-        trend_filters = evaluate_trend_filters(enriched, min_rs_proxy=config.min_rs_proxy)
+        if is_minervini_profile(config.strategy_profile):
+            trend_filters = evaluate_minervini_trend_filters(enriched, strategy_profile=config.strategy_profile)
+        else:
+            trend_filters = evaluate_trend_filters(enriched, min_rs_proxy=config.min_rs_proxy)
         if not trend_filters.passes:
             continue
 
@@ -270,6 +278,7 @@ def run_scan(
         candidates,
         as_of=config.as_of,
         trigger_window_days=config.trigger_window_days,
+        strategy_profile=config.strategy_profile,
     )
     summary = _build_summary(config=config, scanned_symbols=scanned_symbols, candidates=ranked, warnings=warnings)
     if write_reports:

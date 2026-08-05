@@ -113,6 +113,7 @@ def test_explicit_sources_render_with_fallback_shape_and_optional_backtest(tmp_p
     premarket_zh = _write_html(source_root / 'premarket_zh.html', '盘前报告')
     premarket_en = _write_html(source_root / 'premarket_.html', 'Premarket Report')
     oneil = _write_html(source_root / 'oneil-live' / 'live-full-latest.html', "O'Neil Live Scanner")
+    minervini = _write_html(source_root / 'minervini-live' / 'live-full-latest.html', 'Minervini Live Scanner')
 
     output_dir = tmp_path / 'assembled-site'
     exit_code = main(
@@ -127,6 +128,8 @@ def test_explicit_sources_render_with_fallback_shape_and_optional_backtest(tmp_p
             str(premarket_en),
             '--oneil-source',
             str(oneil),
+            '--minervini-source',
+            str(minervini),
             '--oneil-backtest-source',
             str(source_root / 'missing-backtest.html'),
         ]
@@ -138,11 +141,13 @@ def test_explicit_sources_render_with_fallback_shape_and_optional_backtest(tmp_p
     assert (output_dir / 'premarket' / 'index.html').exists()
     assert (output_dir / 'premarket' / 'index_en.html').exists()
     assert (output_dir / 'oneil' / 'index.html').exists()
+    assert (output_dir / 'minervini' / 'index.html').exists()
     assert not (output_dir / 'oneil-backtest' / 'index.html').exists()
 
     zh_wrapper = (output_dir / 'premarket' / 'index.html').read_text(encoding='utf-8')
     en_wrapper = (output_dir / 'premarket' / 'index_en.html').read_text(encoding='utf-8')
     oneil_wrapper = (output_dir / 'oneil' / 'index.html').read_text(encoding='utf-8')
+    minervini_wrapper = (output_dir / 'minervini' / 'index.html').read_text(encoding='utf-8')
     assert '返回首页' in zh_wrapper
     assert '../index.html' in zh_wrapper
     assert '打开原报告' in zh_wrapper
@@ -155,15 +160,52 @@ def test_explicit_sources_render_with_fallback_shape_and_optional_backtest(tmp_p
     assert '返回首页' not in en_wrapper
     assert '打开原报告' not in en_wrapper
     assert '../oneil-live/live-full-latest.html' in oneil_wrapper
+    assert '../minervini-live/live-full-latest.html' in minervini_wrapper
     assert (output_dir / 'premarket_zh.html').exists()
     assert (output_dir / 'premarket_.html').exists()
     assert (output_dir / 'oneil-live' / 'live-full-latest.html').exists()
+    assert (output_dir / 'minervini-live' / 'live-full-latest.html').exists()
 
     manifest = json.loads((output_dir / 'site_manifest.json').read_text(encoding='utf-8'))
     premarket_family = next(family for family in manifest['families'] if family['slug'] == 'premarket')
+    minervini_family = next(family for family in manifest['families'] if family['slug'] == 'minervini')
     backtest_family = next(family for family in manifest['families'] if family['slug'] == 'oneil-backtest')
     assert premarket_family['pages']['zh']['source_file'] == 'premarket_zh.html'
     assert premarket_family['pages']['en']['source_file'] == 'premarket_.html'
     assert all('source_path' not in page for page in _iter_pages(manifest))
+    assert minervini_family['available'] is True
+    assert minervini_family['pages']['default']['source_file'] == 'live-full-latest.html'
     assert backtest_family['available'] is False
     assert backtest_family['pages']['default']['available'] is False
+
+
+def test_manifest_driven_render_supports_minervini_family(tmp_path: Path) -> None:
+    sources_dir = tmp_path / 'sources'
+    minervini = _write_html(sources_dir / 'minervini-live' / 'live-full-latest.html', 'Minervini Live Scanner')
+
+    manifest_path = tmp_path / 'fixture_manifest.json'
+    manifest_payload = {
+        'manifest_version': 'market-report-hub/v1',
+        'generated_at': '2026-08-05T10:30:00Z',
+        'families': [
+            {
+                'slug': 'minervini',
+                'titles': {'zh': 'Minervini 实时扫描', 'en': 'Minervini Live Scanner'},
+                'pages': {
+                    'default': {'title': 'Minervini Live Scanner', 'source_path': str(minervini.relative_to(tmp_path))},
+                },
+            },
+        ],
+    }
+    manifest_path.write_text(json.dumps(manifest_payload, ensure_ascii=False), encoding='utf-8')
+
+    output_dir = tmp_path / 'site'
+    exit_code = main(['--manifest', str(manifest_path), '--output-dir', str(output_dir)])
+
+    assert exit_code == 0
+    assert (output_dir / 'minervini' / 'index.html').exists()
+    wrapper = (output_dir / 'minervini' / 'index.html').read_text(encoding='utf-8')
+    assert '../minervini-live/live-full-latest.html' in wrapper
+
+    rendered_manifest = json.loads((output_dir / 'site_manifest.json').read_text(encoding='utf-8'))
+    assert [family['slug'] for family in rendered_manifest['families']] == ['minervini']

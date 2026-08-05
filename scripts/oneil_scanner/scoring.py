@@ -6,6 +6,7 @@ from datetime import date, datetime
 from functools import cmp_to_key
 
 from .models import PatternCandidate
+from .minervini import is_minervini_profile
 
 DEFAULT_FAMILY_PRIORITY: dict[str, int] = {
     'event_driven_family': 4,
@@ -41,6 +42,20 @@ _VOLUME_SETUP_BONUS: dict[str, float] = {
 }
 
 _QUALITY_CLOSE_THRESHOLD = 1.0
+
+_MINERVINI_PATTERN_BONUS: dict[str, float] = {
+    'vcp': 4.0,
+    'platform-breakout': 2.5,
+    '52-week-high-breakout': 2.0,
+    'cup-with-handle': 1.5,
+    'flat-base': 1.0,
+    'double-bottom': 0.5,
+}
+
+_MINERVINI_FAMILY_PRIORITY: dict[str, int] = {
+    'vcp_breakout_family': 2,
+    'ibd_base_family': 1,
+}
 
 
 def _clamp(value: float, *, low: float = 0.0, high: float = 100.0) -> float:
@@ -149,13 +164,51 @@ def _report_sort_score(candidate: PatternCandidate) -> float:
     return round((quality * 0.35) + (setup * 0.45) + (confidence * 0.15) + (rs_score * 0.05), 4)
 
 
+def _minervini_tightness_bonus(candidate: PatternCandidate) -> float:
+    bonus = 0.0
+    if candidate.distance_to_52w_high is not None:
+        if candidate.distance_to_52w_high <= 0.02:
+            bonus += 4.0
+        elif candidate.distance_to_52w_high <= 0.05:
+            bonus += 2.0
+        elif candidate.distance_to_52w_high <= 0.10:
+            bonus += 0.5
+        else:
+            bonus -= 2.0
+
+    bonus += {
+        'confirmed': 3.0,
+        'watch': 1.0,
+        'dry-up': 0.5,
+    }.get(candidate.volume_confirmation, 0.0)
+
+    bonus += _MINERVINI_PATTERN_BONUS.get(candidate.pattern_type, 0.0)
+    return round(bonus, 2)
+
+
+def _minervini_report_sort_score(candidate: PatternCandidate) -> float:
+    quality = candidate.quality_score or 0.0
+    setup = candidate.setup_score or 0.0
+    rs_score = candidate.rs_score or 0.0
+    tightness = _minervini_tightness_bonus(candidate)
+    family_priority = _MINERVINI_FAMILY_PRIORITY.get(candidate.pattern_family, 0)
+    return round((quality * 0.20) + (setup * 0.25) + (rs_score * 0.35) + (tightness * 2.0) + (family_priority * 2.5), 4)
+
+
 def _compare_primary_candidates(
     left: PatternCandidate,
     right: PatternCandidate,
     *,
     as_of: str | None,
     family_priority: Mapping[str, int],
+    strategy_profile: str = 'oneil',
 ) -> int:
+    if is_minervini_profile(strategy_profile):
+        left_minervini = _minervini_report_sort_score(left)
+        right_minervini = _minervini_report_sort_score(right)
+        if left_minervini != right_minervini:
+            return -1 if left_minervini > right_minervini else 1
+
     left_quality = left.quality_score or 0.0
     right_quality = right.quality_score or 0.0
     if abs(left_quality - right_quality) > _QUALITY_CLOSE_THRESHOLD:
@@ -242,6 +295,7 @@ def score_and_rank_candidates(
     as_of: str | None = None,
     trigger_window_days: int = 5,
     family_priority: Mapping[str, int] | None = None,
+    strategy_profile: str = 'oneil',
 ) -> list[PatternCandidate]:
     priority_map = family_priority or DEFAULT_FAMILY_PRIORITY
     normalized = [normalize_candidate(candidate, as_of=as_of) for candidate in candidates]
@@ -254,7 +308,15 @@ def score_and_rank_candidates(
 
         ordered = sorted(
             group,
-            key=cmp_to_key(lambda left, right: _compare_primary_candidates(left, right, as_of=as_of, family_priority=priority_map)),
+            key=cmp_to_key(
+                lambda left, right: _compare_primary_candidates(
+                    left,
+                    right,
+                    as_of=as_of,
+                    family_priority=priority_map,
+                    strategy_profile=strategy_profile,
+                )
+            ),
         )
         primary = ordered[0]
         secondary_signals = list(primary.secondary_signals)
@@ -269,10 +331,10 @@ def score_and_rank_candidates(
     ranked = sorted(
         deduplicated,
         key=lambda item: (
-            _report_sort_score(item),
+            _minervini_report_sort_score(item) if is_minervini_profile(strategy_profile) else _report_sort_score(item),
             item.setup_score or 0.0,
             item.quality_score or 0.0,
-            priority_map.get(item.pattern_family, 0),
+            (_MINERVINI_FAMILY_PRIORITY if is_minervini_profile(strategy_profile) else priority_map).get(item.pattern_family, 0),
             _normalize_confidence(item.catalyst_confidence),
         ),
         reverse=True,

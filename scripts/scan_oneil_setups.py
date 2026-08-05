@@ -29,6 +29,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument('--period', default='1y')
     parser.add_argument('--interval', default='1d')
     parser.add_argument('--refresh-cache', action='store_true')
+    parser.add_argument(
+        '--strategy-profile',
+        default='oneil',
+        choices=['oneil', 'minervini_relaxed', 'minervini_strict'],
+        help='Strategy profile to run inside the unified scanner.',
+    )
     return parser
 
 
@@ -52,6 +58,7 @@ def build_config(args: argparse.Namespace) -> ScannerConfig:
         period=args.period,
         interval=args.interval,
         refresh_cache=args.refresh_cache,
+        strategy_profile=args.strategy_profile,
     )
 
 

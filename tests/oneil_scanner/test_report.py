@@ -131,8 +131,9 @@ def test_report_writers_emit_json_csv_and_html(tmp_path: Path) -> None:
     assert rows[0]['catalyst_type'] == 'earnings'
 
     html = html_path.read_text(encoding='utf-8')
-    assert "O'Neil Setup Scanner Report" in html
-    assert 'O&#x27;Neil 形态扫描报告' in html or 'O\'Neil 形态扫描报告' in html
+    assert 'Setup Scanner Report' in html
+    assert 'Strategy profile: oneil' in html
+    assert '形态扫描报告' in html
     assert 'English' in html
     assert '中文' in html
     assert 'setLanguage(' in html

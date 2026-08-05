@@ -26,6 +26,7 @@ class ScannerConfig:
     min_avg_dollar_volume: float = 10_000_000.0
     min_rs_proxy: float = 0.05
     trigger_window_days: int = 5
+    strategy_profile: str = 'oneil'
 
     def out_dir_path(self) -> Path:
         return Path(self.out_dir)
@@ -40,6 +41,7 @@ class RunMetadata:
     as_of: str | None = None
     report_name: str = 'oneil-setups'
     out_dir: str = 'reports/oneil'
+    strategy_profile: str = 'oneil'
     include_news: bool = False
     include_earnings: bool = False
     warnings: list[str] = field(default_factory=list)
@@ -137,6 +139,7 @@ class ScanRunSummary:
         as_of: str | None = None,
         include_news: bool = False,
         include_earnings: bool = False,
+        strategy_profile: str = 'oneil',
         warnings: list[str] | None = None,
     ) -> 'ScanRunSummary':
         return cls(
@@ -145,6 +148,7 @@ class ScanRunSummary:
                 as_of=as_of,
                 report_name=report_name,
                 out_dir=out_dir,
+                strategy_profile=strategy_profile,
                 include_news=include_news,
                 include_earnings=include_earnings,
                 warnings=list(warnings or []),
@@ -161,6 +165,7 @@ class ScanRunSummary:
         payload['as_of'] = self.run_metadata.as_of
         payload['report_name'] = self.run_metadata.report_name
         payload['out_dir'] = self.run_metadata.out_dir
+        payload['strategy_profile'] = self.run_metadata.strategy_profile
         payload['include_news'] = self.run_metadata.include_news
         payload['include_earnings'] = self.run_metadata.include_earnings
         payload['warnings'] = list(self.run_metadata.warnings)
