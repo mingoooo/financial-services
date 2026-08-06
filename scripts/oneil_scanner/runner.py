@@ -16,7 +16,11 @@ from .filters import evaluate_eligibility, evaluate_trend_filters
 from .minervini import allowed_detector_families, evaluate_minervini_trend_filters, is_minervini_profile
 from .models import GroupedCandidateSummary, PatternCandidate, ScanRunSummary, SymbolContext
 from .preprocess import add_shared_preprocessing
-from .qullamaggie import evaluate_qullamaggie_leader_prefilter, is_qullamaggie_profile
+from .qullamaggie import (
+    allowed_detector_families_for_qullamaggie,
+    evaluate_qullamaggie_leader_prefilter,
+    is_qullamaggie_profile,
+)
 from .report import build_grouped_candidate_summaries, write_report_bundle
 from .scoring import score_and_rank_candidates
 from .universe import resolve_universe_symbols
@@ -166,7 +170,12 @@ def _run_family_detectors(
     config: ScannerConfig,
 ) -> list[PatternCandidate]:
     candidates: list[PatternCandidate] = []
+    qullamaggie_families = allowed_detector_families_for_qullamaggie('qullamaggie') or set()
     allowed_families = allowed_detector_families(config.strategy_profile)
+    if allowed_families is None:
+        allowed_families = allowed_detector_families_for_qullamaggie(config.strategy_profile)
+    if allowed_families is None:
+        allowed_families = set(DETECTOR_REGISTRY) - qullamaggie_families
     for family_name, detector in DETECTOR_REGISTRY.items():
         if allowed_families is not None and family_name not in allowed_families:
             continue
