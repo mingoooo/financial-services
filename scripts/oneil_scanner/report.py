@@ -152,6 +152,7 @@ def _translate_volume_confirmation(volume_confirmation: str) -> str:
 
 
 def _candidate_explanation(candidate: PatternCandidate) -> str:
+    setup_metadata = candidate.setup_metadata()
     parts = [
         f"{candidate.pattern_type} on {candidate.trigger_date or 'latest bar'}",
         f"quality {candidate.quality_score or 0:.1f}",
@@ -166,10 +167,12 @@ def _candidate_explanation(candidate: PatternCandidate) -> str:
         parts.append(f"catalyst {candidate.catalyst_type}: {candidate.catalyst_summary or ''}")
     elif candidate.catalyst_summary:
         parts.append(candidate.catalyst_summary)
+    parts.extend(_qullamaggie_explanation_bits(candidate, setup_metadata=setup_metadata))
     return '; '.join(parts)
 
 
 def _candidate_explanation_zh(candidate: PatternCandidate) -> str:
+    setup_metadata = candidate.setup_metadata()
     parts = [
         f"{_translate_pattern_type(candidate.pattern_type)}，触发日 {candidate.trigger_date or '最新一根 K 线'}",
         f"质量分 {candidate.quality_score or 0:.1f}",
@@ -184,7 +187,88 @@ def _candidate_explanation_zh(candidate: PatternCandidate) -> str:
         parts.append(f"催化：{_translate_catalyst_type(candidate.catalyst_type)}；{candidate.catalyst_summary or ''}")
     elif candidate.catalyst_summary:
         parts.append(candidate.catalyst_summary.replace('Technical breakout without separate event catalyst requirement', '技术突破，无需额外事件催化').replace('No usable catalyst evidence aligned with the price move', '未发现与价格动作匹配的有效催化'))
+    parts.extend(_qullamaggie_explanation_bits_zh(candidate, setup_metadata=setup_metadata))
     return '；'.join(parts)
+
+
+def _qullamaggie_explanation_bits(candidate: PatternCandidate, *, setup_metadata: dict[str, object]) -> list[str]:
+    if not candidate.pattern_family.startswith('qullamaggie_'):
+        return []
+    parts: list[str] = []
+    if candidate.pattern_family == 'qullamaggie_ep_family':
+        gap_pct = setup_metadata.get('gap_pct')
+        if isinstance(gap_pct, (int, float)):
+            parts.append(f'gap {float(gap_pct):.1%}')
+        opening_drive = setup_metadata.get('opening_drive_volume_ratio')
+        if isinstance(opening_drive, (int, float)):
+            parts.append(f'opening drive {float(opening_drive):.1f}x')
+        entry_trigger_type = setup_metadata.get('entry_trigger_type')
+        if entry_trigger_type:
+            parts.append(f'entry {entry_trigger_type}')
+        or_window = setup_metadata.get('or_window_used')
+        if isinstance(or_window, (int, float)):
+            parts.append(f'OR window {int(or_window)}m')
+        stop_type = setup_metadata.get('stop_type')
+        if stop_type:
+            parts.append(f'stop {stop_type}')
+        return parts
+
+    prior_runup = setup_metadata.get('prior_runup_pct')
+    if isinstance(prior_runup, (int, float)):
+        parts.append(f'prior run-up {float(prior_runup):.1%}')
+    base_length = setup_metadata.get('base_length_bars')
+    if isinstance(base_length, (int, float)):
+        parts.append(f'base {int(base_length)} bars')
+    base_depth = setup_metadata.get('base_depth_pct')
+    if isinstance(base_depth, (int, float)):
+        parts.append(f'base depth {float(base_depth):.1%}')
+    tightness = setup_metadata.get('range_tightness_score')
+    if isinstance(tightness, (int, float)):
+        parts.append(f'tightness {float(tightness):.2f}')
+    breakout_volume = setup_metadata.get('breakout_volume_ratio')
+    if isinstance(breakout_volume, (int, float)):
+        parts.append(f'breakout volume {float(breakout_volume):.1f}x')
+    return parts
+
+
+def _qullamaggie_explanation_bits_zh(candidate: PatternCandidate, *, setup_metadata: dict[str, object]) -> list[str]:
+    if not candidate.pattern_family.startswith('qullamaggie_'):
+        return []
+    parts: list[str] = []
+    if candidate.pattern_family == 'qullamaggie_ep_family':
+        gap_pct = setup_metadata.get('gap_pct')
+        if isinstance(gap_pct, (int, float)):
+            parts.append(f'跳空幅度 {float(gap_pct):.1%}')
+        opening_drive = setup_metadata.get('opening_drive_volume_ratio')
+        if isinstance(opening_drive, (int, float)):
+            parts.append(f'开盘驱动量比 {float(opening_drive):.1f} 倍')
+        entry_trigger_type = setup_metadata.get('entry_trigger_type')
+        if entry_trigger_type:
+            parts.append(f'入场触发 {entry_trigger_type}')
+        or_window = setup_metadata.get('or_window_used')
+        if isinstance(or_window, (int, float)):
+            parts.append(f'开盘区间 {int(or_window)} 分钟')
+        stop_type = setup_metadata.get('stop_type')
+        if stop_type:
+            parts.append(f'止损类型 {stop_type}')
+        return parts
+
+    prior_runup = setup_metadata.get('prior_runup_pct')
+    if isinstance(prior_runup, (int, float)):
+        parts.append(f'前期涨幅 {float(prior_runup):.1%}')
+    base_length = setup_metadata.get('base_length_bars')
+    if isinstance(base_length, (int, float)):
+        parts.append(f'平台长度 {int(base_length)} 根')
+    base_depth = setup_metadata.get('base_depth_pct')
+    if isinstance(base_depth, (int, float)):
+        parts.append(f'平台深度 {float(base_depth):.1%}')
+    tightness = setup_metadata.get('range_tightness_score')
+    if isinstance(tightness, (int, float)):
+        parts.append(f'收紧度 {float(tightness):.2f}')
+    breakout_volume = setup_metadata.get('breakout_volume_ratio')
+    if isinstance(breakout_volume, (int, float)):
+        parts.append(f'突破量比 {float(breakout_volume):.1f} 倍')
+    return parts
 
 
 def _row_for_candidate(candidate: PatternCandidate) -> dict[str, object]:

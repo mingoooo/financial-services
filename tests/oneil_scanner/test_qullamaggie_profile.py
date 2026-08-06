@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import importlib
+import json
 from types import SimpleNamespace
 
 import pandas as pd
 import pytest
 
-from scripts.oneil_scanner.models import PatternCandidate, ScannerConfig
+from scripts.oneil_scanner.models import PatternCandidate, RunMetadata, ScanRunSummary, ScannerConfig
 from scripts.oneil_scanner.preprocess import add_shared_preprocessing
 from scripts.oneil_scanner.qullamaggie import (
     DEFAULT_ALLOWED_FAMILIES,
@@ -15,6 +16,7 @@ from scripts.oneil_scanner.qullamaggie import (
     is_qullamaggie_profile,
     resolve_qullamaggie_entry_trigger,
 )
+from scripts.oneil_scanner.report import build_grouped_candidate_summaries, write_json
 from scripts.oneil_scanner.runner import RunnerDependencies, run_scan
 from scripts.oneil_scanner.scoring import score_and_rank_candidates
 from scripts.scan_oneil_setups import build_config, build_parser
@@ -809,3 +811,45 @@ def test_non_qullamaggie_ranking_preserves_existing_ordering_behavior() -> None:
     )
 
     assert [candidate.symbol for candidate in ranked] == ['LOOSE', 'TIGHT']
+
+
+def test_qullamaggie_report_json_serializes_setup_metadata_cleanly(tmp_path) -> None:
+    candidate = _qullamaggie_candidate(
+        pattern_family='qullamaggie_breakout_family',
+        pattern_type='qullamaggie-breakout',
+        notes=[
+            'prior_runup_pct=0.4200',
+            'base_length_bars=15',
+            'base_depth_pct=0.0800',
+            'range_tightness_score=0.8800',
+            'breakout_level=104.5000',
+            'volume_confirmation=confirmed',
+        ],
+    )
+    summary = ScanRunSummary(
+        run_metadata=RunMetadata(
+            run_timestamp='2026-07-17T10:00:00',
+            as_of='2026-07-16',
+            report_name='qullamaggie-report',
+            out_dir=str(tmp_path),
+            strategy_profile='qullamaggie',
+        ),
+        universe='all-us',
+        symbols=[candidate.symbol],
+        limit=10,
+        candidates=[candidate],
+        grouped_candidate_summaries=build_grouped_candidate_summaries([candidate]),
+    )
+    json_path = tmp_path / 'qullamaggie-report.json'
+
+    write_json(json_path, summary)
+
+    payload = json.loads(json_path.read_text(encoding='utf-8'))
+    assert payload['candidates'][0]['setup_metadata'] == {
+        'prior_runup_pct': 0.42,
+        'base_length_bars': 15,
+        'base_depth_pct': 0.08,
+        'range_tightness_score': 0.88,
+        'breakout_level': 104.5,
+        'volume_confirmation': 'confirmed',
+    }

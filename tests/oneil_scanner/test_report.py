@@ -20,7 +20,12 @@ def _candidate(
     pattern_type: str,
     rank: int,
     catalyst_type: str = 'technical_breakout',
+    catalyst_confidence: float | None = None,
+    notes: list[str] | None = None,
 ) -> PatternCandidate:
+    resolved_catalyst_confidence = catalyst_confidence
+    if resolved_catalyst_confidence is None:
+        resolved_catalyst_confidence = 0.8 if catalyst_type not in {'technical_breakout', 'unknown'} else 0.0
     return PatternCandidate(
         symbol=symbol,
         pattern_family=family,
@@ -36,14 +41,14 @@ def _candidate(
         distance_to_52w_high=0.03,
         volume_confirmation='confirmed',
         catalyst_type=catalyst_type,
-        catalyst_confidence=0.8 if catalyst_type not in {'technical_breakout', 'unknown'} else 0.0,
+        catalyst_confidence=resolved_catalyst_confidence,
         catalyst_evidence_count=2 if catalyst_type not in {'technical_breakout', 'unknown'} else 1,
         catalyst_summary='Confirmed catalyst aligned with price action' if catalyst_type not in {'technical_breakout', 'unknown'} else None,
         quality_score=81.0 + rank,
         setup_score=79.0 + rank,
         report_rank=rank,
         secondary_signals=['tight closes'],
-        notes=['scaffold'],
+        notes=list(notes or ['scaffold']),
     )
 
 
@@ -67,6 +72,40 @@ def _summary() -> ScanRunSummary:
         limit=10,
         candidates=candidates,
         grouped_candidate_summaries=build_grouped_candidate_summaries(candidates),
+    )
+
+
+def _qullamaggie_summary() -> ScanRunSummary:
+    candidate = _candidate(
+        symbol='APP',
+        family='qullamaggie_ep_family',
+        pattern_type='episodic-pivot',
+        rank=1,
+        catalyst_type='earnings',
+        catalyst_confidence=0.91,
+        notes=[
+            'gap_pct=0.1234',
+            'catalyst_type=earnings',
+            'catalyst_confidence=0.9100',
+            'opening_drive_volume_ratio=2.4000',
+            'entry_trigger_type=orh_breakout',
+            'or_window_used=30',
+            'stop_type=low_of_day',
+        ],
+    )
+    return ScanRunSummary(
+        run_metadata=RunMetadata(
+            run_timestamp='2026-07-17T10:00:00',
+            as_of='2026-07-16',
+            report_name='daily-qullamaggie',
+            out_dir='reports/qullamaggie',
+            strategy_profile='qullamaggie',
+        ),
+        universe='all-us',
+        symbols=['APP'],
+        limit=10,
+        candidates=[candidate],
+        grouped_candidate_summaries=build_grouped_candidate_summaries([candidate]),
     )
 
 
@@ -176,3 +215,38 @@ def test_report_writers_create_parent_directories(tmp_path: Path) -> None:
     write_json(json_path, summary)
 
     assert json_path.exists()
+
+
+def test_report_writers_include_qullamaggie_metadata_in_json_and_html(tmp_path: Path) -> None:
+    summary = _qullamaggie_summary()
+    config = ScannerConfig(
+        as_of='2026-07-16',
+        cache_dir=str(tmp_path / 'cache'),
+        strategy_profile='qullamaggie',
+    )
+    json_path = tmp_path / 'daily-qullamaggie.json'
+    html_path = tmp_path / 'daily-qullamaggie.html'
+
+    for symbol in summary.symbols:
+        _write_cached_frame(Path(config.cache_dir), symbol, as_of='2026-07-16')
+
+    write_json(json_path, summary)
+    write_html(html_path, summary, config=config)
+
+    payload = json.loads(json_path.read_text(encoding='utf-8'))
+    assert payload['strategy_profile'] == 'qullamaggie'
+    assert payload['candidates'][0]['setup_metadata'] == {
+        'gap_pct': 0.1234,
+        'catalyst_type': 'earnings',
+        'catalyst_confidence': 0.91,
+        'opening_drive_volume_ratio': 2.4,
+        'entry_trigger_type': 'orh_breakout',
+        'or_window_used': 30,
+        'stop_type': 'low_of_day',
+    }
+
+    html = html_path.read_text(encoding='utf-8')
+    assert 'Strategy profile: qullamaggie' in html
+    assert 'gap 12.3%' in html
+    assert 'entry orh_breakout' in html
+    assert '开盘区间 30 分钟' in html

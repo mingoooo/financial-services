@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+import math
 from typing import Any
 
 
@@ -101,8 +102,43 @@ class PatternCandidate:
         if self.catalyst_summary is None:
             self.catalyst_summary = _default_catalyst_summary(self.catalyst_type)
 
+    def setup_metadata(self) -> dict[str, Any]:
+        metadata: dict[str, Any] = {}
+        for note in self.notes:
+            if '=' not in note:
+                continue
+            key, raw_value = note.split('=', 1)
+            key = key.strip()
+            if not key:
+                continue
+            metadata[key] = _coerce_setup_metadata_value(raw_value.strip())
+        return metadata
+
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        payload = asdict(self)
+        setup_metadata = self.setup_metadata()
+        if setup_metadata:
+            payload['setup_metadata'] = setup_metadata
+        return payload
+
+
+def _coerce_setup_metadata_value(value: str) -> Any:
+    if value == '':
+        return ''
+    lowered = value.lower()
+    if lowered == 'true':
+        return True
+    if lowered == 'false':
+        return False
+    if value.lstrip('-').isdigit():
+        return int(value)
+    try:
+        parsed = float(value)
+    except ValueError:
+        return value
+    if math.isnan(parsed) or math.isinf(parsed):
+        return value
+    return parsed
 
 
 def _default_catalyst_summary(catalyst_type: str) -> str:
@@ -168,7 +204,14 @@ class ScanRunSummary:
         )
 
     def to_dict(self) -> dict[str, Any]:
-        payload = asdict(self)
+        payload = {
+            'run_metadata': asdict(self.run_metadata),
+            'universe': self.universe,
+            'symbols': list(self.symbols),
+            'limit': self.limit,
+            'candidates': [candidate.to_dict() for candidate in self.candidates],
+            'grouped_candidate_summaries': [group.to_dict() for group in self.grouped_candidate_summaries],
+        }
         payload['run_timestamp'] = self.run_metadata.run_timestamp
         payload['as_of'] = self.run_metadata.as_of
         payload['report_name'] = self.run_metadata.report_name
