@@ -5,6 +5,14 @@ from pathlib import Path
 from typing import Any
 
 
+STRATEGY_PROFILES = (
+    'oneil',
+    'minervini_relaxed',
+    'minervini_strict',
+    'qullamaggie',
+)
+
+
 @dataclass
 class ScannerConfig:
     universe: str = 'all-us'

@@ -9,9 +9,11 @@ import sys
 if __package__ in (None, ''):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from scripts.oneil_scanner.config import ScannerConfig
+    from scripts.oneil_scanner.models import STRATEGY_PROFILES
     from scripts.oneil_scanner.runner import run_scan
 else:
     from .oneil_scanner.config import ScannerConfig
+    from .oneil_scanner.models import STRATEGY_PROFILES
     from .oneil_scanner.runner import run_scan
 
 
@@ -32,7 +34,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         '--strategy-profile',
         default='oneil',
-        choices=['oneil', 'minervini_relaxed', 'minervini_strict'],
+        choices=STRATEGY_PROFILES,
         help='Strategy profile to run inside the unified scanner.',
     )
     return parser
