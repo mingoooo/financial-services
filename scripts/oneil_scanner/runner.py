@@ -16,6 +16,7 @@ from .filters import evaluate_eligibility, evaluate_trend_filters
 from .minervini import allowed_detector_families, evaluate_minervini_trend_filters, is_minervini_profile
 from .models import GroupedCandidateSummary, PatternCandidate, ScanRunSummary, SymbolContext
 from .preprocess import add_shared_preprocessing
+from .qullamaggie import evaluate_qullamaggie_leader_prefilter, is_qullamaggie_profile
 from .report import build_grouped_candidate_summaries, write_report_bundle
 from .scoring import score_and_rank_candidates
 from .universe import resolve_universe_symbols
@@ -190,6 +191,18 @@ def _run_family_detectors(
     return candidates
 
 
+def _passes_leader_prefilter(frame: pd.DataFrame, *, config: ScannerConfig) -> bool:
+    if not is_qullamaggie_profile(config.strategy_profile):
+        return True
+    result = evaluate_qullamaggie_leader_prefilter(
+        strength_1m=_latest_value(frame, 'strength_1m'),
+        strength_3m=_latest_value(frame, 'strength_3m'),
+        strength_6m=_latest_value(frame, 'strength_6m'),
+        strategy_profile=config.strategy_profile,
+    )
+    return result.passes
+
+
 def _build_summary(
     *,
     config: ScannerConfig,
@@ -252,6 +265,8 @@ def run_scan(
         else:
             trend_filters = evaluate_trend_filters(enriched, min_rs_proxy=config.min_rs_proxy)
         if not trend_filters.passes:
+            continue
+        if not _passes_leader_prefilter(enriched, config=config):
             continue
 
         symbol_context = _build_symbol_context(symbol, enriched)

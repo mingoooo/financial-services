@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
+import pandas as pd
+
 from scripts.oneil_scanner.models import PatternCandidate, ScannerConfig
 from scripts.oneil_scanner.qullamaggie import (
     DEFAULT_ALLOWED_FAMILIES,
@@ -8,7 +12,23 @@ from scripts.oneil_scanner.qullamaggie import (
     is_qullamaggie_profile,
     resolve_qullamaggie_entry_trigger,
 )
+from scripts.oneil_scanner.runner import RunnerDependencies, run_scan
 from scripts.scan_oneil_setups import build_config, build_parser
+
+
+def _daily_frame(length: int = 260, *, start: float = 100.0, step: float = 0.6) -> pd.DataFrame:
+    dates = pd.date_range('2025-01-01', periods=length, freq='B')
+    close = [start + (index * step) for index in range(length)]
+    return pd.DataFrame(
+        {
+            'Date': dates,
+            'Open': [value * 0.99 for value in close],
+            'High': [value * 1.01 for value in close],
+            'Low': [value * 0.98 for value in close],
+            'Close': close,
+            'Volume': [1_500_000] * length,
+        }
+    )
 
 
 def _candidate(*, breakout_level: float | None = 104.5) -> PatternCandidate:
@@ -88,6 +108,164 @@ def test_qullamaggie_helper_leader_prefilter_fails_when_short_term_strength_brea
 
     assert result.passes is False
     assert result.reasons == ['strength_1m_below_threshold']
+
+
+def test_run_scan_oneil_leader_prefilter_does_not_invoke_qullamaggie_prefilter(monkeypatch, tmp_path) -> None:
+    prefilter_calls: list[tuple[float | None, float | None, float | None]] = []
+    detector_calls: list[str] = []
+    frame = _daily_frame()
+
+    def fake_load_daily_ohlcv(symbols, **_kwargs):
+        return SimpleNamespace(frames={symbol: frame for symbol in symbols}, warnings=[], metadata={'run_metadata': {'window_key': 'latest_1y_1d'}})
+
+    def fake_preprocess(raw_frame, **_kwargs):
+        enriched = raw_frame.copy()
+        enriched['AvgDollarVolume20'] = 20_000_000.0
+        enriched['strength_1m'] = 0.35
+        enriched['strength_3m'] = 0.60
+        enriched['strength_6m'] = 0.90
+        return enriched
+
+    def fake_trend_filters(_frame, *, min_rs_proxy=0.0):
+        return SimpleNamespace(passes=True, trend_template_pass=True, rs_pass=True)
+
+    def fake_eligibility(_frame, **_kwargs):
+        return SimpleNamespace(passes=True)
+
+    def fake_leader_prefilter(*, strength_1m, strength_3m, strength_6m, strategy_profile='qullamaggie'):
+        prefilter_calls.append((strength_1m, strength_3m, strength_6m))
+        return SimpleNamespace(passes=True, reasons=[], metrics={})
+
+    def fake_detector(_frame, **kwargs):
+        detector_calls.append(kwargs['symbol'])
+        return [_candidate()]
+
+    monkeypatch.setattr('scripts.oneil_scanner.runner.load_daily_ohlcv', fake_load_daily_ohlcv)
+    monkeypatch.setattr('scripts.oneil_scanner.runner.add_shared_preprocessing', fake_preprocess)
+    monkeypatch.setattr('scripts.oneil_scanner.runner.evaluate_trend_filters', fake_trend_filters)
+    monkeypatch.setattr('scripts.oneil_scanner.runner.evaluate_eligibility', fake_eligibility)
+    monkeypatch.setattr('scripts.oneil_scanner.runner.evaluate_qullamaggie_leader_prefilter', fake_leader_prefilter)
+    monkeypatch.setattr('scripts.oneil_scanner.runner.DETECTOR_REGISTRY', {'momentum_continuation_family': fake_detector})
+
+    summary = run_scan(
+        ScannerConfig(
+            universe='all-us',
+            symbols=['AAPL'],
+            cache_dir=str(tmp_path / 'cache'),
+            out_dir=str(tmp_path / 'reports'),
+        ),
+        dependencies=RunnerDependencies(),
+        write_reports=False,
+    )
+
+    assert prefilter_calls == []
+    assert detector_calls == ['AAPL']
+    assert len(summary.candidates) == 1
+
+
+def test_run_scan_qullamaggie_leader_prefilter_runs_before_detectors(monkeypatch, tmp_path) -> None:
+    call_order: list[tuple[str, float | None, float | None, float | None] | str] = []
+    frame = _daily_frame()
+
+    def fake_load_daily_ohlcv(symbols, **_kwargs):
+        return SimpleNamespace(frames={symbol: frame for symbol in symbols}, warnings=[], metadata={'run_metadata': {'window_key': 'latest_1y_1d'}})
+
+    def fake_preprocess(raw_frame, **_kwargs):
+        enriched = raw_frame.copy()
+        enriched['AvgDollarVolume20'] = 20_000_000.0
+        enriched['strength_1m'] = 0.35
+        enriched['strength_3m'] = 0.60
+        enriched['strength_6m'] = 0.90
+        return enriched
+
+    def fake_trend_filters(_frame, *, min_rs_proxy=0.0):
+        return SimpleNamespace(passes=True, trend_template_pass=True, rs_pass=True)
+
+    def fake_eligibility(_frame, **_kwargs):
+        return SimpleNamespace(passes=True)
+
+    def fake_leader_prefilter(*, strength_1m, strength_3m, strength_6m, strategy_profile='qullamaggie'):
+        call_order.append(('leader_prefilter', strength_1m, strength_3m, strength_6m))
+        return SimpleNamespace(passes=True, reasons=[], metrics={})
+
+    def fake_detector(_frame, **_kwargs):
+        call_order.append('detector')
+        return [_candidate()]
+
+    monkeypatch.setattr('scripts.oneil_scanner.runner.load_daily_ohlcv', fake_load_daily_ohlcv)
+    monkeypatch.setattr('scripts.oneil_scanner.runner.add_shared_preprocessing', fake_preprocess)
+    monkeypatch.setattr('scripts.oneil_scanner.runner.evaluate_trend_filters', fake_trend_filters)
+    monkeypatch.setattr('scripts.oneil_scanner.runner.evaluate_eligibility', fake_eligibility)
+    monkeypatch.setattr('scripts.oneil_scanner.runner.evaluate_qullamaggie_leader_prefilter', fake_leader_prefilter)
+    monkeypatch.setattr('scripts.oneil_scanner.runner.DETECTOR_REGISTRY', {'momentum_continuation_family': fake_detector})
+
+    run_scan(
+        ScannerConfig(
+            universe='all-us',
+            symbols=['AAPL'],
+            cache_dir=str(tmp_path / 'cache'),
+            out_dir=str(tmp_path / 'reports'),
+            strategy_profile='qullamaggie',
+        ),
+        dependencies=RunnerDependencies(),
+        write_reports=False,
+    )
+
+    assert call_order == [('leader_prefilter', 0.35, 0.60, 0.90), 'detector']
+
+
+def test_run_scan_qullamaggie_leader_prefilter_blocks_detector_calls_when_symbol_fails(monkeypatch, tmp_path) -> None:
+    prefilter_calls: list[tuple[float | None, float | None, float | None]] = []
+    detector_calls: list[str] = []
+    frame = _daily_frame()
+
+    def fake_load_daily_ohlcv(symbols, **_kwargs):
+        return SimpleNamespace(frames={symbol: frame for symbol in symbols}, warnings=[], metadata={'run_metadata': {'window_key': 'latest_1y_1d'}})
+
+    def fake_preprocess(raw_frame, **_kwargs):
+        enriched = raw_frame.copy()
+        enriched['AvgDollarVolume20'] = 20_000_000.0
+        enriched['strength_1m'] = 0.10
+        enriched['strength_3m'] = 0.60
+        enriched['strength_6m'] = 0.90
+        return enriched
+
+    def fake_trend_filters(_frame, *, min_rs_proxy=0.0):
+        return SimpleNamespace(passes=True, trend_template_pass=True, rs_pass=True)
+
+    def fake_eligibility(_frame, **_kwargs):
+        return SimpleNamespace(passes=True)
+
+    def fake_leader_prefilter(*, strength_1m, strength_3m, strength_6m, strategy_profile='qullamaggie'):
+        prefilter_calls.append((strength_1m, strength_3m, strength_6m))
+        return SimpleNamespace(passes=False, reasons=['strength_1m_below_threshold'], metrics={})
+
+    def fake_detector(_frame, **kwargs):
+        detector_calls.append(kwargs['symbol'])
+        return [_candidate()]
+
+    monkeypatch.setattr('scripts.oneil_scanner.runner.load_daily_ohlcv', fake_load_daily_ohlcv)
+    monkeypatch.setattr('scripts.oneil_scanner.runner.add_shared_preprocessing', fake_preprocess)
+    monkeypatch.setattr('scripts.oneil_scanner.runner.evaluate_trend_filters', fake_trend_filters)
+    monkeypatch.setattr('scripts.oneil_scanner.runner.evaluate_eligibility', fake_eligibility)
+    monkeypatch.setattr('scripts.oneil_scanner.runner.evaluate_qullamaggie_leader_prefilter', fake_leader_prefilter)
+    monkeypatch.setattr('scripts.oneil_scanner.runner.DETECTOR_REGISTRY', {'momentum_continuation_family': fake_detector})
+
+    summary = run_scan(
+        ScannerConfig(
+            universe='all-us',
+            symbols=['AAPL'],
+            cache_dir=str(tmp_path / 'cache'),
+            out_dir=str(tmp_path / 'reports'),
+            strategy_profile='qullamaggie',
+        ),
+        dependencies=RunnerDependencies(),
+        write_reports=False,
+    )
+
+    assert prefilter_calls == [(0.10, 0.60, 0.90)]
+    assert detector_calls == []
+    assert summary.candidates == []
 
 
 
