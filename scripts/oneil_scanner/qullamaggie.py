@@ -50,6 +50,9 @@ def evaluate_qullamaggie_leader_prefilter(
     strategy_profile: str = QULLAMAGGIE_PROFILE,
 ) -> QullamaggieLeaderPrefilterResult:
     settings = PROFILE_SETTINGS[strategy_profile]
+    strength_1m = _normalized_strength_metric(strength_1m)
+    strength_3m = _normalized_strength_metric(strength_3m)
+    strength_6m = _normalized_strength_metric(strength_6m)
     metrics = {
         'strength_1m': strength_1m,
         'strength_3m': strength_3m,
@@ -62,6 +65,15 @@ def evaluate_qullamaggie_leader_prefilter(
     }
     reasons = [reason for reason, failed in checks.items() if failed]
     return QullamaggieLeaderPrefilterResult(passes=not reasons, reasons=reasons, metrics=metrics)
+
+
+def _normalized_strength_metric(value: float | None) -> float | None:
+    if value is None:
+        return None
+    parsed = float(value)
+    if math.isnan(parsed) or math.isinf(parsed):
+        return None
+    return parsed
 
 
 def resolve_qullamaggie_entry_trigger(

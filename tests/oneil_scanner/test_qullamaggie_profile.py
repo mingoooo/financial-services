@@ -243,6 +243,18 @@ def test_qullamaggie_helper_leader_prefilter_fails_when_short_term_strength_brea
     assert result.reasons == ['strength_1m_below_threshold']
 
 
+def test_qullamaggie_helper_leader_prefilter_treats_nan_strength_as_missing() -> None:
+    result = evaluate_qullamaggie_leader_prefilter(
+        strength_1m=float('nan'),
+        strength_3m=0.60,
+        strength_6m=0.90,
+    )
+
+    assert result.passes is False
+    assert result.metrics['strength_1m'] is None
+    assert result.reasons == ['strength_1m_below_threshold']
+
+
 def test_qullamaggie_detector_breakout_requires_sufficient_prior_runup() -> None:
     assert _detect_qullamaggie_breakout(_qullamaggie_breakout_frame(strong_runup=False)) == []
 

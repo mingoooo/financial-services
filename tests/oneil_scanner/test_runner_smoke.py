@@ -79,6 +79,71 @@ def _end_to_end_frames() -> dict[str, pd.DataFrame]:
     }
 
 
+def _redate_frame(frame: pd.DataFrame, *, as_of: str) -> pd.DataFrame:
+    dated = frame.copy()
+    dated['Date'] = pd.bdate_range(end=pd.Timestamp(as_of), periods=len(dated))
+    return dated
+
+
+def _prepend_history(frame: pd.DataFrame, *, start_close: float, bars: int = 180) -> pd.DataFrame:
+    first_close = float(frame.iloc[0]['Close'])
+    closes = [start_close + ((first_close * 0.96) - start_close) * index / max(bars - 1, 1) for index in range(bars)]
+    end_date = pd.Timestamp(frame.iloc[0]['Date']) - pd.offsets.BDay(1)
+    history = pd.DataFrame(
+        {
+            'Date': pd.bdate_range(end=end_date, periods=bars),
+            'Open': [close * 0.995 for close in closes],
+            'High': [close * 1.01 for close in closes],
+            'Low': [close * 0.985 for close in closes],
+            'Close': closes,
+            'Volume': [900_000.0] * bars,
+        }
+    )
+    return pd.concat([history, frame], ignore_index=True)
+
+
+def _qullamaggie_smoke_breakout_frame(*, as_of: str) -> pd.DataFrame:
+    prior_run = [32.0 + (40.0 / 59.0) * index for index in range(60)]
+    base = pd.DataFrame(
+        {
+            'Date': pd.date_range('2025-01-01', periods=76, freq='B'),
+            'Open': [close * 0.995 for close in prior_run]
+            + [87.8, 87.3, 86.9, 86.5, 86.1, 86.0, 86.2, 86.5, 86.8, 87.0, 87.3, 87.7, 88.0, 88.4, 88.8]
+            + [90.2],
+            'High': [close * 1.02 for close in prior_run]
+            + [90.0, 89.6, 89.2, 88.9, 88.6, 88.4, 88.5, 88.7, 88.9, 89.1, 89.2, 89.4, 89.6, 89.8, 89.9]
+            + [93.0],
+            'Low': [close * 0.98 for close in prior_run]
+            + [85.6, 85.5, 85.4, 85.5, 85.6, 85.8, 86.0, 86.2, 86.4, 86.6, 86.8, 87.0, 87.3, 87.5, 87.8]
+            + [89.4],
+            'Close': prior_run
+            + [88.0, 87.5, 87.0, 86.6, 86.2, 86.0, 86.3, 86.6, 86.9, 87.2, 87.5, 87.9, 88.2, 88.6, 89.0]
+            + [92.0],
+            'Volume': [1_550_000.0] * 60
+            + [1_000_000.0, 950_000.0, 920_000.0, 900_000.0, 880_000.0, 860_000.0, 850_000.0, 840_000.0, 830_000.0, 825_000.0, 820_000.0, 815_000.0, 810_000.0, 805_000.0, 800_000.0]
+            + [2_700_000.0],
+        }
+    )
+    return _redate_frame(_prepend_history(base, start_close=18.0), as_of=as_of)
+
+
+def _qullamaggie_smoke_ep_frame(*, as_of: str) -> pd.DataFrame:
+    prior = [40.0 + 0.35 * index for index in range(39)]
+    previous_close = prior[-1]
+    gap_open = previous_close * 1.10
+    base = pd.DataFrame(
+        {
+            'Date': pd.date_range('2025-03-03', periods=40, freq='B'),
+            'Open': [close * 0.995 for close in prior] + [gap_open],
+            'High': [close * 1.01 for close in prior] + [gap_open * 1.05],
+            'Low': [close * 0.985 for close in prior] + [gap_open * 0.985],
+            'Close': prior + [gap_open * 1.03],
+            'Volume': [1_050_000.0] * 39 + [3_800_000.0],
+        }
+    )
+    return _redate_frame(_prepend_history(base, start_close=20.0), as_of=as_of)
+
+
 def test_scan_oneil_module_import_smoke() -> None:
     parser = build_parser()
     args = parser.parse_args([])
@@ -222,6 +287,104 @@ def test_run_scan_end_to_end_runs_all_families_dedups_and_writes_reports(tmp_pat
     assert (tmp_path / 'reports' / 'e2e-run.json').exists()
     assert (tmp_path / 'reports' / 'e2e-run.csv').exists()
     assert (tmp_path / 'reports' / 'e2e-run.html').exists()
+
+
+def test_run_scan_end_to_end_qullamaggie_applies_prefilter_ranks_and_writes_reports(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    as_of = '2026-07-16'
+    frames = {
+        'QEP': _qullamaggie_smoke_ep_frame(as_of=as_of),
+        'QBO': _qullamaggie_smoke_breakout_frame(as_of=as_of),
+        'FAIL': _redate_frame(_single_symbol_frame('FAIL'), as_of=as_of),
+    }
+    prefilter_calls: list[tuple[str, float | None, float | None, float | None]] = []
+    real_leader_prefilter = runner_module.evaluate_qullamaggie_leader_prefilter
+
+    def record_leader_prefilter(*, strength_1m, strength_3m, strength_6m, strategy_profile='qullamaggie'):
+        prefilter_calls.append((strategy_profile, strength_1m, strength_3m, strength_6m))
+        return real_leader_prefilter(
+            strength_1m=strength_1m,
+            strength_3m=strength_3m,
+            strength_6m=strength_6m,
+            strategy_profile=strategy_profile,
+        )
+
+    monkeypatch.setattr(
+        runner_module,
+        'evaluate_trend_filters',
+        lambda *_args, **_kwargs: SimpleNamespace(passes=True, trend_template_pass=True),
+    )
+    monkeypatch.setattr(runner_module, 'evaluate_qullamaggie_leader_prefilter', record_leader_prefilter)
+
+    config = build_config(
+        build_parser().parse_args(
+            [
+                '--universe',
+                'all-us',
+                '--symbols',
+                'QEP,QBO,FAIL',
+                '--limit',
+                '10',
+                '--as-of',
+                as_of,
+                '--include-earnings',
+                '--strategy-profile',
+                'qullamaggie',
+                '--report-name',
+                'qullamaggie-smoke',
+                '--out-dir',
+                str(tmp_path / 'reports'),
+                '--cache-dir',
+                str(tmp_path / 'cache'),
+            ]
+        )
+    )
+
+    summary = run_scan(
+        config,
+        dependencies=RunnerDependencies(
+            download_fn=_multi_symbol_download_factory(frames),
+            earnings_fetcher=lambda symbol: {
+                'events': [
+                    {
+                        'date': as_of,
+                        'reported': True,
+                        'confirmed': True,
+                        'headline': 'Quarterly earnings beat and raised outlook',
+                        'eps_surprise_pct': 18.0,
+                    }
+                ]
+            }
+            if symbol == 'QEP'
+            else {'events': []},
+        ),
+        write_reports=True,
+    )
+
+    assert summary.symbols == ['QEP', 'QBO', 'FAIL']
+    assert len(prefilter_calls) == 3
+    assert all(call[0] == 'qullamaggie' for call in prefilter_calls)
+    assert [candidate.symbol for candidate in summary.candidates] == ['QEP', 'QBO']
+    assert [candidate.pattern_family for candidate in summary.candidates] == ['qullamaggie_ep_family', 'qullamaggie_breakout_family']
+    assert [candidate.report_rank for candidate in summary.candidates] == [1, 2]
+    assert all(candidate.symbol != 'FAIL' for candidate in summary.candidates)
+    assert summary.grouped_candidate_summaries[0].candidate_count == 2
+
+    json_path = tmp_path / 'reports' / 'qullamaggie-smoke.json'
+    csv_path = tmp_path / 'reports' / 'qullamaggie-smoke.csv'
+    html_path = tmp_path / 'reports' / 'qullamaggie-smoke.html'
+    assert json_path.exists()
+    assert csv_path.exists()
+    assert html_path.exists()
+
+    payload = json.loads(json_path.read_text(encoding='utf-8'))
+    assert payload['strategy_profile'] == 'qullamaggie'
+    assert payload['candidate_count'] == 2
+    assert [candidate['symbol'] for candidate in payload['candidates']] == ['QEP', 'QBO']
+
+    html = html_path.read_text(encoding='utf-8')
+    assert 'Strategy profile: qullamaggie' in html
+    assert 'episodic-pivot' in html
+    assert 'gap ' in html
 
 
 def test_daily_loader_batches_and_normalizes_frames(tmp_path: Path) -> None:

@@ -193,7 +193,7 @@ def _run_family_detectors(
             'trend_template_pass': trend_template_pass,
             'symbol_context': symbol_context,
         }
-        if family_name == 'event_driven_family':
+        if family_name in {'event_driven_family', 'qullamaggie_ep_family'}:
             kwargs['earnings_payload'] = earnings_payload
             kwargs['news_payload'] = news_payload
         candidates.extend(detector(frame, **kwargs))
