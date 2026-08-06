@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import importlib
 from types import SimpleNamespace
 
 import pandas as pd
 import pytest
 
 from scripts.oneil_scanner.models import PatternCandidate, ScannerConfig
+from scripts.oneil_scanner.preprocess import add_shared_preprocessing
 from scripts.oneil_scanner.qullamaggie import (
     DEFAULT_ALLOWED_FAMILIES,
     allowed_detector_families_for_qullamaggie,
@@ -44,6 +46,80 @@ def _compounding_daily_frame(length: int = 260, *, start: float = 100.0, daily_r
             'Volume': [1_500_000] * length,
         }
     )
+
+
+def _load_qullamaggie_breakout_detector_module():
+    try:
+        return importlib.import_module('scripts.oneil_scanner.detectors.qullamaggie_breakout_family')
+    except ModuleNotFoundError as exc:
+        raise AssertionError('Task 4 Qullamaggie breakout detector module is missing') from exc
+
+
+def _load_qullamaggie_ep_detector_module():
+    try:
+        return importlib.import_module('scripts.oneil_scanner.detectors.qullamaggie_ep_family')
+    except ModuleNotFoundError as exc:
+        raise AssertionError('Task 4 Qullamaggie EP detector module is missing') from exc
+
+
+def _qullamaggie_breakout_frame(*, strong_runup: bool = True) -> pd.DataFrame:
+    prior_start = 40.0 if strong_runup else 80.0
+    prior_run = [prior_start + (50.0 / 59.0) * index for index in range(60)]
+    base_closes = [88.0, 87.5, 87.0, 86.6, 86.2, 86.0, 86.3, 86.6, 86.9, 87.2, 87.5, 87.9, 88.2, 88.6, 89.0]
+    closes = prior_run + base_closes + [92.0]
+    highs = [close * 1.02 for close in prior_run]
+    highs += [90.0, 89.6, 89.2, 88.9, 88.6, 88.4, 88.5, 88.7, 88.9, 89.1, 89.2, 89.4, 89.6, 89.8, 89.9]
+    highs += [93.0]
+    lows = [close * 0.98 for close in prior_run]
+    lows += [85.6, 85.5, 85.4, 85.5, 85.6, 85.8, 86.0, 86.2, 86.4, 86.6, 86.8, 87.0, 87.3, 87.5, 87.8]
+    lows += [89.4]
+    opens = [close * 0.995 for close in prior_run]
+    opens += [87.8, 87.3, 86.9, 86.5, 86.1, 86.0, 86.2, 86.5, 86.8, 87.0, 87.3, 87.7, 88.0, 88.4, 88.8]
+    opens += [90.2]
+    volumes = [1_400_000.0] * 60 + [1_000_000.0, 950_000.0, 920_000.0, 900_000.0, 880_000.0, 860_000.0, 850_000.0, 840_000.0, 830_000.0, 825_000.0, 820_000.0, 815_000.0, 810_000.0, 805_000.0, 800_000.0] + [2_700_000.0]
+    return pd.DataFrame(
+        {
+            'Date': pd.date_range('2025-01-01', periods=len(closes), freq='B'),
+            'Open': opens,
+            'High': highs,
+            'Low': lows,
+            'Close': closes,
+            'Volume': volumes,
+        }
+    )
+
+
+def _qullamaggie_ep_frame(*, gap_pct: float = 0.10, volume: float = 3_800_000.0) -> pd.DataFrame:
+    prior = [40.0 + 0.35 * index for index in range(39)]
+    previous_close = prior[-1]
+    gap_open = previous_close * (1.0 + gap_pct)
+    closes = prior + [gap_open * 1.03]
+    opens = [close * 0.995 for close in prior] + [gap_open]
+    highs = [close * 1.01 for close in prior] + [gap_open * 1.05]
+    lows = [close * 0.985 for close in prior] + [gap_open * 0.985]
+    volumes = [1_050_000.0] * 39 + [volume]
+    return pd.DataFrame(
+        {
+            'Date': pd.date_range('2025-03-03', periods=len(closes), freq='B'),
+            'Open': opens,
+            'High': highs,
+            'Low': lows,
+            'Close': closes,
+            'Volume': volumes,
+        }
+    )
+
+
+def _detect_qullamaggie_breakout(frame: pd.DataFrame):
+    module = _load_qullamaggie_breakout_detector_module()
+    enriched = add_shared_preprocessing(frame)
+    return module.detect_qullamaggie_breakout_family(enriched, symbol='TEST', trend_template_pass=True)
+
+
+def _detect_qullamaggie_ep(frame: pd.DataFrame, **kwargs):
+    module = _load_qullamaggie_ep_detector_module()
+    enriched = add_shared_preprocessing(frame)
+    return module.detect_qullamaggie_ep_family(enriched, symbol='TEST', trend_template_pass=True, **kwargs)
 
 
 def _candidate(*, breakout_level: float | None = 104.5) -> PatternCandidate:
@@ -123,6 +199,69 @@ def test_qullamaggie_helper_leader_prefilter_fails_when_short_term_strength_brea
 
     assert result.passes is False
     assert result.reasons == ['strength_1m_below_threshold']
+
+
+def test_qullamaggie_detector_breakout_requires_sufficient_prior_runup() -> None:
+    assert _detect_qullamaggie_breakout(_qullamaggie_breakout_frame(strong_runup=False)) == []
+
+
+def test_qullamaggie_detector_breakout_returns_candidate_for_orderly_base_breakout() -> None:
+    candidates = _detect_qullamaggie_breakout(_qullamaggie_breakout_frame())
+
+    assert len(candidates) == 1
+    candidate = candidates[0]
+    assert candidate.pattern_family == 'qullamaggie_breakout_family'
+    assert candidate.pattern_type == 'qullamaggie-breakout'
+    assert candidate.pattern_variant == 'tight-base'
+    assert candidate.volume_confirmation == 'confirmed'
+    assert any(note.startswith('prior_runup_pct=') for note in candidate.notes)
+    assert any(note.startswith('base_length_bars=') for note in candidate.notes)
+    assert any(note.startswith('base_depth_pct=') for note in candidate.notes)
+    assert any(note.startswith('range_tightness_score=') for note in candidate.notes)
+    assert any(note.startswith('breakout_level=') for note in candidate.notes)
+    assert any(note.startswith('volume_confirmation=') for note in candidate.notes)
+
+
+def test_qullamaggie_detector_ep_requires_gap_and_valid_catalyst() -> None:
+    assert _detect_qullamaggie_ep(_qullamaggie_ep_frame(gap_pct=0.03), earnings_payload={'events': []}, news_payload={'items': []}) == []
+    assert _detect_qullamaggie_ep(_qullamaggie_ep_frame(), earnings_payload={'events': []}, news_payload={'items': []}) == []
+
+
+def test_qullamaggie_detector_ep_returns_candidate_for_gap_catalyst_and_volume_confirmation() -> None:
+    frame = _qullamaggie_ep_frame(gap_pct=0.11)
+    trigger_date = pd.Timestamp(frame.iloc[-1]['Date']).strftime('%Y-%m-%d')
+
+    candidates = _detect_qullamaggie_ep(
+        frame,
+        earnings_payload={
+            'events': [
+                {
+                    'date': trigger_date,
+                    'reported': True,
+                    'confirmed': True,
+                    'headline': 'Quarterly earnings beat expectations',
+                    'eps_surprise_pct': 18.0,
+                }
+            ]
+        },
+        news_payload={'items': []},
+        execution_metadata={'orh_high': 62.75, 'orh_low': 61.2, 'orh_window_minutes': 30},
+    )
+
+    assert len(candidates) == 1
+    candidate = candidates[0]
+    assert candidate.pattern_family == 'qullamaggie_ep_family'
+    assert candidate.pattern_type == 'episodic-pivot'
+    assert candidate.pattern_variant == 'earnings-gap'
+    assert candidate.catalyst_type == 'earnings'
+    assert candidate.volume_confirmation == 'confirmed'
+    assert any(note.startswith('gap_pct=') for note in candidate.notes)
+    assert any(note == 'catalyst_type=earnings' for note in candidate.notes)
+    assert any(note.startswith('catalyst_confidence=') for note in candidate.notes)
+    assert any(note.startswith('opening_drive_volume_ratio=') for note in candidate.notes)
+    assert any(note == 'entry_trigger_type=orh_breakout' for note in candidate.notes)
+    assert any(note == 'or_window_used=30' for note in candidate.notes)
+    assert any(note == 'stop_type=low_of_day' for note in candidate.notes)
 
 
 def test_run_scan_oneil_leader_prefilter_does_not_invoke_qullamaggie_prefilter(monkeypatch, tmp_path) -> None:
