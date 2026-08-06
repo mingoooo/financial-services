@@ -16,6 +16,7 @@ from scripts.oneil_scanner.qullamaggie import (
     resolve_qullamaggie_entry_trigger,
 )
 from scripts.oneil_scanner.runner import RunnerDependencies, run_scan
+from scripts.oneil_scanner.scoring import score_and_rank_candidates
 from scripts.scan_oneil_setups import build_config, build_parser
 
 
@@ -142,6 +143,45 @@ def _candidate(*, breakout_level: float | None = 104.5) -> PatternCandidate:
         quality_score=88.0,
         setup_score=86.0,
         report_rank=None,
+    )
+
+
+def _qullamaggie_candidate(
+    *,
+    symbol: str = 'AAPL',
+    pattern_family: str = 'qullamaggie_breakout_family',
+    pattern_type: str = 'qullamaggie-breakout',
+    pattern_variant: str = 'test',
+    quality_score: float = 90.0,
+    setup_score: float = 88.0,
+    rs_score: float = 96.0,
+    distance_to_52w_high: float = 0.02,
+    volume_confirmation: str = 'confirmed',
+    catalyst_type: str = 'technical_breakout',
+    catalyst_confidence: float = 0.0,
+    notes: list[str] | None = None,
+) -> PatternCandidate:
+    return PatternCandidate(
+        symbol=symbol,
+        pattern_family=pattern_family,
+        pattern_type=pattern_type,
+        pattern_variant=pattern_variant,
+        trigger_date='2026-07-16',
+        breakout_level=104.5,
+        entry_zone_low=103.0,
+        entry_zone_high=106.0,
+        stop_reference=99.0,
+        trend_template_pass=True,
+        rs_score=rs_score,
+        distance_to_52w_high=distance_to_52w_high,
+        volume_confirmation=volume_confirmation,
+        catalyst_type=catalyst_type,
+        catalyst_confidence=catalyst_confidence,
+        quality_score=quality_score,
+        setup_score=setup_score,
+        report_rank=None,
+        secondary_signals=[],
+        notes=list(notes or []),
     )
 
 
@@ -682,3 +722,90 @@ def test_qullamaggie_helper_ignores_nan_orh_high_and_falls_back() -> None:
         'orh_low': 101.0,
         'orh_window_minutes': 30,
     }
+
+
+def test_qullamaggie_ranking_prefers_ep_over_breakout_when_quality_is_similar() -> None:
+    ranked = score_and_rank_candidates(
+        [
+            _qullamaggie_candidate(
+                symbol='TSLA',
+                pattern_family='qullamaggie_breakout_family',
+                pattern_type='qullamaggie-breakout',
+                catalyst_confidence=0.92,
+                notes=[
+                    'base_depth_pct=0.0900',
+                    'range_tightness_score=0.8200',
+                    'breakout_volume_ratio=1.6000',
+                ],
+            ),
+            _qullamaggie_candidate(
+                symbol='TSLA',
+                pattern_family='qullamaggie_ep_family',
+                pattern_type='episodic-pivot',
+                pattern_variant='earnings-gap',
+                catalyst_type='earnings',
+                catalyst_confidence=0.35,
+                notes=['gap_pct=0.0900', 'opening_drive_volume_ratio=2.0000'],
+            ),
+        ],
+        as_of='2026-07-18',
+        strategy_profile='qullamaggie',
+    )
+
+    assert len(ranked) == 1
+    assert ranked[0].pattern_family == 'qullamaggie_ep_family'
+    assert 'qullamaggie-breakout' in ranked[0].secondary_signals
+
+
+def test_qullamaggie_ranking_prefers_tighter_shallower_bases_when_leadership_is_similar() -> None:
+    ranked = score_and_rank_candidates(
+        [
+            _qullamaggie_candidate(
+                symbol='LOOSE',
+                notes=[
+                    'base_depth_pct=0.1700',
+                    'range_tightness_score=0.4100',
+                    'breakout_volume_ratio=1.3000',
+                ],
+            ),
+            _qullamaggie_candidate(
+                symbol='TIGHT',
+                notes=[
+                    'base_depth_pct=0.0600',
+                    'range_tightness_score=0.9200',
+                    'breakout_volume_ratio=1.3000',
+                ],
+            ),
+        ],
+        as_of='2026-07-18',
+        strategy_profile='qullamaggie',
+    )
+
+    assert [candidate.symbol for candidate in ranked] == ['TIGHT', 'LOOSE']
+
+
+def test_non_qullamaggie_ranking_preserves_existing_ordering_behavior() -> None:
+    ranked = score_and_rank_candidates(
+        [
+            _qullamaggie_candidate(
+                symbol='LOOSE',
+                notes=[
+                    'base_depth_pct=0.1700',
+                    'range_tightness_score=0.4100',
+                    'breakout_volume_ratio=1.3000',
+                ],
+            ),
+            _qullamaggie_candidate(
+                symbol='TIGHT',
+                notes=[
+                    'base_depth_pct=0.0600',
+                    'range_tightness_score=0.9200',
+                    'breakout_volume_ratio=1.3000',
+                ],
+            ),
+        ],
+        as_of='2026-07-18',
+        strategy_profile='oneil',
+    )
+
+    assert [candidate.symbol for candidate in ranked] == ['LOOSE', 'TIGHT']

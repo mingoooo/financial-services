@@ -7,6 +7,7 @@ from functools import cmp_to_key
 
 from .models import PatternCandidate
 from .minervini import is_minervini_profile
+from .qullamaggie import is_qullamaggie_profile
 
 DEFAULT_FAMILY_PRIORITY: dict[str, int] = {
     'event_driven_family': 4,
@@ -57,6 +58,17 @@ _MINERVINI_FAMILY_PRIORITY: dict[str, int] = {
     'ibd_base_family': 1,
 }
 
+_QULLAMAGGIE_FAMILY_PRIORITY: dict[str, int] = {
+    'qullamaggie_ep_family': 2,
+    'qullamaggie_breakout_family': 1,
+}
+
+_QULLAMAGGIE_VOLUME_BONUS: dict[str, float] = {
+    'confirmed': 3.0,
+    'watch': 1.0,
+    'dry-up': -1.0,
+}
+
 
 def _clamp(value: float, *, low: float = 0.0, high: float = 100.0) -> float:
     return round(max(low, min(high, value)), 2)
@@ -74,6 +86,24 @@ def _parse_date(raw: str | None) -> date | None:
     if not raw:
         return None
     return datetime.strptime(raw, '%Y-%m-%d').date()
+
+
+def _note_value(candidate: PatternCandidate, key: str) -> str | None:
+    prefix = f'{key}='
+    for note in candidate.notes:
+        if note.startswith(prefix):
+            return note[len(prefix) :]
+    return None
+
+
+def _note_float(candidate: PatternCandidate, key: str) -> float | None:
+    raw_value = _note_value(candidate, key)
+    if raw_value in (None, ''):
+        return None
+    try:
+        return float(raw_value)
+    except ValueError:
+        return None
 
 
 def _recency_bonus(trigger_date: str | None, *, as_of: str | None) -> float:
@@ -195,6 +225,61 @@ def _minervini_report_sort_score(candidate: PatternCandidate) -> float:
     return round((quality * 0.20) + (setup * 0.25) + (rs_score * 0.35) + (tightness * 2.0) + (family_priority * 2.5), 4)
 
 
+def _qullamaggie_breakout_bonus(candidate: PatternCandidate) -> float:
+    if candidate.pattern_family != 'qullamaggie_breakout_family':
+        return 0.0
+
+    tightness = _note_float(candidate, 'range_tightness_score') or 0.0
+    base_depth = _note_float(candidate, 'base_depth_pct')
+    breakout_volume_ratio = _note_float(candidate, 'breakout_volume_ratio')
+
+    bonus = tightness * 5.0
+    if base_depth is not None:
+        if base_depth <= 0.08:
+            bonus += 3.0
+        elif base_depth <= 0.12:
+            bonus += 1.5
+        elif base_depth > 0.16:
+            bonus -= 2.0
+    if breakout_volume_ratio is not None:
+        bonus += min(2.0, max(breakout_volume_ratio - 1.2, 0.0) * 2.5)
+    return round(bonus, 2)
+
+
+def _qullamaggie_ep_bonus(candidate: PatternCandidate) -> float:
+    if candidate.pattern_family != 'qullamaggie_ep_family':
+        return 0.0
+
+    gap_pct = _note_float(candidate, 'gap_pct') or 0.0
+    opening_drive_volume_ratio = _note_float(candidate, 'opening_drive_volume_ratio') or 0.0
+    bonus = 5.0
+    bonus += min(3.0, gap_pct * 25.0)
+    bonus += min(2.0, max(opening_drive_volume_ratio - 1.5, 0.0) * 2.0)
+    return round(bonus, 2)
+
+
+def _qullamaggie_report_sort_score(candidate: PatternCandidate) -> float:
+    quality = candidate.quality_score or 0.0
+    setup = candidate.setup_score or 0.0
+    rs_score = candidate.rs_score or 0.0
+    confidence = _normalize_confidence(candidate.catalyst_confidence)
+    family_priority = _QULLAMAGGIE_FAMILY_PRIORITY.get(candidate.pattern_family, 0)
+    volume_bonus = _QULLAMAGGIE_VOLUME_BONUS.get(candidate.volume_confirmation, 0.0)
+    proximity_bonus = _proximity_bonus(candidate.distance_to_52w_high)
+    setup_bonus = _qullamaggie_breakout_bonus(candidate) + _qullamaggie_ep_bonus(candidate)
+    return round(
+        (quality * 0.18)
+        + (setup * 0.18)
+        + (rs_score * 0.34)
+        + (confidence * 0.08)
+        + (family_priority * 4.0)
+        + (volume_bonus * 2.0)
+        + proximity_bonus
+        + setup_bonus,
+        4,
+    )
+
+
 def _compare_primary_candidates(
     left: PatternCandidate,
     right: PatternCandidate,
@@ -208,6 +293,12 @@ def _compare_primary_candidates(
         right_minervini = _minervini_report_sort_score(right)
         if left_minervini != right_minervini:
             return -1 if left_minervini > right_minervini else 1
+
+    if is_qullamaggie_profile(strategy_profile):
+        left_qullamaggie = _qullamaggie_report_sort_score(left)
+        right_qullamaggie = _qullamaggie_report_sort_score(right)
+        if left_qullamaggie != right_qullamaggie:
+            return -1 if left_qullamaggie > right_qullamaggie else 1
 
     left_quality = left.quality_score or 0.0
     right_quality = right.quality_score or 0.0
@@ -297,7 +388,12 @@ def score_and_rank_candidates(
     family_priority: Mapping[str, int] | None = None,
     strategy_profile: str = 'oneil',
 ) -> list[PatternCandidate]:
-    priority_map = family_priority or DEFAULT_FAMILY_PRIORITY
+    if family_priority is not None:
+        priority_map = family_priority
+    elif is_qullamaggie_profile(strategy_profile):
+        priority_map = _QULLAMAGGIE_FAMILY_PRIORITY
+    else:
+        priority_map = DEFAULT_FAMILY_PRIORITY
     normalized = [normalize_candidate(candidate, as_of=as_of) for candidate in candidates]
 
     deduplicated: list[PatternCandidate] = []
@@ -331,7 +427,11 @@ def score_and_rank_candidates(
     ranked = sorted(
         deduplicated,
         key=lambda item: (
-            _minervini_report_sort_score(item) if is_minervini_profile(strategy_profile) else _report_sort_score(item),
+            _minervini_report_sort_score(item)
+            if is_minervini_profile(strategy_profile)
+            else _qullamaggie_report_sort_score(item)
+            if is_qullamaggie_profile(strategy_profile)
+            else _report_sort_score(item),
             item.setup_score or 0.0,
             item.quality_score or 0.0,
             (_MINERVINI_FAMILY_PRIORITY if is_minervini_profile(strategy_profile) else priority_map).get(item.pattern_family, 0),
