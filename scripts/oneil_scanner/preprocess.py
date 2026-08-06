@@ -12,6 +12,19 @@ from scripts.vcp_lib.indicators import (
 )
 
 
+def _add_qullamaggie_strength_metrics(
+    frame: pd.DataFrame,
+    *,
+    close_column: str = 'Close',
+) -> pd.DataFrame:
+    enriched = frame.copy()
+    close = enriched[close_column].replace(0, pd.NA)
+    enriched['strength_1m'] = close / close.shift(21) - 1.0
+    enriched['strength_3m'] = close / close.shift(63) - 1.0
+    enriched['strength_6m'] = close / close.shift(126) - 1.0
+    return enriched
+
+
 def add_shared_preprocessing(
     frame: pd.DataFrame,
     *,
@@ -24,4 +37,5 @@ def add_shared_preprocessing(
     enriched = add_liquidity_indicators(enriched)
     enriched = add_gap_and_breakout_indicators(enriched)
     enriched = add_relative_strength_proxy(enriched, benchmark=benchmark)
+    enriched = _add_qullamaggie_strength_metrics(enriched)
     return enriched

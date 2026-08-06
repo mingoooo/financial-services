@@ -24,6 +24,20 @@ def _price_frame(*, periods: int = 260, close_start: float = 100.0, step: float 
     )
 
 
+def _compounding_price_frame(*, periods: int = 260, close_start: float = 100.0, daily_return: float = 0.012, volume: int = 1_000_000) -> pd.DataFrame:
+    closes = pd.Series([close_start * ((1.0 + daily_return) ** index) for index in range(periods)], dtype='float64')
+    return pd.DataFrame(
+        {
+            'Date': pd.date_range('2025-01-01', periods=periods, freq='D'),
+            'Open': closes * 0.99,
+            'High': closes * 1.02,
+            'Low': closes * 0.98,
+            'Close': closes,
+            'Volume': [volume] * periods,
+        }
+    )
+
+
 
 def test_shared_preprocessing_adds_moving_averages_and_52_week_metrics() -> None:
     frame = _price_frame()
@@ -75,6 +89,20 @@ def test_shared_preprocessing_adds_rs_proxy_using_benchmark_relative_performance
 
     assert latest['RSProxy'] == pytest.approx(expected_rs_proxy)
     assert latest['RSProxy'] > 0
+
+
+def test_shared_preprocessing_adds_qullamaggie_strength_proxies() -> None:
+    frame = _compounding_price_frame()
+
+    enriched = add_shared_preprocessing(frame)
+    latest = enriched.iloc[-1]
+
+    assert latest['strength_1m'] == pytest.approx(frame['Close'].iloc[-1] / frame['Close'].iloc[-22] - 1.0)
+    assert latest['strength_3m'] == pytest.approx(frame['Close'].iloc[-1] / frame['Close'].iloc[-64] - 1.0)
+    assert latest['strength_6m'] == pytest.approx(frame['Close'].iloc[-1] / frame['Close'].iloc[-127] - 1.0)
+    assert latest['strength_1m'] > 0.25
+    assert latest['strength_3m'] > 0.50
+    assert latest['strength_6m'] > 0.75
 
 
 

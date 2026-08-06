@@ -3,6 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pandas as pd
+import pytest
 
 from scripts.oneil_scanner.models import PatternCandidate, ScannerConfig
 from scripts.oneil_scanner.qullamaggie import (
@@ -22,6 +23,20 @@ def _daily_frame(length: int = 260, *, start: float = 100.0, step: float = 0.6) 
     return pd.DataFrame(
         {
             'Date': dates,
+            'Open': [value * 0.99 for value in close],
+            'High': [value * 1.01 for value in close],
+            'Low': [value * 0.98 for value in close],
+            'Close': close,
+            'Volume': [1_500_000] * length,
+        }
+    )
+
+
+def _compounding_daily_frame(length: int = 260, *, start: float = 100.0, daily_return: float = 0.012) -> pd.DataFrame:
+    close = [start * ((1.0 + daily_return) ** index) for index in range(length)]
+    return pd.DataFrame(
+        {
+            'Date': pd.date_range('2025-01-01', periods=length, freq='B'),
             'Open': [value * 0.99 for value in close],
             'High': [value * 1.01 for value in close],
             'Low': [value * 0.98 for value in close],
@@ -266,6 +281,55 @@ def test_run_scan_qullamaggie_leader_prefilter_blocks_detector_calls_when_symbol
     assert prefilter_calls == [(0.10, 0.60, 0.90)]
     assert detector_calls == []
     assert summary.candidates == []
+
+
+def test_run_scan_qullamaggie_leader_prefilter_uses_real_preprocessing_strength_metrics(monkeypatch, tmp_path) -> None:
+    prefilter_calls: list[tuple[float | None, float | None, float | None]] = []
+    detector_calls: list[str] = []
+    frame = _compounding_daily_frame()
+
+    def fake_load_daily_ohlcv(symbols, **_kwargs):
+        return SimpleNamespace(frames={symbol: frame for symbol in symbols}, warnings=[], metadata={'run_metadata': {'window_key': 'latest_1y_1d'}})
+
+    def fake_trend_filters(_frame, *, min_rs_proxy=0.0):
+        return SimpleNamespace(passes=True, trend_template_pass=True, rs_pass=True)
+
+    def fake_eligibility(_frame, **_kwargs):
+        return SimpleNamespace(passes=True)
+
+    def fake_leader_prefilter(*, strength_1m, strength_3m, strength_6m, strategy_profile='qullamaggie'):
+        prefilter_calls.append((strength_1m, strength_3m, strength_6m))
+        return SimpleNamespace(passes=True, reasons=[], metrics={})
+
+    def fake_detector(_frame, **kwargs):
+        detector_calls.append(kwargs['symbol'])
+        return [_candidate()]
+
+    monkeypatch.setattr('scripts.oneil_scanner.runner.load_daily_ohlcv', fake_load_daily_ohlcv)
+    monkeypatch.setattr('scripts.oneil_scanner.runner.evaluate_trend_filters', fake_trend_filters)
+    monkeypatch.setattr('scripts.oneil_scanner.runner.evaluate_eligibility', fake_eligibility)
+    monkeypatch.setattr('scripts.oneil_scanner.runner.evaluate_qullamaggie_leader_prefilter', fake_leader_prefilter)
+    monkeypatch.setattr('scripts.oneil_scanner.runner.DETECTOR_REGISTRY', {'momentum_continuation_family': fake_detector})
+
+    summary = run_scan(
+        ScannerConfig(
+            universe='all-us',
+            symbols=['AAPL'],
+            cache_dir=str(tmp_path / 'cache'),
+            out_dir=str(tmp_path / 'reports'),
+            strategy_profile='qullamaggie',
+        ),
+        dependencies=RunnerDependencies(),
+        write_reports=False,
+    )
+
+    assert len(prefilter_calls) == 1
+    strength_1m, strength_3m, strength_6m = prefilter_calls[0]
+    assert strength_1m == pytest.approx(frame['Close'].iloc[-1] / frame['Close'].iloc[-22] - 1.0)
+    assert strength_3m == pytest.approx(frame['Close'].iloc[-1] / frame['Close'].iloc[-64] - 1.0)
+    assert strength_6m == pytest.approx(frame['Close'].iloc[-1] / frame['Close'].iloc[-127] - 1.0)
+    assert detector_calls == ['AAPL']
+    assert len(summary.candidates) == 1
 
 
 
