@@ -55,6 +55,20 @@ def _extract_oneil_summary(report_path: Path) -> dict[str, Any]:
     }
 
 
+def _scanner_heading(family: str) -> str:
+    return {
+        'oneil': "🚀 O'Neil 扫描已完成",
+        'qullamaggie': '⚡ Qullamaggie 扫描已完成',
+    }.get(family, '📡 扫描已完成')
+
+
+def _scanner_label(family: str) -> str:
+    return {
+        'oneil': "O'Neil 实时扫描",
+        'qullamaggie': 'Qullamaggie 实时扫描',
+    }.get(family, family)
+
+
 def _build_premarket_message(
     report_path: Path,
     pages_url: str | None,
@@ -65,14 +79,14 @@ def _build_premarket_message(
 ) -> str:
     title = _read_markdown_title(report_path)
     lines = [
-        '📈 盘前报告已生成',
+        '📈 盘前报告已生成。',
         f'发送时点: {run_label}',
         f'标题: {title}',
     ]
     lines.extend(
         _build_links(
             ('导航页', hub_url),
-            ('中文报告', pages_url),
+            ('报告页面', pages_url),
             ('English report', alt_pages_url),
         )
     )
@@ -85,10 +99,12 @@ def _build_oneil_message(
     run_label: str,
     *,
     hub_url: str | None = None,
+    family: str = 'oneil',
 ) -> str:
     summary = _extract_oneil_summary(report_path)
     lines = [
-        "🚀 O'Neil 扫描已完成",
+        _scanner_heading(family),
+        _scanner_label(family),
         f'发送时点: {run_label}',
         f"报告: {summary['report_name']}",
         f"运行时间: {summary['run_timestamp']}",
@@ -111,7 +127,7 @@ def _build_oneil_message(
     lines.extend(
         _build_links(
             ('导航页', hub_url),
-            ('扫描报告', pages_url),
+            ('报告页面', pages_url),
         )
     )
     return '\n'.join(lines)
@@ -121,14 +137,17 @@ def _build_full_message(
     *,
     premarket_report_path: Path,
     oneil_report_path: Path,
+    qullamaggie_report_path: Path | None,
     run_label: str,
     hub_url: str | None,
     premarket_pages_url: str | None,
     premarket_alt_pages_url: str | None,
     oneil_pages_url: str | None,
+    qullamaggie_pages_url: str | None,
 ) -> str:
     premarket_title = _read_markdown_title(premarket_report_path)
     oneil = _extract_oneil_summary(oneil_report_path)
+    qullamaggie = _extract_oneil_summary(qullamaggie_report_path) if qullamaggie_report_path else None
     lines = [
         '📬 市场扫描汇总已生成',
         f'发送时点: {run_label}',
@@ -136,6 +155,10 @@ def _build_full_message(
         f"O'Neil 股票池: {oneil['universe']}",
         f"O'Neil 候选数量: {oneil['candidate_count']}",
     ]
+
+    if qullamaggie is not None:
+        lines.append(f"Qullamaggie 股票池: {qullamaggie['universe']}")
+        lines.append(f"Qullamaggie 候选数量: {qullamaggie['candidate_count']}")
 
     candidates = oneil['candidates']
     if candidates:
@@ -147,12 +170,18 @@ def _build_full_message(
     if warnings:
         lines.append(f'注意事项: {warnings[0]}')
 
+    if qullamaggie is not None and qullamaggie['candidates']:
+        lines.append('Qullamaggie 前几条候选:')
+        for candidate in qullamaggie['candidates'][:3]:
+            lines.append(_format_oneil_candidate(candidate))
+
     lines.extend(
         _build_links(
             ('导航页', hub_url),
             ('盘前中文', premarket_pages_url),
             ('盘前英文', premarket_alt_pages_url),
             ("O'Neil 报告", oneil_pages_url),
+            ('Qullamaggie 报告', qullamaggie_pages_url),
         )
     )
     return '\n'.join(lines)
@@ -168,9 +197,11 @@ def build_message(
     alt_pages_url: str | None = None,
     premarket_report_path: str | None = None,
     oneil_report_path: str | None = None,
+    qullamaggie_report_path: str | None = None,
     premarket_pages_url: str | None = None,
     premarket_alt_pages_url: str | None = None,
     oneil_pages_url: str | None = None,
+    qullamaggie_pages_url: str | None = None,
 ) -> str:
     if family == 'premarket':
         if not report_path:
@@ -190,6 +221,17 @@ def build_message(
             pages_url,
             run_label,
             hub_url=hub_url,
+            family='oneil',
+        )
+    if family == 'qullamaggie':
+        if not report_path:
+            raise ValueError('report_path is required for qullamaggie notifications')
+        return _build_oneil_message(
+            Path(report_path),
+            pages_url,
+            run_label,
+            hub_url=hub_url,
+            family='qullamaggie',
         )
     if family == 'full':
         if not premarket_report_path or not oneil_report_path:
@@ -197,11 +239,13 @@ def build_message(
         return _build_full_message(
             premarket_report_path=Path(premarket_report_path),
             oneil_report_path=Path(oneil_report_path),
+            qullamaggie_report_path=Path(qullamaggie_report_path) if qullamaggie_report_path else None,
             run_label=run_label,
             hub_url=hub_url,
             premarket_pages_url=premarket_pages_url,
             premarket_alt_pages_url=premarket_alt_pages_url,
             oneil_pages_url=oneil_pages_url,
+            qullamaggie_pages_url=qullamaggie_pages_url,
         )
     raise ValueError(f'Unsupported report family: {family}')
 
@@ -228,16 +272,18 @@ def _send_telegram(bot_token: str, chat_id: str, text: str) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description='Send Telegram notifications for market report families.')
-    parser.add_argument('--family', required=True, choices=['premarket', 'oneil', 'full'])
+    parser.add_argument('--family', required=True, choices=['premarket', 'oneil', 'qullamaggie', 'full'])
     parser.add_argument('--report-path')
     parser.add_argument('--pages-url')
     parser.add_argument('--alt-pages-url')
     parser.add_argument('--hub-url')
     parser.add_argument('--premarket-report-path')
     parser.add_argument('--oneil-report-path')
+    parser.add_argument('--qullamaggie-report-path')
     parser.add_argument('--premarket-pages-url')
     parser.add_argument('--premarket-alt-pages-url')
     parser.add_argument('--oneil-pages-url')
+    parser.add_argument('--qullamaggie-pages-url')
     parser.add_argument('--run-label', default='scheduled run')
     parser.add_argument('--dry-run', action='store_true')
     return parser
@@ -257,9 +303,11 @@ def main(argv: list[str] | None = None) -> int:
             alt_pages_url=args.alt_pages_url,
             premarket_report_path=args.premarket_report_path,
             oneil_report_path=args.oneil_report_path,
+            qullamaggie_report_path=args.qullamaggie_report_path,
             premarket_pages_url=args.premarket_pages_url,
             premarket_alt_pages_url=args.premarket_alt_pages_url,
             oneil_pages_url=args.oneil_pages_url,
+            qullamaggie_pages_url=args.qullamaggie_pages_url,
         )
     except Exception as exc:
         print(f'Failed to build Telegram notification: {exc}', file=sys.stderr)

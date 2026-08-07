@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from html import escape
 from pathlib import Path
 from typing import Any, Iterable, Sequence
+from zoneinfo import ZoneInfo
 
 
 DEFAULT_OUTPUT_DIR = Path('reports/site')
@@ -15,7 +16,9 @@ DEFAULT_PREMARKET_ZH_SOURCE = Path('reports/premarket_zh.html')
 DEFAULT_PREMARKET_EN_SOURCE = Path('reports/premarket_.html')
 DEFAULT_ONEIL_SOURCE = Path('reports/oneil-live/live-full-latest.html')
 DEFAULT_MINERVINI_SOURCE = Path('reports/minervini-live/live-full-latest.html')
+DEFAULT_QULLAMAGGIE_SOURCE = Path('reports/qullamaggie-live/live-full-latest.html')
 DEFAULT_ONEIL_BACKTEST_SOURCE = Path('reports/oneil_backtest_overview.html')
+CHINA_TZ = ZoneInfo('Asia/Shanghai')
 
 MANIFEST_VERSION = 'market-report-hub/v1'
 
@@ -53,6 +56,17 @@ FAMILY_DEFAULTS: dict[str, dict[str, Any]] = {
             'en': 'Mark Minervini-style setup scan and candidate list.',
         },
     },
+    'qullamaggie': {
+        'order': 27,
+        'titles': {
+            'zh': 'Qullamaggie 实时扫描',
+            'en': 'Qullamaggie Live Scanner',
+        },
+        'descriptions': {
+            'zh': 'Kristian Qullamaggie 风格强势突破与 EP 扫描。',
+            'en': 'Kristian Qullamaggie-style breakout and episodic pivot scan.',
+        },
+    },
     'oneil-backtest': {
         'order': 30,
         'titles': {
@@ -86,6 +100,15 @@ def parse_timestamp(value: str | None) -> datetime | None:
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=UTC)
     return parsed.astimezone(UTC)
+
+
+def format_timestamp_for_display(value: str | None, *, language: str) -> str:
+    parsed = parse_timestamp(value)
+    if parsed is None:
+        return '时间未知' if language == 'zh' else 'n/a'
+    localized = parsed.astimezone(CHINA_TZ)
+    suffix = '北京时间' if language == 'zh' else 'China Time (UTC+8)'
+    return f"{localized.strftime('%Y-%m-%d %H:%M')} {suffix}"
 
 
 def file_timestamp(path: Path) -> str:
@@ -150,7 +173,7 @@ def stable_page_href(slug: str, lang: str) -> str:
 
 
 def stable_source_href(source_path: Path) -> str:
-    if source_path.parent.name in {'oneil-live', 'minervini-live'}:
+    if source_path.parent.name in {'oneil-live', 'minervini-live', 'qullamaggie-live'}:
         return f'{source_path.parent.name}/{source_path.name}'
     return source_path.name
 
@@ -210,6 +233,7 @@ def build_manifest_from_sources(args: argparse.Namespace) -> dict[str, Any]:
     premarket_en_source = explicit_or_default(args.premarket_en_source, DEFAULT_PREMARKET_EN_SOURCE)
     oneil_source = explicit_or_default(args.oneil_source, DEFAULT_ONEIL_SOURCE)
     minervini_source = explicit_or_default(args.minervini_source, DEFAULT_MINERVINI_SOURCE)
+    qullamaggie_source = explicit_or_default(args.qullamaggie_source, DEFAULT_QULLAMAGGIE_SOURCE)
     oneil_backtest_source = explicit_or_default(args.oneil_backtest_source, DEFAULT_ONEIL_BACKTEST_SOURCE)
 
     families = [
@@ -261,6 +285,21 @@ def build_manifest_from_sources(args: argparse.Namespace) -> dict[str, Any]:
                     lang='default',
                     title='Minervini Live Scanner',
                     source_path=minervini_source,
+                    output_dir=output_dir,
+                ),
+            },
+        },
+        {
+            'slug': 'qullamaggie',
+            'active': True,
+            'archived': False,
+            **copy.deepcopy(FAMILY_DEFAULTS['qullamaggie']),
+            'pages': {
+                'default': page_record(
+                    slug='qullamaggie',
+                    lang='default',
+                    title='Qullamaggie Live Scanner',
+                    source_path=qullamaggie_source,
                     output_dir=output_dir,
                 ),
             },
@@ -391,6 +430,7 @@ def render_wrapper_page(
     title = page.get('title') or family_title
     source_href = page.get('source_href', '')
     published_at = page.get('published_at') or 'n/a'
+    published_at_display = format_timestamp_for_display(page.get('published_at'), language=language)
     html = f"""<!doctype html>
 <html lang="{'zh-CN' if language == 'zh' else 'en'}">
 <head>
@@ -418,7 +458,7 @@ def render_wrapper_page(
     <div class="header">
       <h1>{escape(family_title)}</h1>
       <div class="meta">{escape(description)}</div>
-      <div class="meta">{escape(updated_label)}: {escape(published_at)}</div>
+      <div class="meta">{escape(updated_label)}: {escape(published_at_display)}</div>
       <div class="actions">
         <a href="{escape(source_href)}">{escape(open_label)}</a>
         <a class="secondary" href="{'../index.html' if language == 'zh' else '../index_en.html'}">{escape(back_label)}</a>
@@ -457,12 +497,13 @@ def render_hub_page(manifest: dict[str, Any], *, language: str, output_path: Pat
     lang_switch_href = 'index_en.html' if language == 'zh' else 'index.html'
     lang_switch_label = 'English' if language == 'zh' else '中文'
     updated_label = '站点生成时间' if language == 'zh' else 'Site generated'
+    generated_at_display = format_timestamp_for_display(manifest.get('generated_at'), language=language)
     families_html: list[str] = []
     for family in manifest['families']:
         title = family['titles'].get(language) or family['titles'].get('en') or family['slug']
         description = family['descriptions'].get(language) or family['descriptions'].get('en') or ''
         freshness = family['freshness'][f'label_{language}']
-        published_at = family.get('published_at') or ('时间未知' if language == 'zh' else 'n/a')
+        published_at = format_timestamp_for_display(family.get('published_at'), language=language)
         links = page_links_for_family(family, language=language)
         if links:
             link_html = ''.join(
@@ -525,7 +566,7 @@ def render_hub_page(manifest: dict[str, Any], *, language: str, output_path: Pat
       <p>{escape(page_subtitle)}</p>
       <div class="toolbar">
         <a href="{escape(lang_switch_href)}">{escape(lang_switch_label)}</a>
-        <span class="meta">{escape(updated_label)}: {escape(manifest['generated_at'])}</span>
+        <span class="meta">{escape(updated_label)}: {escape(generated_at_display)}</span>
       </div>
     </header>
     <main class="grid">
@@ -600,6 +641,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument('--premarket-en-source', help='Source HTML for the English premarket report.')
     parser.add_argument('--oneil-source', help="Source HTML for the O'Neil live report.")
     parser.add_argument('--minervini-source', help='Source HTML for the Minervini live report.')
+    parser.add_argument('--qullamaggie-source', help='Source HTML for the Qullamaggie live report.')
     parser.add_argument('--oneil-backtest-source', help="Source HTML for the O'Neil backtest overview.")
     return parser.parse_args(argv)
 

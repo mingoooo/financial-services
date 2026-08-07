@@ -80,6 +80,69 @@ class NotifyTelegramMarketReportTests(unittest.TestCase):
         self.assertIn('注意事项: Data source lagged for one symbol.', message)
         self.assertIn('报告页面: https://example.test/oneil/index.html', message)
 
+    def test_build_message_for_qullamaggie_reads_json_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            report_path = Path(tmp_dir) / 'live-full-latest.json'
+            report_path.write_text(
+                json.dumps(
+                    {
+                        'run_metadata': {
+                            'run_timestamp': '2026-08-07T10:40:00Z',
+                            'report_name': 'live-full-latest',
+                        },
+                        'universe': 'all-us',
+                        'candidate_count': 1,
+                        'candidates': [
+                            {
+                                'symbol': 'VAC',
+                                'pattern_variant': 'earnings-gap',
+                                'trigger_date': '2026-08-06',
+                                'setup_score': 97.9,
+                            },
+                        ],
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding='utf-8',
+            )
+
+            message = build_message(
+                family='qullamaggie',
+                report_path=str(report_path),
+                pages_url='https://example.test/qullamaggie/index.html',
+                run_label='Q scheduled',
+            )
+
+        self.assertIn('Qullamaggie 实时扫描', message)
+        self.assertIn('候选数量: 1', message)
+        self.assertIn('- VAC earnings-gap | Trigger 2026-08-06 | Score 97.9', message)
+        self.assertIn('报告页面: https://example.test/qullamaggie/index.html', message)
+
+    def test_build_message_for_full_includes_qullamaggie_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            premarket_report = tmp_root / 'REPORT.md'
+            premarket_report.write_text('# Full Run Premarket\n', encoding='utf-8')
+            oneil_report = tmp_root / 'oneil.json'
+            oneil_report.write_text(json.dumps({'run_metadata': {'run_timestamp': '2026-08-07T10:40:00Z'}, 'universe': 'all-us', 'candidate_count': 0, 'candidates': []}, ensure_ascii=False), encoding='utf-8')
+            qullamaggie_report = tmp_root / 'qullamaggie.json'
+            qullamaggie_report.write_text(json.dumps({'run_metadata': {'run_timestamp': '2026-08-07T10:40:00Z'}, 'universe': 'all-us', 'candidate_count': 1, 'candidates': [{'symbol': 'VAC', 'pattern_variant': 'earnings-gap', 'trigger_date': '2026-08-06'}]}, ensure_ascii=False), encoding='utf-8')
+
+            message = build_message(
+                family='full',
+                report_path=None,
+                pages_url=None,
+                run_label='full run',
+                premarket_report_path=str(premarket_report),
+                oneil_report_path=str(oneil_report),
+                qullamaggie_report_path=str(qullamaggie_report),
+                oneil_pages_url='https://example.test/oneil/index.html',
+                qullamaggie_pages_url='https://example.test/qullamaggie/index.html',
+            )
+
+        self.assertIn('Qullamaggie 候选数量: 1', message)
+        self.assertIn('Qullamaggie 报告: https://example.test/qullamaggie/index.html', message)
+
     def test_build_message_omits_pages_url_when_not_provided(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             report_path = Path(tmp_dir) / 'REPORT.md'
@@ -151,11 +214,17 @@ class NotifyTelegramMarketReportTests(unittest.TestCase):
             with redirect_stdout(oneil_stdout):
                 oneil_exit = main(['--family', 'oneil', '--report-path', str(oneil_report), '--dry-run'])
 
+            qullamaggie_stdout = io.StringIO()
+            with redirect_stdout(qullamaggie_stdout):
+                qullamaggie_exit = main(['--family', 'qullamaggie', '--report-path', str(oneil_report), '--dry-run'])
+
         self.assertEqual(premarket_exit, 0)
         self.assertIn('Dry Run Premarket', premarket_stdout.getvalue())
         self.assertEqual(oneil_exit, 0)
         self.assertIn("O'Neil 实时扫描", oneil_stdout.getvalue())
         self.assertIn('当前没有命中候选。', oneil_stdout.getvalue())
+        self.assertEqual(qullamaggie_exit, 0)
+        self.assertIn('Qullamaggie 实时扫描', qullamaggie_stdout.getvalue())
 
 
 if __name__ == '__main__':

@@ -399,8 +399,10 @@ def _render_html(summary: ScanRunSummary, *, config: ScannerConfig | None = None
         )
         warnings_html = (
             '<section>'
-            f'<h2>{_language_span("Warnings", "警告")}</h2>'
+            '<details class="warnings-panel">'
+            f'<summary>{_language_span("Warnings", "警告")}</summary>'
             f'<ul>{warning_items}</ul>'
+            '</details>'
             '</section>'
         )
 
@@ -422,6 +424,9 @@ def _render_html(summary: ScanRunSummary, *, config: ScannerConfig | None = None
         '    .chart-fallback { min-width: 180px; color: #666; font-size: 12px; }'
         '    .lang-toggle { border: 1px solid #ccc; background: #fff; padding: 6px 12px; border-radius: 6px; cursor: pointer; }'
         '    .lang-toggle.active { background: #222; color: #fff; border-color: #222; }'
+        '    .warnings-panel { border: 1px solid #ddd; border-radius: 8px; background: #fafafa; padding: 10px 12px; }'
+        '    .warnings-panel summary { cursor: pointer; font-weight: 600; }'
+        '    .warnings-panel ul { margin: 10px 0 0 18px; padding: 0; }'
         '    html[data-lang="en"] .lang-zh { display: none; }'
         '    html[data-lang="zh"] .lang-en { display: none; }'
         '    @media (max-width: 1100px) { .chart-svg { width: 180px; height: 112px; } }'

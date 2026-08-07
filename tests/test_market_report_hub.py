@@ -114,6 +114,7 @@ def test_explicit_sources_render_with_fallback_shape_and_optional_backtest(tmp_p
     premarket_en = _write_html(source_root / 'premarket_.html', 'Premarket Report')
     oneil = _write_html(source_root / 'oneil-live' / 'live-full-latest.html', "O'Neil Live Scanner")
     minervini = _write_html(source_root / 'minervini-live' / 'live-full-latest.html', 'Minervini Live Scanner')
+    qullamaggie = _write_html(source_root / 'qullamaggie-live' / 'live-full-latest.html', 'Qullamaggie Live Scanner')
 
     output_dir = tmp_path / 'assembled-site'
     exit_code = main(
@@ -130,6 +131,8 @@ def test_explicit_sources_render_with_fallback_shape_and_optional_backtest(tmp_p
             str(oneil),
             '--minervini-source',
             str(minervini),
+            '--qullamaggie-source',
+            str(qullamaggie),
             '--oneil-backtest-source',
             str(source_root / 'missing-backtest.html'),
         ]
@@ -142,12 +145,16 @@ def test_explicit_sources_render_with_fallback_shape_and_optional_backtest(tmp_p
     assert (output_dir / 'premarket' / 'index_en.html').exists()
     assert (output_dir / 'oneil' / 'index.html').exists()
     assert (output_dir / 'minervini' / 'index.html').exists()
+    assert (output_dir / 'qullamaggie' / 'index.html').exists()
     assert not (output_dir / 'oneil-backtest' / 'index.html').exists()
 
     zh_wrapper = (output_dir / 'premarket' / 'index.html').read_text(encoding='utf-8')
     en_wrapper = (output_dir / 'premarket' / 'index_en.html').read_text(encoding='utf-8')
     oneil_wrapper = (output_dir / 'oneil' / 'index.html').read_text(encoding='utf-8')
     minervini_wrapper = (output_dir / 'minervini' / 'index.html').read_text(encoding='utf-8')
+    qullamaggie_wrapper = (output_dir / 'qullamaggie' / 'index.html').read_text(encoding='utf-8')
+    zh_hub = (output_dir / 'index.html').read_text(encoding='utf-8')
+    en_hub = (output_dir / 'index_en.html').read_text(encoding='utf-8')
     assert '返回首页' in zh_wrapper
     assert '../index.html' in zh_wrapper
     assert '打开原报告' in zh_wrapper
@@ -161,20 +168,27 @@ def test_explicit_sources_render_with_fallback_shape_and_optional_backtest(tmp_p
     assert '打开原报告' not in en_wrapper
     assert '../oneil-live/live-full-latest.html' in oneil_wrapper
     assert '../minervini-live/live-full-latest.html' in minervini_wrapper
+    assert '../qullamaggie-live/live-full-latest.html' in qullamaggie_wrapper
     assert (output_dir / 'premarket_zh.html').exists()
     assert (output_dir / 'premarket_.html').exists()
     assert (output_dir / 'oneil-live' / 'live-full-latest.html').exists()
     assert (output_dir / 'minervini-live' / 'live-full-latest.html').exists()
+    assert (output_dir / 'qullamaggie-live' / 'live-full-latest.html').exists()
+    assert '2026-07-29 19:00 北京时间' in zh_hub
+    assert '2026-07-29 19:00 China Time (UTC+8)' in en_hub
 
     manifest = json.loads((output_dir / 'site_manifest.json').read_text(encoding='utf-8'))
     premarket_family = next(family for family in manifest['families'] if family['slug'] == 'premarket')
     minervini_family = next(family for family in manifest['families'] if family['slug'] == 'minervini')
+    qullamaggie_family = next(family for family in manifest['families'] if family['slug'] == 'qullamaggie')
     backtest_family = next(family for family in manifest['families'] if family['slug'] == 'oneil-backtest')
     assert premarket_family['pages']['zh']['source_file'] == 'premarket_zh.html'
     assert premarket_family['pages']['en']['source_file'] == 'premarket_.html'
     assert all('source_path' not in page for page in _iter_pages(manifest))
     assert minervini_family['available'] is True
     assert minervini_family['pages']['default']['source_file'] == 'live-full-latest.html'
+    assert qullamaggie_family['available'] is True
+    assert qullamaggie_family['pages']['default']['source_file'] == 'live-full-latest.html'
     assert backtest_family['available'] is False
     assert backtest_family['pages']['default']['available'] is False
 

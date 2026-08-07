@@ -159,6 +159,8 @@ def test_report_writers_emit_json_csv_and_html(tmp_path: Path) -> None:
     assert 'class="ma-line ma20"' in html
     assert 'Warnings' in html
     assert '警告' in html
+    assert '<details class="warnings-panel">' in html
+    assert '<summary><span class="lang lang-en">Warnings</span><span class="lang lang-zh">警告</span></summary>' in html
 
 
 def test_report_writers_create_parent_directories(tmp_path: Path) -> None:

@@ -29,6 +29,7 @@ on:
         options:
           - premarket
           - oneil
+          - qullamaggie
           - full
       run_label:
         description: Telegram 文案里的运行标签
@@ -46,8 +47,8 @@ on:
         default: true
         type: boolean
   schedule:
-    - cron: '00 10 * * *'
-    - cron: '00 13 * * *'
+    - cron: '00 10 * * 1-5'
+    - cron: '00 13 * * 1-5'
 
 permissions:
   contents: read
@@ -67,6 +68,7 @@ jobs:
       run_family: ${{ steps.gate.outputs.run_family }}
       run_label: ${{ steps.gate.outputs.run_label }}
       should_notify: ${{ steps.gate.outputs.should_notify }}
+      cn_time: ${{ steps.gate.outputs.cn_time }}
 
     steps:
       - name: Checkout
@@ -106,15 +108,15 @@ jobs:
           manual_family = os.environ.get('INPUT_REPORT_FAMILY', '').strip() or 'premarket'
           manual_label = os.environ.get('INPUT_RUN_LABEL', '').strip()
           notify_input = (os.environ.get('INPUT_NOTIFY_TELEGRAM', 'true').strip().lower() == 'true')
-          now_ny = datetime.now(ZoneInfo('America/New_York'))
+          now_cn = datetime.now(ZoneInfo('Asia/Shanghai'))
           should_run = True
           run_family = 'premarket'
           run_label = 'scheduled run'
 
           if event_name == 'schedule':
               scheduled_runs = {
-                  '00 10 * * *': ('full', '定时运行 18:00 北京时间'),
-                  '00 13 * * *': ('full', '定时运行 21:00 北京时间'),
+                  '00 10 * * 1-5': ('full', '定时运行 18:00 北京时间'),
+                  '00 13 * * 1-5': ('full', '定时运行 21:00 北京时间'),
               }
               scheduled_run = scheduled_runs.get(schedule_expr)
               if scheduled_run is None:
@@ -131,14 +133,14 @@ jobs:
               run_label = 'push run (site refresh)'
 
           run_label = normalize_run_label(run_label)
-          should_notify = notify_input and run_family in {'premarket', 'oneil', 'full'}
+          should_notify = notify_input and run_family in {'premarket', 'oneil', 'qullamaggie', 'full'}
 
           with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
               fh.write(f"should_run={'true' if should_run else 'false'}\n")
               fh.write(f'run_family={run_family}\n')
               fh.write(f'run_label={run_label}\n')
               fh.write(f"should_notify={'true' if should_notify else 'false'}\n")
-              fh.write(f'ny_time={now_ny.isoformat()}\n')
+              fh.write(f'cn_time={now_cn.isoformat()}\n')
           PY
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
@@ -151,7 +153,7 @@ jobs:
         if: github.event_name == 'schedule' && steps.gate.outputs.should_run != 'true'
         run: |
           echo "Skipping scheduled run outside weekday NY window."
-          echo "NY time was: ${{ steps.gate.outputs.ny_time }}"
+          echo "China time was: ${{ steps.gate.outputs.cn_time }}"
 
       - name: Install dependencies
         if: steps.gate.outputs.should_run == 'true'
@@ -161,7 +163,7 @@ jobs:
 
       - name: Prepare report directories
         if: steps.gate.outputs.should_run == 'true'
-        run: mkdir -p reports/site reports/oneil-live reports/minervini-live
+        run: mkdir -p reports/site reports/oneil-live reports/minervini-live reports/qullamaggie-live
 
       - name: Run premarket scan
         if: steps.gate.outputs.should_run == 'true' && (steps.gate.outputs.run_family == 'premarket' || steps.gate.outputs.run_family == 'full')
@@ -188,7 +190,7 @@ jobs:
         env:
           PUBLISHED_SITE_BASE: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
         run: |
-          mkdir -p reports/oneil-live reports/minervini-live
+          mkdir -p reports/oneil-live reports/minervini-live reports/qullamaggie-live
 
           fetch_if_missing() {
             local dest="$1"
@@ -211,6 +213,8 @@ jobs:
           fetch_if_missing reports/oneil-live/live-full-latest.json "${PUBLISHED_SITE_BASE%/}/oneil-live/live-full-latest.json"
           fetch_if_missing reports/minervini-live/live-full-latest.html "${PUBLISHED_SITE_BASE%/}/minervini-live/live-full-latest.html"
           fetch_if_missing reports/minervini-live/live-full-latest.json "${PUBLISHED_SITE_BASE%/}/minervini-live/live-full-latest.json"
+          fetch_if_missing reports/qullamaggie-live/live-full-latest.html "${PUBLISHED_SITE_BASE%/}/qullamaggie-live/live-full-latest.html"
+          fetch_if_missing reports/qullamaggie-live/live-full-latest.json "${PUBLISHED_SITE_BASE%/}/qullamaggie-live/live-full-latest.json"
           fetch_if_missing reports/oneil_backtest_overview.html "${PUBLISHED_SITE_BASE%/}/oneil_backtest_overview.html"
 
       - name: Run O'Neil chain
@@ -234,6 +238,18 @@ jobs:
             --report-name live-full-latest \
             --out-dir reports/minervini-live
 
+      - name: Run Qullamaggie chain
+        if: steps.gate.outputs.should_run == 'true' && (steps.gate.outputs.run_family == 'qullamaggie' || steps.gate.outputs.run_family == 'full')
+        run: |
+          python scripts/scan_oneil_setups.py \
+            --universe all-us \
+            --limit 0 \
+            --include-news \
+            --include-earnings \
+            --strategy-profile qullamaggie \
+            --report-name live-full-latest \
+            --out-dir reports/qullamaggie-live
+
       - name: Render merged market report hub
         if: steps.gate.outputs.should_run == 'true'
         run: python scripts/render_market_report_hub.py --output-dir reports/site
@@ -252,13 +268,15 @@ jobs:
           }
 
           rm -rf market-report-bundle
-          mkdir -p market-report-bundle/reports/oneil-live market-report-bundle/reports/minervini-live
+          mkdir -p market-report-bundle/reports/oneil-live market-report-bundle/reports/minervini-live market-report-bundle/reports/qullamaggie-live
           copy_if_exists reports/premarket_.html market-report-bundle/reports/premarket_.html
           copy_if_exists reports/premarket_zh.html market-report-bundle/reports/premarket_zh.html
           copy_if_exists reports/oneil-live/live-full-latest.html market-report-bundle/reports/oneil-live/live-full-latest.html
           copy_if_exists reports/oneil-live/live-full-latest.json market-report-bundle/reports/oneil-live/live-full-latest.json
           copy_if_exists reports/minervini-live/live-full-latest.html market-report-bundle/reports/minervini-live/live-full-latest.html
           copy_if_exists reports/minervini-live/live-full-latest.json market-report-bundle/reports/minervini-live/live-full-latest.json
+          copy_if_exists reports/qullamaggie-live/live-full-latest.html market-report-bundle/reports/qullamaggie-live/live-full-latest.html
+          copy_if_exists reports/qullamaggie-live/live-full-latest.json market-report-bundle/reports/qullamaggie-live/live-full-latest.json
           copy_if_exists reports/oneil_backtest_overview.html market-report-bundle/reports/oneil_backtest_overview.html
           copy_if_exists REPORT.md market-report-bundle/REPORT.md
           copy_if_exists packet.json market-report-bundle/packet.json
@@ -326,6 +344,8 @@ jobs:
           copy_if_exists market-report-bundle/reports/oneil-live/live-full-latest.json pages_payload/oneil-live/live-full-latest.json
           copy_if_exists market-report-bundle/reports/minervini-live/live-full-latest.html pages_payload/minervini-live/live-full-latest.html
           copy_if_exists market-report-bundle/reports/minervini-live/live-full-latest.json pages_payload/minervini-live/live-full-latest.json
+          copy_if_exists market-report-bundle/reports/qullamaggie-live/live-full-latest.html pages_payload/qullamaggie-live/live-full-latest.html
+          copy_if_exists market-report-bundle/reports/qullamaggie-live/live-full-latest.json pages_payload/qullamaggie-live/live-full-latest.json
           copy_if_exists market-report-bundle/reports/oneil_backtest_overview.html pages_payload/oneil_backtest_overview.html
 
           touch pages_payload/.nojekyll
@@ -359,6 +379,9 @@ jobs:
             fi
             if [ -f pages_payload/minervini/index.html ]; then
               echo "- Minervini: ${BASE_URL%/}/minervini/index.html"
+            fi
+            if [ -f pages_payload/qullamaggie/index.html ]; then
+              echo "- Qullamaggie: ${BASE_URL%/}/qullamaggie/index.html"
             fi
             if [ -f pages_payload/oneil-backtest/index.html ]; then
               echo "- O'Neil Backtest: ${BASE_URL%/}/oneil-backtest/index.html"
@@ -395,15 +418,18 @@ jobs:
           PREMARKET_URL=""
           PREMARKET_EN_URL=""
           ONEIL_URL=""
+          QULLAMAGGIE_URL=""
 
           if [ -n "$BASE_URL" ]; then
             HUB_URL="${BASE_URL%/}/"
             PREMARKET_URL="${BASE_URL%/}/premarket/index.html"
             PREMARKET_EN_URL="${BASE_URL%/}/premarket/index_en.html"
             ONEIL_URL="${BASE_URL%/}/oneil/index.html"
+            QULLAMAGGIE_URL="${BASE_URL%/}/qullamaggie/index.html"
             case "$FAMILY" in
               premarket) REPORT_URL="$PREMARKET_URL" ;;
               oneil) REPORT_URL="$ONEIL_URL" ;;
+              qullamaggie) REPORT_URL="$QULLAMAGGIE_URL" ;;
               full) REPORT_URL="$HUB_URL" ;;
             esac
           fi
@@ -426,15 +452,25 @@ jobs:
                 --pages-url "$REPORT_URL" \
                 --run-label "$RUN_LABEL"
               ;;
+            qullamaggie)
+              python scripts/notify_telegram_market_report.py \
+                --family qullamaggie \
+                --report-path market-report-bundle/reports/qullamaggie-live/live-full-latest.json \
+                --hub-url "$HUB_URL" \
+                --pages-url "$REPORT_URL" \
+                --run-label "$RUN_LABEL"
+              ;;
             full)
               python scripts/notify_telegram_market_report.py \
                 --family full \
                 --premarket-report-path market-report-bundle/REPORT.md \
                 --oneil-report-path market-report-bundle/reports/oneil-live/live-full-latest.json \
+                --qullamaggie-report-path market-report-bundle/reports/qullamaggie-live/live-full-latest.json \
                 --hub-url "$HUB_URL" \
                 --premarket-pages-url "$PREMARKET_URL" \
                 --premarket-alt-pages-url "$PREMARKET_EN_URL" \
                 --oneil-pages-url "$ONEIL_URL" \
+                --qullamaggie-pages-url "$QULLAMAGGIE_URL" \
                 --run-label "$RUN_LABEL"
               ;;
             *)
