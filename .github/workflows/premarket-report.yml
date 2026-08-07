@@ -129,11 +129,11 @@ jobs:
               run_family = manual_family
               run_label = manual_label or f'manual {run_family}'
           else:
-              run_family = 'push-site'
-              run_label = 'push run (site refresh)'
+              run_family = 'full'
+              run_label = 'push run (full refresh)'
 
           run_label = normalize_run_label(run_label)
-          should_notify = notify_input and run_family in {'premarket', 'oneil', 'qullamaggie', 'full'}
+          should_notify = event_name != 'push' and notify_input and run_family in {'premarket', 'oneil', 'qullamaggie', 'full'}
 
           with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
               fh.write(f"should_run={'true' if should_run else 'false'}\n")
