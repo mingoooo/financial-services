@@ -16,6 +16,7 @@ on:
       - 'scripts/render_market_report_hub.py'
       - 'scripts/render_backtest_overview_html.py'
       - 'scripts/scan_oneil_setups.py'
+      - 'scripts/oneil_scanner/**'
       - 'scripts/notify_telegram_market_report.py'
       - 'reports/oneil_backtest_overview.html'
       - '.github/workflows/premarket-report.yml'
