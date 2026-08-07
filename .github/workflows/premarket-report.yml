@@ -48,8 +48,8 @@ on:
         default: true
         type: boolean
   schedule:
-    - cron: '00 10 * * 1-5'
-    - cron: '00 13 * * 1-5'
+    - cron: '42 9 * * 1-5'
+    - cron: '42 12 * * 1-5'
 
 permissions:
   contents: read
@@ -116,8 +116,8 @@ jobs:
 
           if event_name == 'schedule':
               scheduled_runs = {
-                  '00 10 * * 1-5': ('full', '定时运行 18:00 北京时间'),
-                  '00 13 * * 1-5': ('full', '定时运行 21:00 北京时间'),
+                  '42 9 * * 1-5': ('full', '定时运行 17:42 北京时间（避开整点）'),
+                  '42 12 * * 1-5': ('full', '定时运行 20:42 北京时间（避开整点）'),
               }
               scheduled_run = scheduled_runs.get(schedule_expr)
               if scheduled_run is None:
