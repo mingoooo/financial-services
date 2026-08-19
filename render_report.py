@@ -148,6 +148,20 @@ footer {
   border-radius: 10px;
   background: #fff;
 }
+.chart-card {
+  margin: 14px 0 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 8px;
+  overflow-x: auto;
+}
+.chart-svg {
+  display: block;
+  width: 100%;
+  min-width: 680px;
+  height: auto;
+}
 .glossary {
   margin: 0 0 18px;
   padding: 12px 14px;

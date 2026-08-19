@@ -3,13 +3,11 @@ from __future__ import annotations
 import json
 import os
 import sys
+from html import escape
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-os.environ.setdefault('MPLCONFIGDIR', '/tmp/mplconfig')
-
-import matplotlib.pyplot as plt
 import pandas as pd
 import yfinance as yf
 
@@ -40,64 +38,131 @@ def fmt_market_cap(x):
     if abs_x >= 1_000_000:
         return f"${x / 1_000_000:.2f}M"
     return f"${x:,.0f}"
-
-
-def chart_rel_path(ticker: str) -> str:
-    return f"charts/{ticker.lower()}_1y.png"
-
-
-def build_daily_chart(ticker: str, out_path: Path) -> bool:
+def build_daily_chart_svg(ticker: str) -> str | None:
     try:
         ticker_obj = yf.Ticker(ticker)
         hist = ticker_obj.history(period='1y', interval='1d', auto_adjust=False, prepost=False)
         if hist is None or hist.empty:
-            return False
-        work = hist[['Open', 'High', 'Low', 'Close']].dropna().copy()
-        if work.empty:
-            return False
-        up = work['Close'] >= work['Open']
-        down = ~up
-        body = (work['Close'] - work['Open']).abs()
-        price_span = float((work['High'].max() - work['Low'].min()) or 0)
-        min_body = max(price_span * 0.0025, 0.01)
-        fig, ax = plt.subplots(figsize=(8.2, 3.6), dpi=160)
-        x = range(len(work))
-        ax.vlines(x, work['Low'], work['High'], color='#94a3b8', linewidth=0.8, zorder=1)
-        up_idx = [i for i, ok in enumerate(up) if ok]
-        down_idx = [i for i, ok in enumerate(down) if ok]
-        up_height = body[up].clip(lower=min_body)
-        down_height = body[down].clip(lower=min_body)
-        up_bottom = pd.Series(work['Open'][up]).where(body[up] >= min_body, pd.Series(work['Open'][up]) - up_height / 2)
-        down_bottom = pd.Series(work['Close'][down]).where(body[down] >= min_body, pd.Series(work['Close'][down]) - down_height / 2)
-        ax.bar(up_idx, up_height, bottom=up_bottom, width=0.55, color='#16a34a', edgecolor='#16a34a', zorder=2)
-        ax.bar(down_idx, down_height, bottom=down_bottom, width=0.55, color='#dc2626', edgecolor='#dc2626', zorder=2)
-        ax.set_title(f'{ticker} · 1Y Daily Candles', fontsize=11)
-        ax.grid(True, axis='y', alpha=0.18)
-        ax.set_xlim(-1, len(work) - 0.2)
+            return None
+        chart = hist[['Open', 'High', 'Low', 'Close', 'Volume']].dropna().copy()
+        if chart.empty:
+            return None
+        chart['MA20'] = chart['Close'].rolling(20, min_periods=1).mean()
+        chart['MA50'] = chart['Close'].rolling(50, min_periods=1).mean()
+        chart['MA200'] = chart['Close'].rolling(200, min_periods=1).mean()
+        recent = chart.tail(90).copy()
+        if recent.empty:
+            return None
+
+        width = 760
+        height = 360
+        margin_left = 14
+        margin_right = 14
+        margin_top = 18
+        margin_bottom = 16
+        price_height = 236
+        volume_gap = 12
+        volume_height = 64
+        usable_width = width - margin_left - margin_right
+        candle_step = usable_width / max(len(recent), 1)
+        candle_width = max(2.0, min(6.0, candle_step * 0.68))
+
+        highs = recent['High'].astype(float)
+        lows = recent['Low'].astype(float)
+        price_min = float(lows.min())
+        price_max = float(highs.max())
+        price_pad = max((price_max - price_min) * 0.06, price_max * 0.01, 0.5)
+        price_min -= price_pad
+        price_max += price_pad
+        volume_max = max(float(recent['Volume'].astype(float).max()), 1.0)
+
+        def scaled(value: float, lower: float, upper: float, span: float) -> float:
+            if abs(upper - lower) < 1e-9:
+                return span / 2.0
+            return (value - lower) / (upper - lower) * span
+
+        svg_parts: list[str] = [
+            '<div class="chart-card">',
+            f'<svg class="chart-svg" viewBox="0 0 {width} {height}" role="img" aria-label="{escape(ticker)} 1Y daily candlestick chart">',
+            f'<rect x="0" y="0" width="{width}" height="{height}" fill="#ffffff" rx="12" ry="12"/>',
+            f'<line x1="{margin_left}" y1="{margin_top + price_height}" x2="{width - margin_right}" y2="{margin_top + price_height}" stroke="#d0d7de" stroke-width="1"/>',
+        ]
+
+        for step in range(4):
+            grid_y = margin_top + step * (price_height / 3.0)
+            svg_parts.append(
+                f'<line x1="{margin_left}" y1="{grid_y:.2f}" x2="{width - margin_right}" y2="{grid_y:.2f}" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3 4"/>'
+            )
+
+        ma_specs = [('MA20', '#7c3aed'), ('MA50', '#ea580c'), ('MA200', '#0891b2')]
+        for ma_name, color in ma_specs:
+            points: list[str] = []
+            for index, (_, row) in enumerate(recent.iterrows()):
+                ma_value = row.get(ma_name)
+                if ma_value is None or pd.isna(ma_value):
+                    continue
+                center_x = margin_left + index * candle_step + candle_step / 2.0
+                ma_y = margin_top + (price_height - scaled(float(ma_value), price_min, price_max, price_height))
+                points.append(f'{center_x:.2f},{ma_y:.2f}')
+            if len(points) >= 2:
+                svg_parts.append(
+                    f'<polyline fill="none" stroke="{color}" stroke-width="1.6" points="{" ".join(points)}"/>'
+                )
+
         try:
             ext = ticker_obj.history(period='2d', interval='1m', auto_adjust=False, prepost=True)
             ext_close = ext['Close'].dropna() if ext is not None and not ext.empty else pd.Series(dtype=float)
             if not ext_close.empty:
                 latest_ext = float(ext_close.iloc[-1])
-                ax.axhline(latest_ext, color='#2563eb', linewidth=1.0, linestyle='--', alpha=0.9)
-                ax.text(len(work) - 0.35, latest_ext, f' Last {latest_ext:.2f}', color='#2563eb', fontsize=8, va='bottom', ha='left', bbox=dict(boxstyle='round,pad=0.18', fc='white', ec='none', alpha=0.85))
+                latest_y = margin_top + (price_height - scaled(latest_ext, price_min, price_max, price_height))
+                svg_parts.append(
+                    f'<line x1="{margin_left}" y1="{latest_y:.2f}" x2="{width - margin_right}" y2="{latest_y:.2f}" stroke="#2563eb" stroke-width="1.2" stroke-dasharray="5 4"/>'
+                )
+                svg_parts.append(
+                    f'<text x="{width - margin_right - 4}" y="{max(latest_y - 4, margin_top + 10):.2f}" font-size="11" text-anchor="end" fill="#2563eb">Last {latest_ext:.2f}</text>'
+                )
         except Exception:
             pass
-        xticks = [0, max(len(work)//4,1), max(len(work)//2,1), max(len(work)*3//4,1), len(work)-1]
-        xticks = sorted(set(min(max(t,0), len(work)-1) for t in xticks))
-        labels = [pd.Timestamp(work.index[t]).strftime('%Y-%m') for t in xticks]
-        ax.set_xticks(xticks)
-        ax.set_xticklabels(labels, fontsize=8)
-        ax.tick_params(axis='y', labelsize=8)
-        for spine in ['top', 'right']:
-            ax.spines[spine].set_visible(False)
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        fig.tight_layout()
-        fig.savefig(out_path, bbox_inches='tight')
-        plt.close(fig)
-        return True
+
+        volume_top = margin_top + price_height + volume_gap
+        label_indices = sorted({0, len(recent) // 3, (len(recent) * 2) // 3, len(recent) - 1})
+        for index, (_, row) in enumerate(recent.iterrows()):
+            open_price = float(row['Open'])
+            high_price = float(row['High'])
+            low_price = float(row['Low'])
+            close_price = float(row['Close'])
+            volume = float(row['Volume'])
+            center_x = margin_left + index * candle_step + candle_step / 2.0
+            high_y = margin_top + (price_height - scaled(high_price, price_min, price_max, price_height))
+            low_y = margin_top + (price_height - scaled(low_price, price_min, price_max, price_height))
+            open_y = margin_top + (price_height - scaled(open_price, price_min, price_max, price_height))
+            close_y = margin_top + (price_height - scaled(close_price, price_min, price_max, price_height))
+            body_top = min(open_y, close_y)
+            body_height = max(abs(close_y - open_y), 1.4)
+            color = '#16a34a' if close_price >= open_price else '#dc2626'
+            volume_scaled = volume / volume_max * volume_height
+            volume_y = volume_top + (volume_height - volume_scaled)
+            svg_parts.append(f'<line x1="{center_x:.2f}" y1="{high_y:.2f}" x2="{center_x:.2f}" y2="{low_y:.2f}" stroke="{color}" stroke-width="1"/>')
+            svg_parts.append(f'<rect x="{center_x - candle_width / 2.0:.2f}" y="{body_top:.2f}" width="{candle_width:.2f}" height="{body_height:.2f}" fill="{color}" rx="1" ry="1"/>')
+            svg_parts.append(f'<rect x="{center_x - candle_width / 2.0:.2f}" y="{volume_y:.2f}" width="{candle_width:.2f}" height="{max(volume_scaled, 1.0):.2f}" fill="{color}" opacity="0.30" rx="1" ry="1"/>')
+            if index in label_indices:
+                label = pd.Timestamp(recent.index[index]).strftime('%Y-%m')
+                svg_parts.append(f'<text x="{center_x:.2f}" y="{height - 2}" font-size="10" text-anchor="middle" fill="#6b7280">{label}</text>')
+
+        latest_close = float(recent.iloc[-1]['Close'])
+        latest_volume = float(recent.iloc[-1]['Volume']) / 1_000_000.0
+        svg_parts.append(f'<text x="{margin_left}" y="14" font-size="12" fill="#111827">{escape(ticker)} · 1Y Daily</text>')
+        svg_parts.append(f'<text x="{width - margin_right}" y="14" font-size="12" text-anchor="end" fill="#111827">{latest_close:.2f}</text>')
+        svg_parts.append(f'<text x="{margin_left}" y="{margin_top + price_height + volume_gap - 2}" font-size="10" fill="#6b7280">Volume</text>')
+        svg_parts.append(f'<text x="{width - margin_right}" y="{margin_top + price_height + volume_gap - 2}" font-size="10" text-anchor="end" fill="#6b7280">Vol {latest_volume:.1f}M</text>')
+        svg_parts.append('<text x="14" y="348" font-size="10" fill="#7c3aed">MA20</text>')
+        svg_parts.append('<text x="54" y="348" font-size="10" fill="#ea580c">MA50</text>')
+        svg_parts.append('<text x="96" y="348" font-size="10" fill="#0891b2">MA200</text>')
+        svg_parts.append('</svg>')
+        svg_parts.append('</div>')
+        return ''.join(svg_parts)
     except Exception:
-        return False
+        return None
 
 
 def catalyst_line(g):
@@ -209,9 +274,9 @@ def build_report(packet: dict) -> str:
         ticker = g.get('ticker', '')
         chart_md = ''
         if ticker:
-            rel = chart_rel_path(ticker)
-            if build_daily_chart(ticker, Path('reports/site') / rel):
-                chart_md = f"- 1Y chart:\n\n  ![{ticker} 1Y daily chart](site/{rel})\n"
+            chart_html = build_daily_chart_svg(ticker)
+            if chart_html:
+                chart_md = f"\n{chart_html}\n"
         pre_gappers.append(
             f"### {ticker} | {g.get('company_name') or 'Company unknown'}\n"
             f"- Full catalyst headline: {catalyst_line(g)}\n"
